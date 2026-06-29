@@ -1,5 +1,4 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { StoreDomain } from './store-domain.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 
 @Entity('stores')
@@ -15,9 +14,6 @@ export class Store {
 
     @Column({ unique: true, nullable: true })
     slug: string;
-
-    @OneToMany(() => StoreDomain, domain => domain.store)
-    domains: StoreDomain[];
 
     @OneToMany(() => Customer, customer => customer.store)
     customers: Customer[];

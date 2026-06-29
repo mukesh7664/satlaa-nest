@@ -12,7 +12,6 @@ import { ProductFlag } from '../admin/entities/product-flag.entity';
 import { GeneralSettings } from '../admin/entities/general-settings.entity';
 import { Tag } from '../admin/entities/tag.entity';
 import { CatalogService } from './catalog.service';
-import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { AdminModule } from '../admin/admin.module';
 import { CatalogController } from './catalog.controller';
 import { WishlistService } from './wishlist.service';
@@ -41,7 +40,6 @@ import { Media } from '../cms/entities/media.entity';
             GeneralSettings,
             Tag,
         ]),
-        SubscriptionsModule,
         AdminModule,
         CmsModule,
     ],

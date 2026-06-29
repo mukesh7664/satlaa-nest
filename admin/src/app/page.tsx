@@ -12,11 +12,7 @@ export default function Home() {
   useEffect(() => {
     if (!loading) {
       if (isAuthenticated) {
-        if (admin?.role === 'super_admin') {
-          router.replace('/sa-dashboard');
-        } else {
-          router.replace('/dashboard');
-        }
+        router.replace('/dashboard');
       } else {
         router.replace('/login');
       }

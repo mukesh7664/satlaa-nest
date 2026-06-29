@@ -14,11 +14,6 @@ export class DashboardController {
         return this.dashboardService.getDashboardSummary(req.user?.storeId);
     }
 
-    @Get('saas-summary')
-    async getSaaSSummary() {
-        return this.dashboardService.getSaaSSummary();
-    }
-
     @Get('dashboard-summary')
     async getDashboardSummaryLegacy(@Req() req: any) {
         return this.dashboardService.getDashboardSummary(req.user?.storeId);

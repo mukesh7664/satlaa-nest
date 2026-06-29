@@ -5,7 +5,6 @@ import { Admin, AdminRole } from './entities/admin.entity';
 import { Store } from '../stores/entities/store.entity';
 import { JwtService } from '@nestjs/jwt';
 import { TenantService } from '../tenant/tenant.service';
-import { StoreSubscription } from '../subscriptions/entities/store-subscription.entity';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { EmailService } from '../notifications/email.service';
@@ -17,8 +16,6 @@ export class AdminAuthService {
         private adminRepository: Repository<Admin>,
         @InjectRepository(Store)
         private storeRepository: Repository<Store>,
-        @InjectRepository(StoreSubscription)
-        private subscriptionRepository: Repository<StoreSubscription>,
         private jwtService: JwtService,
         private tenantService: TenantService,
         private emailService: EmailService,
@@ -92,18 +89,8 @@ export class AdminAuthService {
 
         const store = admin.storeId ? await this.storeRepository.findOne({ where: { id: admin.storeId } }) : null;
 
-        let planCategory = 'ecommerce';
-        let allowedPages: string[] = [];
-        if (admin.storeId) {
-            const sub = await this.subscriptionRepository.findOne({
-                where: { store_id: admin.storeId, status: 'active' },
-                relations: ['plan'],
-            });
-            if (sub?.plan) {
-                planCategory = sub.plan.category || 'ecommerce';
-                allowedPages = sub.plan.allowedPages || [];
-            }
-        }
+        const planCategory = 'ecommerce';
+        const allowedPages: string[] = [];
 
         const token = this.jwtService.sign({
             sub: admin.id,
@@ -227,19 +214,9 @@ export class AdminAuthService {
         const admin = await this.adminRepository.findOne({ where: { id: adminId } });
         if (!admin) throw new NotFoundException('Admin not found');
         const store = admin.storeId ? await this.storeRepository.findOne({ where: { id: admin.storeId } }) : null;
-        
-        let planCategory = 'ecommerce';
-        let allowedPages: string[] = [];
-        if (admin.storeId) {
-            const sub = await this.subscriptionRepository.findOne({
-                where: { store_id: admin.storeId, status: 'active' },
-                relations: ['plan'],
-            });
-            if (sub?.plan) {
-                planCategory = sub.plan.category || 'ecommerce';
-                allowedPages = sub.plan.allowedPages || [];
-            }
-        }
+
+        const planCategory = 'ecommerce';
+        const allowedPages: string[] = [];
 
         return {
             admin: {

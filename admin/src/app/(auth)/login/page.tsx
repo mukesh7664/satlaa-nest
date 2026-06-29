@@ -54,15 +54,7 @@ export default function LoginPage() {
   const { isAuthenticated, loading, admin } = useAppSelector((state) => state.auth);
 
   const handleRedirect = (adminData: any) => {
-    if (adminData.role === 'super_admin') {
-      router.push('/sa-dashboard');
-    } else if (adminData.planCategory === 'page_builder') {
-      router.push('/pages');
-    } else if (!adminData.storeId) {
-      router.push('/billing/pricing');
-    } else {
-      router.push('/dashboard');
-    }
+    router.push('/dashboard');
   };
 
   useEffect(() => {

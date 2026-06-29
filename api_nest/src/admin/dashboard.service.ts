@@ -1,24 +1,18 @@
 
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Not, IsNull } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Order, OrderStatus, PaymentStatus } from '../sales/entities/order.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { Product } from '../catalog/entities/product.entity';
 import { Collection } from '../catalog/entities/collection.entity';
 import { Invoice } from '../sales/entities/invoice.entity';
 import { Inquiry, InquiryStatus } from '../communication/entities/inquiry.entity';
-import { Admin, AdminRole } from './entities/admin.entity';
-import { Store } from '../stores/entities/store.entity';
-import { Plan } from '../plans/plan.entity';
-import { StoreSubscription } from '../subscriptions/entities/store-subscription.entity';
-import { StoreDomain } from '../stores/entities/store-domain.entity';
 import { getFullS3Url } from '../common/utils/s3-url.util';
 import { EmailSettings } from './entities/email-settings.entity';
 import { GeneralSettings } from './entities/general-settings.entity';
 import { StorePaymentConfigService } from '../payments/store-payment-config.service';
 import { ShippingConfig } from '../sales/entities/shipping-config.entity';
-import { Page } from '../cms/entities/page.entity';
 
 @Injectable()
 export class DashboardService {
@@ -35,16 +29,6 @@ export class DashboardService {
         private invoiceRepository: Repository<Invoice>,
         @InjectRepository(Inquiry)
         private inquiryRepository: Repository<Inquiry>,
-        @InjectRepository(Admin)
-        private adminRepository: Repository<Admin>,
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
-        @InjectRepository(StoreDomain)
-        private storeDomainRepository: Repository<StoreDomain>,
-        @InjectRepository(StoreSubscription)
-        private subscriptionRepository: Repository<StoreSubscription>,
-        @InjectRepository(Plan)
-        private planRepository: Repository<Plan>,
         @InjectRepository(EmailSettings)
         private emailSettingsRepository: Repository<EmailSettings>,
         @InjectRepository(GeneralSettings)
@@ -52,42 +36,6 @@ export class DashboardService {
         private storePaymentConfigService: StorePaymentConfigService,
         private dataSource: DataSource,
     ) { }
-
-    async getSaaSSummary() {
-        const [
-            totalSuperAdmins,
-            totalAdmins,
-            activeStores,
-            expiredStores,
-            totalPlans,
-            customDomains,
-        ] = await Promise.all([
-            this.adminRepository.count({ where: { role: AdminRole.SUPER_ADMIN } }),
-            this.adminRepository.count({ where: { role: AdminRole.STORE_ADMIN } }),
-            this.storeDomainRepository.count({ where: { is_primary: true, status: 'active' } }),
-            this.storeDomainRepository.count({ where: { is_primary: true, status: 'expired' } }),
-            this.planRepository.count(),
-            this.storeDomainRepository.count({ where: { type: 'custom', status: 'active' } }),
-        ]);
-
-        // Revenue from subscriptions (using Order for now)
-        const revenue = await this.getRevenueStats();
-
-        return {
-            superAdminCount: totalSuperAdmins,
-            adminCount: totalAdmins,
-            activeStores,
-            expiredStores,
-            totalPlans,
-            domainManagement: customDomains,
-            totalSubscriptions: await this.subscriptionRepository.count(),
-            recentSubscriptions: await this.subscriptionRepository.find({
-                take: 5,
-                order: { created_at: 'DESC' },
-                relations: ['store', 'plan'],
-            }),
-        };
-    }
 
     async getDashboardSummary(storeId?: string) {
         const filter = storeId ? { storeId } : {};
@@ -181,139 +129,60 @@ export class DashboardService {
             };
         }
 
-        const [emailSettings, paymentConfigs, shippingConfig, sub, generalSettings, productCount, customDomainCount] = await Promise.all([
+        const [emailSettings, paymentConfigs, shippingConfig, generalSettings, productCount] = await Promise.all([
             this.emailSettingsRepository.findOne({ where: { storeId } }),
             this.storePaymentConfigService.findByStore(storeId),
             this.dataSource.getRepository(ShippingConfig).findOne({ where: { storeId, provider: 'shiprocket' } }),
-            this.subscriptionRepository.findOne({
-                where: { store_id: storeId, status: 'active' },
-                relations: ['plan'],
-            }),
             this.generalSettingsRepository.findOne({ where: { storeId } }),
             this.productRepository.count({ where: { storeId } }),
-            this.storeDomainRepository.count({ where: { store_id: storeId, type: 'custom' } }),
         ]);
 
-        let emailConfigured = !!(emailSettings && emailSettings.smtpHost && emailSettings.smtpUser && emailSettings.smtpPassword);
-        let paymentConfigured = paymentConfigs.some(c => c.isActive && c.keyId && c.keySecret);
-        let shippingConfigured = !!(shippingConfig && shippingConfig.email && shippingConfig.password);
+        const emailConfigured = !!(emailSettings && emailSettings.smtpHost && emailSettings.smtpUser && emailSettings.smtpPassword);
+        const paymentConfigured = paymentConfigs.some(c => c.isActive && c.keyId && c.keySecret);
+        const shippingConfigured = !!(shippingConfig && shippingConfig.email && shippingConfig.password);
 
-        const isPageBuilder = sub?.plan?.category === 'page_builder';
-        const pageCount = isPageBuilder ? await this.dataSource.getRepository(Page).count({ where: { storeId } }) : 0;
-
-        const steps = [];
-
-        if (isPageBuilder) {
-            steps.push(
-                {
-                    id: 'store_details',
-                    label: 'Website Name & Description',
-                    description: 'Set your website brand name and a short description',
-                    weight: 25,
-                    isCompleted: !!(generalSettings && generalSettings.siteName && generalSettings.siteName !== 'Inospire' && generalSettings.siteDescription),
-                    redirectUrl: '/settings/general-settings'
-                },
-                {
-                    id: 'store_logo',
-                    label: 'Website Logo',
-                    description: 'Upload a logo to build brand identity',
-                    weight: 25,
-                    isCompleted: !!(generalSettings && generalSettings.siteLogo),
-                    redirectUrl: '/settings/general-settings'
-                },
-                {
-                    id: 'first_page',
-                    label: 'Create First Page',
-                    description: 'Create and publish at least one page to start',
-                    weight: 30,
-                    isCompleted: pageCount > 0,
-                    redirectUrl: '/pages'
-                },
-                {
-                    id: 'store_domain',
-                    label: 'Website Domain',
-                    description: 'Configure a custom domain for your website',
-                    weight: 10,
-                    isCompleted: customDomainCount > 0,
-                    redirectUrl: '/settings/domain-management'
-                },
-                {
-                    id: 'email_smtp',
-                    label: 'Email SMTP Configuration',
-                    description: 'Setup SMTP server for transactional emails',
-                    weight: 10,
-                    isCompleted: emailConfigured,
-                    redirectUrl: '/settings/email-config/settings'
-                }
-            );
-        } else {
-            steps.push(
-                {
-                    id: 'store_details',
-                    label: 'Store Name & Description',
-                    description: 'Set your store brand name and a short description',
-                    weight: 20,
-                    isCompleted: !!(generalSettings && generalSettings.siteName && generalSettings.siteName !== 'Inospire' && generalSettings.siteDescription),
-                    redirectUrl: '/settings/general-settings'
-                },
-                {
-                    id: 'store_logo',
-                    label: 'Store Logo',
-                    description: 'Upload a logo to build brand identity',
-                    weight: 20,
-                    isCompleted: !!(generalSettings && generalSettings.siteLogo),
-                    redirectUrl: '/settings/general-settings'
-                },
-                {
-                    id: 'first_product',
-                    label: 'Add First Product',
-                    description: 'Add at least one product to start selling',
-                    weight: 20,
-                    isCompleted: productCount > 0,
-                    redirectUrl: '/manage-products/create-product'
-                },
-                {
-                    id: 'payment_gateway',
-                    label: 'Payment Gateway',
-                    description: 'Setup Razorpay or Stripe to receive payments',
-                    weight: 20,
-                    isCompleted: paymentConfigured,
-                    redirectUrl: '/settings/payment-settings'
-                },
-                {
-                    id: 'store_domain',
-                    label: 'Store Domain',
-                    description: 'Configure a custom domain',
-                    weight: 10,
-                    isCompleted: customDomainCount > 0,
-                    redirectUrl: '/settings/domain-management'
-                },
-                {
-                    id: 'email_smtp',
-                    label: 'Email SMTP Configuration',
-                    description: 'Setup SMTP server for transactional emails',
-                    weight: 10,
-                    isCompleted: emailConfigured,
-                    redirectUrl: '/settings/email-config/settings'
-                }
-            );
-        }
-
-        let emailAllowed = true;
-        let paymentAllowed = true;
-        let shippingAllowed = true;
-
-        // If the store is on a subscription plan, check page permissions and suppress shipping configurations if not allowed
-        if (sub && sub.plan) {
-            const allowedPages = sub.plan.allowedPages || [];
-            emailAllowed = allowedPages.includes('settings/email-config/settings');
-            paymentAllowed = allowedPages.includes('settings/payment-settings');
-            shippingAllowed = allowedPages.includes('settings/shipping-settings');
-            
-            if (!shippingAllowed) {
-                shippingConfigured = true;
+        const steps = [
+            {
+                id: 'store_details',
+                label: 'Store Name & Description',
+                description: 'Set your store brand name and a short description',
+                weight: 20,
+                isCompleted: !!(generalSettings && generalSettings.siteName && generalSettings.siteName !== 'Inospire' && generalSettings.siteDescription),
+                redirectUrl: '/settings/general-settings'
+            },
+            {
+                id: 'store_logo',
+                label: 'Store Logo',
+                description: 'Upload a logo to build brand identity',
+                weight: 20,
+                isCompleted: !!(generalSettings && generalSettings.siteLogo),
+                redirectUrl: '/settings/general-settings'
+            },
+            {
+                id: 'first_product',
+                label: 'Add First Product',
+                description: 'Add at least one product to start selling',
+                weight: 20,
+                isCompleted: productCount > 0,
+                redirectUrl: '/manage-products/create-product'
+            },
+            {
+                id: 'payment_gateway',
+                label: 'Payment Gateway',
+                description: 'Setup Razorpay or Stripe to receive payments',
+                weight: 20,
+                isCompleted: paymentConfigured,
+                redirectUrl: '/settings/payment-settings'
+            },
+            {
+                id: 'email_smtp',
+                label: 'Email SMTP Configuration',
+                description: 'Setup SMTP server for transactional emails',
+                weight: 20,
+                isCompleted: emailConfigured,
+                redirectUrl: '/settings/email-config/settings'
             }
-        }
+        ];
 
         const completionPercentage = steps.reduce((acc, step) => acc + (step.isCompleted ? step.weight : 0), 0);
 
@@ -321,9 +190,9 @@ export class DashboardService {
             emailConfigured,
             paymentConfigured,
             shippingConfigured,
-            emailAllowed,
-            paymentAllowed,
-            shippingAllowed,
+            emailAllowed: true,
+            paymentAllowed: true,
+            shippingAllowed: true,
             isComplete: completionPercentage === 100,
             completionPercentage,
             steps,

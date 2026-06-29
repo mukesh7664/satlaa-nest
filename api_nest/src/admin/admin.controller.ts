@@ -18,10 +18,7 @@ import { Admin, AdminRole } from './entities/admin.entity';
 import { EmailSettings } from './entities/email-settings.entity';
 import { AdminAuthService } from './admin-auth.service';
 import { Store } from '../stores/entities/store.entity';
-import { StoreDomain } from '../stores/entities/store-domain.entity';
 import { Section } from '../cms/entities/section.entity';
-import { StoreSubscription } from '../subscriptions/entities/store-subscription.entity';
-import { Plan } from '../plans/plan.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import * as bcrypt from 'bcryptjs';
 import { Address, AddressType } from '../customers/entities/address.entity';
@@ -58,10 +55,6 @@ export class AdminController {
         private sectionRepository: Repository<Section>,
         @InjectRepository(Store)
         private storeRepository: Repository<Store>,
-        @InjectRepository(StoreDomain)
-        private storeDomainRepository: Repository<StoreDomain>,
-        @InjectRepository(Plan)
-        private planRepository: Repository<Plan>,
         @InjectRepository(Order)
         private orderRepository: Repository<Order>,
         @InjectRepository(Customer)
@@ -1487,39 +1480,6 @@ export class AdminController {
         const total = await this.customerRepository.count();
         const active = await this.customerRepository.count({ where: { isActive: true } });
         return { total, active, inactive: total - active };
-    }
-
-    // ── Stores Management (Super Admin) ──────────────────────────────────
-    @ApiOperation({ summary: 'Get all stores with domains (Super Admin)' })
-    @Get('stores')
-    async getAllStores(@Query() query: any) {
-        const page = parseInt(query.page) || 1;
-        const limit = parseInt(query.limit) || 20;
-        return this.adminService.getAllStores(page, limit);
-    }
-
-    @ApiOperation({ summary: 'Get store details (Super Admin)' })
-    @Get('stores/:id')
-    async getStoreById(@Param('id') id: string) {
-        const store = await this.adminService.getStoreById(id);
-        if (!store) throw new NotFoundException('Store not found');
-        return store;
-    }
-
-    @ApiOperation({ summary: 'Get all payments (Super Admin)' })
-    @Get('payments')
-    async getAllPayments(@Query() query: any) {
-        const page = parseInt(query.page) || 1;
-        const limit = parseInt(query.limit) || 20;
-        return this.adminService.getAllPayments(page, limit);
-    }
-
-    @ApiOperation({ summary: 'Get all payment attempts (Super Admin)' })
-    @Get('payment-attempts')
-    async getAllPaymentAttempts(@Query() query: any) {
-        const page = parseInt(query.page) || 1;
-        const limit = parseInt(query.limit) || 20;
-        return this.adminService.getAllPaymentAttempts(page, limit);
     }
 
     // ── Section Library (Super Admin) ────────────────────────────────────

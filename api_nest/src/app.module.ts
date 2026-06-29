@@ -16,10 +16,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { TenantModule } from './tenant/tenant.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
-import { PlansModule } from './plans/plans.module';
-import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { PaymentsModule } from './payments/payments.module';
-import { StoreSubscription } from './subscriptions/entities/store-subscription.entity';
 import { CustomersModule } from './customers/customers.module';
 import { ReportsModule } from './admin/reports/reports.module';
 import { DocumentationModule } from './documentation/documentation.module';
@@ -42,7 +39,7 @@ import { BlogModule } from './blog/blog.module';
             password: process.env.DB_PASSWORD || 'postgres',
             database: process.env.DB_DATABASE || 'inospire_nest',
             autoLoadEntities: true,
-            synchronize: true,
+            synchronize: false,
         }),
         NotificationsModule, // Global — provides EmailService everywhere
         AuthModule,
@@ -52,8 +49,6 @@ import { BlogModule } from './blog/blog.module';
         CmsModule,
         AdminModule,
         TenantModule,
-        PlansModule,
-        SubscriptionsModule,
         PaymentsModule,
         CustomersModule,
         ReportsModule,
@@ -78,10 +73,6 @@ export class AppModule implements NestModule {
             .exclude(
                 { path: 'admin/(.*)', method: RequestMethod.ALL },
                 { path: 'admin', method: RequestMethod.ALL },
-                { path: 'plans/(.*)', method: RequestMethod.ALL },
-                { path: 'plans', method: RequestMethod.ALL },
-                { path: 'subscriptions/(.*)', method: RequestMethod.ALL },
-                { path: 'subscriptions', method: RequestMethod.ALL },
                 { path: 'payment/webhook/(.*)', method: RequestMethod.ALL },
                 { path: 'section-types/(.*)', method: RequestMethod.ALL },
                 { path: 'section-types', method: RequestMethod.ALL },

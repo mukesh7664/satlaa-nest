@@ -6,8 +6,6 @@ import { PageSection } from './entities/page-section.entity';
 import { Section } from './entities/section.entity';
 import { HeaderSection } from './entities/header-section.entity';
 import { FooterSection } from './entities/footer-section.entity';
-import { PlanLimitsService } from '../subscriptions/plan-limits.service';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class CmsService {
@@ -22,8 +20,6 @@ export class CmsService {
         private headerSectionRepository: Repository<HeaderSection>,
         @InjectRepository(FooterSection)
         private footerSectionRepository: Repository<FooterSection>,
-        private readonly planLimitsService: PlanLimitsService,
-        private readonly subscriptionsService: SubscriptionsService,
     ) { }
 
     // ── Pages ───────────────────────────────────────────────────────────
@@ -103,7 +99,6 @@ export class CmsService {
 
     async createPage(data: any, storeId?: string) {
         if (storeId) {
-            await this.planLimitsService.checkLimit(storeId, 'pages');
             data.storeId = storeId;
         }
 
@@ -360,20 +355,8 @@ export class CmsService {
             where.category = category;
         }
 
-        // Determine effective scope based on store's subscription if storeId is provided
+        // Single-store: use the requested scope directly (no subscription-based scoping)
         let effectiveScope = scope;
-        if (storeId) {
-            try {
-                const sub = await this.subscriptionsService.getStoreSubscription(storeId);
-                if (sub?.plan?.category === 'page_builder') {
-                    effectiveScope = 'page-builder';
-                } else if (sub?.plan?.category === 'ecommerce') {
-                    effectiveScope = 'ecommerce';
-                }
-            } catch (err) {
-                console.error("Error checking store subscription scope on backend:", err);
-            }
-        }
 
         if (effectiveScope && effectiveScope !== 'All') {
             if (exact === 'true' || exact === true) {

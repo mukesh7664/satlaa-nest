@@ -1,5 +1,4 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Plan } from '../../plans/plan.entity';
 import { Store } from '../../stores/entities/store.entity';
 
 @Entity('payment_attempts')
@@ -22,10 +21,6 @@ export class PaymentAttempt {
 
     @Column({ type: 'uuid', nullable: true })
     customer_id: string;
-
-    @ManyToOne(() => Plan, { nullable: true })
-    @JoinColumn({ name: 'plan_id' })
-    plan: Plan;
 
     @Column({ type: 'uuid', nullable: true })
     plan_id: string;

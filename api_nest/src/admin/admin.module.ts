@@ -28,16 +28,11 @@ import { Product } from '../catalog/entities/product.entity';
 import { Collection } from '../catalog/entities/collection.entity';
 import { Inquiry } from '../communication/entities/inquiry.entity';
 import { Store } from '../stores/entities/store.entity';
-import { StoreDomain } from '../stores/entities/store-domain.entity';
-import { Plan } from '../plans/plan.entity';
-import { StoreSubscription } from '../subscriptions/entities/store-subscription.entity';
-import { StoreInvoice } from '../subscriptions/entities/store-invoice.entity';
 import { Section } from '../cms/entities/section.entity';
 import { Page } from '../cms/entities/page.entity';
 import { Address } from '../customers/entities/address.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity';
-import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { Media } from '../cms/entities/media.entity';
 import { CatalogModule } from '../catalog/catalog.module';
@@ -66,10 +61,6 @@ import { AuditLogService } from './audit-log.service';
             ProductFlag,
             Estimate,
             Store,
-            StoreDomain,
-            Plan,
-            StoreSubscription,
-            StoreInvoice,
             Section,
             Page,
             Inquiry,
@@ -87,7 +78,6 @@ import { AuditLogService } from './audit-log.service';
             }),
             inject: [ConfigService],
         }),
-        forwardRef(() => SubscriptionsModule),
         forwardRef(() => PaymentsModule),
         forwardRef(() => CatalogModule),
     ],

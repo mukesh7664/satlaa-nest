@@ -32,24 +32,13 @@ export interface Subscription {
 }
 
 class SubscriptionApiService {
+    // Single-store mode: subscriptions removed. Return null so callers fall back to defaults.
     async getMySubscription(): Promise<Subscription | null> {
-        try {
-            const response = await apiService.get("/subscriptions/my");
-            return response;
-        } catch (error) {
-            console.error("Error fetching subscription:", error);
-            return null;
-        }
+        return null;
     }
 
     async getUsage(): Promise<any | null> {
-        try {
-            const response = await apiService.get("/subscriptions/usage");
-            return response;
-        } catch (error) {
-            console.error("Error fetching usage:", error);
-            return null;
-        }
+        return null;
     }
 
     async getChangePreview(planId: string, billingCycle: string = 'monthly'): Promise<any> {

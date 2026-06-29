@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CmsController } from './cms.controller';
 import { CmsService } from './cms.service';
@@ -14,7 +14,6 @@ import { HeaderSection } from './entities/header-section.entity';
 import { FooterSection } from './entities/footer-section.entity';
 import { Theme } from './entities/theme.entity';
 import { GeneralSettings } from '../admin/entities/general-settings.entity';
-import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { AdminModule } from '../admin/admin.module';
 
 @Module({
@@ -29,7 +28,6 @@ import { AdminModule } from '../admin/admin.module';
             FooterSection,
             Theme,
         ]),
-        forwardRef(() => SubscriptionsModule),
         AdminModule,
     ],
     providers: [CmsService, ThemeService, S3Service],

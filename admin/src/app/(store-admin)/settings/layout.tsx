@@ -5,10 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Settings as SettingsIcon,
-  Language as LanguageIcon,
   Palette as ThemeIcon,
   Payment as PaymentIcon,
-  Subscriptions as SubscriptionsIcon,
   Public as SeoIcon,
   Campaign as AdvertisementIcon,
   Email as EmailIcon,
@@ -36,12 +34,6 @@ const settingsMenu: MenuItem[] = [
     key: "settings/general-settings",
   },
   {
-    label: "Domain Management",
-    icon: <LanguageIcon />,
-    href: "/settings/domain-management",
-    key: "settings/domain-management",
-  },
-  {
     label: "Theme Settings",
     icon: <ThemeIcon />,
     href: "/settings/theme-settings",
@@ -58,12 +50,6 @@ const settingsMenu: MenuItem[] = [
     icon: <LocalShippingIcon />,
     href: "/settings/shipping-settings",
     key: "settings/shipping-settings",
-  },
-  {
-    label: "Manage Subscription",
-    icon: <SubscriptionsIcon />,
-    href: "/settings/manage-subscription",
-    key: "settings/manage-subscription",
   },
   {
     label: "SEO Settings",

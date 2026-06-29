@@ -8,7 +8,6 @@ import { Category } from './entities/category.entity';
 import { ProductFlag } from '../admin/entities/product-flag.entity';
 import { Tag } from '../admin/entities/tag.entity';
 import { GeneralSettings } from '../admin/entities/general-settings.entity';
-import { PlanLimitsService } from '../subscriptions/plan-limits.service';
 
 @Injectable()
 export class CatalogService {
@@ -27,7 +26,6 @@ export class CatalogService {
         private tagRepository: Repository<Tag>,
         @InjectRepository(GeneralSettings)
         private settingsRepository: Repository<GeneralSettings>,
-        private readonly planLimitsService: PlanLimitsService,
     ) { }
 
     /**

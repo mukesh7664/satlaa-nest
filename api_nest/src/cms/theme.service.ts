@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Theme } from './entities/theme.entity';
@@ -8,7 +8,6 @@ import { Section } from './entities/section.entity';
 import { GeneralSettings } from '../admin/entities/general-settings.entity';
 import { HeaderSection } from './entities/header-section.entity';
 import { FooterSection } from './entities/footer-section.entity';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class ThemeService {
@@ -27,30 +26,12 @@ export class ThemeService {
         private headerSectionRepository: Repository<HeaderSection>,
         @InjectRepository(FooterSection)
         private footerSectionRepository: Repository<FooterSection>,
-        @Inject(forwardRef(() => SubscriptionsService))
-        private readonly subscriptionsService: SubscriptionsService,
     ) {}
 
     async findAll(includeInactive = false, storeId?: string) {
-        let categoryFilter: 'page_builder' | 'ecommerce' | null = null;
-
-        if (storeId) {
-            try {
-                const sub = await this.subscriptionsService.getStoreSubscription(storeId);
-                if (sub && sub.plan) {
-                    categoryFilter = sub.plan.category;
-                }
-            } catch (err) {
-                console.error('Failed to get store subscription category:', err);
-            }
-        }
-
         const whereClause: any = {};
         if (!includeInactive) {
             whereClause.isActive = true;
-        }
-        if (categoryFilter) {
-            whereClause.category = categoryFilter;
         }
 
         return this.themeRepository.find({ where: whereClause });

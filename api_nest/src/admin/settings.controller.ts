@@ -41,20 +41,4 @@ export class SettingsController {
     async updateSettings(@Body() body: any, @Request() req: any) {
         return this.settingsService.updateSettings(body, req.user?.storeId);
     }
-
-    @ApiOperation({ summary: 'Admin: Get domains' })
-    @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard)
-    @Get('domains')
-    async getDomains(@Request() req: any) {
-        return this.settingsService.getDomains(req.user?.storeId);
-    }
-
-    @ApiOperation({ summary: 'Admin: Add custom domain' })
-    @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard)
-    @Post('domains')
-    async addDomain(@Body() body: { domain: string }, @Request() req: any) {
-        return this.settingsService.addDomain(req.user?.storeId, body.domain);
-    }
 }

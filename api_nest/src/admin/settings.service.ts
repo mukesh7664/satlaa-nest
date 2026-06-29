@@ -1,13 +1,11 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { getS3KeyFromUrl, getFullS3Url } from '../common/utils/s3-url.util';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GeneralSettings } from './entities/general-settings.entity';
 import { SeoSettings } from './entities/seo-settings.entity';
 import { Store } from '../stores/entities/store.entity';
-import { StoreDomain } from '../stores/entities/store-domain.entity';
 import { Page } from '../cms/entities/page.entity';
-import { PlanLimitsService } from '../subscriptions/plan-limits.service';
 
 @Injectable()
 export class SettingsService {
@@ -16,13 +14,10 @@ export class SettingsService {
         private generalSettingsRepository: Repository<GeneralSettings>,
         @InjectRepository(SeoSettings)
         private seoSettingsRepository: Repository<SeoSettings>,
-        @InjectRepository(StoreDomain)
-        private storeDomainRepository: Repository<StoreDomain>,
         @InjectRepository(Page)
         private pageRepository: Repository<Page>,
         @InjectRepository(Store)
         private storeRepository: Repository<Store>,
-        private readonly planLimitsService: PlanLimitsService,
     ) { }
 
     async getSeoSettings(storeId?: string) {
@@ -147,38 +142,5 @@ export class SettingsService {
 
         const newSettings = this.seoSettingsRepository.create({ ...updateData, storeId });
         return this.seoSettingsRepository.save(newSettings);
-    }
-
-    async getDomains(storeId: string) {
-        return this.storeDomainRepository.find({
-            where: { store_id: storeId },
-            order: { created_at: 'ASC' }
-        });
-    }
-
-    async addDomain(storeId: string, domain: string) {
-        // Check if domain already exists
-        const existing = await this.storeDomainRepository.findOne({ where: { domain } });
-        if (existing) {
-            throw new ConflictException('Domain already exists');
-        }
-
-        const baseDomain = process.env.BASE_DOMAIN || 'localhost';
-        const isSubdomainOfBase = domain.endsWith(`.${baseDomain}`);
-
-        if (!isSubdomainOfBase) {
-            await this.planLimitsService.checkLimit(storeId, 'custom_domains');
-        }
-
-        const newDomain = this.storeDomainRepository.create({
-            store_id: storeId,
-            domain,
-            type: isSubdomainOfBase ? 'subdomain' : 'custom',
-            is_primary: false,
-            is_verified: isSubdomainOfBase,
-            status: isSubdomainOfBase ? 'active' : 'pending',
-            ssl_status: isSubdomainOfBase ? 'active' : 'none'
-        });
-        return this.storeDomainRepository.save(newDomain);
     }
 }

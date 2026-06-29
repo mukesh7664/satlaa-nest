@@ -40,37 +40,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     // 3. Authenticated user protection
     if (isAuthenticated && !isTokenExpired(token)) {
       if (isPublicRoute) {
-        if (admin?.role === 'super_admin') {
-          router.push('/sa-dashboard');
-        } else {
-          const allowedPages = admin?.allowedPages || [];
-          if (allowedPages.includes('dashboard') || allowedPages.length === 0) {
-            router.push('/dashboard');
-          } else if (allowedPages.includes('pages')) {
-            router.push('/pages');
-          } else {
-            router.push('/dashboard');
-          }
-        }
-      } else {
-        const superAdminPaths = ['/sa-dashboard', '/admins', '/plans', '/stores', '/product-categories', '/system-payment-config', '/sa-media', '/sa-payments', '/sa-sections'];
-        const isSuperAdminRoute = superAdminPaths.some(path => pathname === path || pathname.startsWith(path + '/'));
-
-        if (admin?.role === 'super_admin' && !isSuperAdminRoute) {
-          router.push('/sa-dashboard');
-        } else if (admin?.role !== 'super_admin' && isSuperAdminRoute) {
-          const allowedPages = admin?.allowedPages || [];
-          if (allowedPages.includes('dashboard') || allowedPages.length === 0) {
-            router.push('/dashboard');
-          } else if (allowedPages.includes('pages')) {
-            router.push('/pages');
-          } else {
-            router.push('/dashboard');
-          }
-        }
+        router.push('/dashboard');
       }
     }
-  }, [isAuthenticated, pathname, router, loading, admin?.role, admin?.planCategory, token, dispatch]);
+  }, [isAuthenticated, pathname, router, loading, admin?.role, token, dispatch]);
 
   if (loading) {
     return (

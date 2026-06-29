@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ModuleRef } from '@nestjs/core';
 import { Store } from '../stores/entities/store.entity';
-import { StoreDomain } from '../stores/entities/store-domain.entity';
 import { GeneralSettings } from '../admin/entities/general-settings.entity';
 import { SeoSettings } from '../admin/entities/seo-settings.entity';
 import { EmailTemplate } from '../admin/entities/email-template.entity';
@@ -13,7 +12,7 @@ import { PageSection } from '../cms/entities/page-section.entity';
 import { Section } from '../cms/entities/section.entity';
 import { DEFAULT_EMAIL_TEMPLATES } from '../common/default-email-templates';
 import { DEFAULT_POLICY_PAGES } from '../common/default-policy-pages';
-import { generateSlug, generateSubdomain } from '../common/utils/domain.utils';
+import { generateSlug } from '../common/utils/domain.utils';
 import { ThemeService } from '../cms/theme.service';
 
 @Injectable()
@@ -21,8 +20,6 @@ export class TenantService {
     constructor(
         @InjectRepository(Store)
         private storeRepository: Repository<Store>,
-        @InjectRepository(StoreDomain)
-        private storeDomainRepository: Repository<StoreDomain>,
         @InjectRepository(GeneralSettings)
         private generalSettingsRepository: Repository<GeneralSettings>,
         @InjectRepository(SeoSettings)
@@ -40,55 +37,15 @@ export class TenantService {
         private moduleRef: ModuleRef,
     ) { }
 
-    async getStoreByHost(host: string): Promise<Store> {
-        // host could be 'mystore.com', 'mukesh.prefyn.com' or 'localhost'
+    async getStoreByHost(_host?: string): Promise<Store> {
+        // Single-store mode: always resolve to the one (first) store, ignoring host/domain.
+        const store = await this.storeRepository.createQueryBuilder('store')
+            .orderBy('store.createdAt', 'ASC')
+            .getOne();
 
-        // Let's strip out port numbers if any for local testing
-        const cleanHost = host.split(':')[0];
+        if (store) return store;
 
-        // Check if host is a UUID (useful for preview mode and direct backend requests)
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanHost);
-        if (isUUID) {
-            const store = await this.storeRepository.findOne({ where: { id: cleanHost } });
-            if (store) return store;
-        }
-
-        // 1. Check StoreDomain table for an active entry matching this domain
-        const domainEntry = await this.storeDomainRepository.findOne({
-            where: { domain: cleanHost, status: 'active' },
-            relations: ['store'],
-        });
-
-        if (domainEntry && domainEntry.store) {
-            return domainEntry.store;
-        }
-
-        // 2. Handle fallback for generic domains (localhost, main base domain, or api/admin subdomains)
-        const baseDomain = process.env.BASE_DOMAIN || 'localhost';
-
-        if (
-            cleanHost === 'localhost' ||
-            cleanHost === '127.0.0.1' ||
-            cleanHost === baseDomain ||
-            cleanHost === `admin.${baseDomain}` ||
-            cleanHost === `apis.${baseDomain}` ||
-            cleanHost === `www.${baseDomain}` ||
-            // Hardcoded platform domains for prefyn.com production/staging
-            cleanHost === 'prefyn.com' ||
-            cleanHost === 'admin.prefyn.com' ||
-            cleanHost === 'admins.prefyn.com' ||
-            cleanHost === 'apis.prefyn.com' ||
-            cleanHost === 'webs.prefyn.com' ||
-            cleanHost === 'www.prefyn.com'
-        ) {
-            const store = await this.storeRepository.createQueryBuilder('store')
-                .orderBy('store.createdAt', 'ASC')
-                .getOne();
-
-            if (store) return store;
-        }
-
-        throw new NotFoundException(`Tenant not found for domain: ${cleanHost}`);
+        throw new NotFoundException('No store found');
     }
 
     async createStore(ownerId: string, name: string, planCategory: 'page_builder' | 'ecommerce' = 'ecommerce'): Promise<Store> {
@@ -110,9 +67,6 @@ export class TenantService {
             counter++;
         }
 
-        // Generate the full subdomain using the utility
-        const domain = generateSubdomain(slug);
-
         // Create the store metadata
         const savedStore = await this.storeRepository.save(
             this.storeRepository.create({
@@ -121,17 +75,6 @@ export class TenantService {
                 slug,
             })
         );
-
-        // Create subdomain entry in store_domains
-        await this.storeDomainRepository.save({
-            store_id: savedStore.id,
-            domain: domain,
-            type: 'subdomain',
-            is_primary: true,
-            is_verified: true,
-            status: 'active',
-            ssl_status: 'active'
-        });
 
         // Initialize default settings for the store
         await this.generalSettingsRepository.save(

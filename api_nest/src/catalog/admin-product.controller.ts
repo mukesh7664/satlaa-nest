@@ -824,22 +824,15 @@ export class AdminProductController {
         const storeId = req.user?.storeId;
         const product = await this.productRepository.findOne({
             where: { id, storeId },
-            relations: ['store', 'store.domains']
+            relations: ['store']
         });
         if (!product) throw new NotFoundException('Product not found');
 
         const store = product.store;
         const isProd = process.env.NODE_ENV === 'production';
         const baseDomain = process.env.BASE_DOMAIN || 'localhost';
-        
-        let frontendUrl = process.env.FRONTEND_URL || (isProd ? `https://${store.slug}.${baseDomain}` : `http://localhost:3000`);
 
-        if (store.domains && store.domains.length > 0) {
-            const activeDomain = store.domains.find(d => d.status === 'active');
-            if (activeDomain) {
-                frontendUrl = `https://${activeDomain.domain}`;
-            }
-        }
+        const frontendUrl = process.env.FRONTEND_URL || (isProd ? `https://${store.slug}.${baseDomain}` : `http://localhost:3000`);
 
         const productUrl = `${frontendUrl}/products/${product.slug}`;
 
