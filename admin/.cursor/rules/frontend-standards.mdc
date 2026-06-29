@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+- Always use Tailwind CSS for styling components.
+- Use Framer Motion for animations where appropriate.
+- Follow component naming conventions (PascalCase for component files).
+- Keep components reusable and focused on a single responsibility.

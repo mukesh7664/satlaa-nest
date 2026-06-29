@@ -1,0 +1,114 @@
+import React from "react";
+import { TextField, Stack, Typography, Button, IconButton } from "@mui/material";
+import { Delete as DeleteIcon, Add as AddIcon } from "@mui/icons-material";
+import ShopifyImagePicker from "@/components/ShopifyImagePicker";
+
+interface ExploreCollectionsEditorProps {
+  data: any;
+  onChange: (data: any) => void;
+}
+
+export const ExploreCollectionsEditor: React.FC<ExploreCollectionsEditorProps> = ({ data, onChange }) => {
+  const items = data.items || [];
+
+  const updateItemField = (index: number, field: string, value: any) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    onChange({ ...data, items: newItems });
+  };
+
+  const addItem = () => {
+    const newItems = [
+      ...items,
+      {
+        title: "New Category",
+        image: "https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=600&auto=format&fit=crop",
+        link: "/shop",
+        count: "0 Items"
+      }
+    ];
+    onChange({ ...data, items: newItems });
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = items.filter((_: any, i: number) => i !== index);
+    onChange({ ...data, items: newItems });
+  };
+
+  return (
+    <Stack spacing={3}>
+      <Typography variant="subtitle2" color="primary" fontWeight="bold">
+        Cloth Explore Collections Settings
+      </Typography>
+
+      <TextField
+        label="Section Title"
+        fullWidth
+        size="small"
+        value={data.title || ""}
+        onChange={(e) => onChange({ ...data, title: e.target.value })}
+      />
+
+      <TextField
+        label="Section Subtitle"
+        fullWidth
+        size="small"
+        value={data.subtitle || ""}
+        onChange={(e) => onChange({ ...data, subtitle: e.target.value })}
+      />
+
+      <Typography variant="subtitle1" fontWeight="medium" sx={{ mt: 2 }}>
+        Collection Categories
+      </Typography>
+
+      {items.map((item: any, idx: number) => (
+        <Stack key={idx} spacing={2} sx={{ p: 2, border: "1px solid #eaeaea", borderRadius: 1 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="body2" fontWeight="bold" color="text.secondary">
+              Category #{idx + 1}
+            </Typography>
+            {items.length > 1 && (
+              <IconButton size="small" color="error" onClick={() => removeItem(idx)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Stack>
+
+          <TextField
+            label="Category Name"
+            fullWidth
+            size="small"
+            value={item.title || ""}
+            onChange={(e) => updateItemField(idx, "title", e.target.value)}
+          />
+
+          <TextField
+            label="Product Count Text (e.g. 120 Items)"
+            fullWidth
+            size="small"
+            value={item.count || ""}
+            onChange={(e) => updateItemField(idx, "count", e.target.value)}
+          />
+
+          <TextField
+            label="Redirection Link"
+            fullWidth
+            size="small"
+            value={item.link || ""}
+            onChange={(e) => updateItemField(idx, "link", e.target.value)}
+          />
+
+          <ShopifyImagePicker
+            label="Category Cover Image"
+            value={item.image || ""}
+            onChange={(url) => updateItemField(idx, "image", url)}
+          />
+        </Stack>
+      ))}
+
+      <Button variant="outlined" startIcon={<AddIcon />} onClick={addItem} sx={{ mt: 2 }}>
+        Add Collection Category
+      </Button>
+    </Stack>
+  );
+};

@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+- Define all shared types and interfaces in this directory.
+- Use clear, descriptive names for types and interfaces.
+- Prefer interfaces for object shapes, types for primitives/unions.
+- Document complex types with comments.

@@ -1,0 +1,8 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+- Store only static assets (images, SVGs, etc.) in this directory.
+- Organize assets into subfolders if needed (e.g., images/).
+- Use descriptive names for asset files.

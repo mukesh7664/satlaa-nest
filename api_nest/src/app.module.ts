@@ -1,0 +1,101 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { APP_FILTER } from '@nestjs/core';
+import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { CatalogModule } from './catalog/catalog.module';
+import { SalesModule } from './sales/sales.module';
+import { CommunicationModule } from './communication/communication.module';
+import { CmsModule } from './cms/cms.module';
+import { AdminModule } from './admin/admin.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { TenantModule } from './tenant/tenant.module';
+import { TenantMiddleware } from './common/middleware/tenant.middleware';
+import { MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
+import { PlansModule } from './plans/plans.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { PaymentsModule } from './payments/payments.module';
+import { StoreSubscription } from './subscriptions/entities/store-subscription.entity';
+import { CustomersModule } from './customers/customers.module';
+import { ReportsModule } from './admin/reports/reports.module';
+import { DocumentationModule } from './documentation/documentation.module';
+import { CurrencyModule } from './common/currency/currency.module';
+import { MarketplaceModule } from './marketplace/marketplace.module';
+import { SupportModule } from './support/support.module';
+import { BlogModule } from './blog/blog.module';
+
+@Module({
+    imports: [
+        SentryModule.forRoot(),
+        ScheduleModule.forRoot(),
+        ConfigModule.forRoot({
+            isGlobal: true,
+        }),
+        TypeOrmModule.forRoot({
+            type: 'postgres',
+            host: process.env.DB_HOST || 'localhost',
+            port: parseInt(process.env.DB_PORT, 10) || 5432,
+            username: process.env.DB_USERNAME || 'postgres',
+            password: process.env.DB_PASSWORD || 'postgres',
+            database: process.env.DB_DATABASE || 'inospire_nest',
+            autoLoadEntities: true,
+            synchronize: true,
+        }),
+        NotificationsModule, // Global — provides EmailService everywhere
+        AuthModule,
+        CatalogModule,
+        SalesModule,
+        CommunicationModule,
+        CmsModule,
+        AdminModule,
+        TenantModule,
+        PlansModule,
+        SubscriptionsModule,
+        PaymentsModule,
+        CustomersModule,
+        ReportsModule,
+        DocumentationModule,
+        CurrencyModule,
+        MarketplaceModule,
+        SupportModule,
+        BlogModule,
+    ],
+    controllers: [AppController],
+    providers: [
+        AppService,
+        {
+            provide: APP_FILTER,
+            useClass: SentryGlobalFilter,
+        },
+    ],
+})
+export class AppModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+        consumer
+            .apply(TenantMiddleware)
+            .exclude(
+                { path: 'admin/(.*)', method: RequestMethod.ALL },
+                { path: 'admin', method: RequestMethod.ALL },
+                { path: 'plans/(.*)', method: RequestMethod.ALL },
+                { path: 'plans', method: RequestMethod.ALL },
+                { path: 'subscriptions/(.*)', method: RequestMethod.ALL },
+                { path: 'subscriptions', method: RequestMethod.ALL },
+                { path: 'payment/webhook/(.*)', method: RequestMethod.ALL },
+                { path: 'section-types/(.*)', method: RequestMethod.ALL },
+                { path: 'section-types', method: RequestMethod.ALL },
+                { path: 'documentation/(.*)', method: RequestMethod.ALL },
+                { path: 'documentation', method: RequestMethod.ALL },
+                { path: 'communication/inquiry/admin', method: RequestMethod.ALL },
+                { path: 'communication/inquiry/admin/(.*)', method: RequestMethod.ALL },
+                { path: 'payment/admin', method: RequestMethod.ALL },
+                { path: 'payment/admin/(.*)', method: RequestMethod.ALL },
+                { path: 'global/(.*)', method: RequestMethod.ALL },
+                { path: 'global', method: RequestMethod.ALL }
+            )
+            .forRoutes('*');
+    }
+}

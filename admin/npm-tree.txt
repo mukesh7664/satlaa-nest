@@ -1,0 +1,22 @@
+inospire-admin@0.1.0 /Users/mukeshsoni/Projects/inospire/admin
+├── UNMET DEPENDENCY @emotion/cache@^11.14.0
+├── UNMET DEPENDENCY @emotion/react@^11.14.0
+├── UNMET DEPENDENCY @emotion/styled@^11.14.0
+├── UNMET DEPENDENCY @mui/icons-material@^7.1.1
+├── UNMET DEPENDENCY @mui/material-nextjs@^7.1.1
+├── UNMET DEPENDENCY @mui/material@^7.1.1
+├── UNMET DEPENDENCY @tailwindcss/postcss@^4.1.8
+├── UNMET DEPENDENCY @types/node@^20.11.19
+├── UNMET DEPENDENCY @types/react-dom@^18.2.19
+├── UNMET DEPENDENCY @types/react@^18.2.57
+├── UNMET DEPENDENCY autoprefixer@^10.4.21
+├── UNMET DEPENDENCY eslint-config-next@14.1.0
+├── UNMET DEPENDENCY eslint@^8.56.0
+├── UNMET DEPENDENCY next@15.3.3
+├── UNMET DEPENDENCY postcss@^8.5.4
+├── UNMET DEPENDENCY react-dom@^19.0.0
+├── UNMET DEPENDENCY react@^19.0.0
+├── UNMET DEPENDENCY sonner@^2.0.5
+├── UNMET DEPENDENCY tailwindcss@^4.1.8
+└── UNMET DEPENDENCY typescript@^5.3.3
+

@@ -1,0 +1,8 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+- Store all theme-related configuration (colors, spacing, etc.) in this directory.
+- Use consistent naming for theme variables.
+- Document any non-obvious design tokens or theme logic.
