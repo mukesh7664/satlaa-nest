@@ -54,8 +54,6 @@ async function bootstrap() {
                 'http://epxweb.satlaa.in',
                 'https://epxweb.nirdesham.com',
                 'http://epxweb.nirdesham.com',
-                'https://marketplace.nirdesham.com',
-                'http://marketplace.nirdesham.com',
             ];
 
             // 1. Check static whitelist or localhost subdomains

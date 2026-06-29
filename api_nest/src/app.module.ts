@@ -24,7 +24,6 @@ import { CustomersModule } from './customers/customers.module';
 import { ReportsModule } from './admin/reports/reports.module';
 import { DocumentationModule } from './documentation/documentation.module';
 import { CurrencyModule } from './common/currency/currency.module';
-import { MarketplaceModule } from './marketplace/marketplace.module';
 import { SupportModule } from './support/support.module';
 import { BlogModule } from './blog/blog.module';
 
@@ -60,7 +59,6 @@ import { BlogModule } from './blog/blog.module';
         ReportsModule,
         DocumentationModule,
         CurrencyModule,
-        MarketplaceModule,
         SupportModule,
         BlogModule,
     ],
