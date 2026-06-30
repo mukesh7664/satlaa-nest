@@ -389,14 +389,14 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
             <>
               <div className="relative w-32 h-10 flex items-center">
                 <span className="text-xl font-bold text-[#408dfb] truncate">
-                  Inospire
+                  Satlaa
                 </span>
               </div>
             </>
           ) : (
             <div className="relative group">
               <span className="w-8 h-8 rounded-lg bg-[#408dfb]  text-white flex items-center justify-center text-lg font-bold shadow-sm group-hover:scale-105 transition-transform">
-                I
+                S
               </span>
             </div>
           )}
@@ -461,8 +461,8 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
                         <span
                           className={`flex-shrink-0 transition-transform duration-200 ${collapsed ? "mr-0" : "mr-2.5 2xl:mr-3"
                             } ${openDropdowns[item.key]
-                            ? "text-slate-700"
-                            : "text-slate-500"
+                              ? "text-slate-700"
+                              : "text-slate-500"
                             }`}
                         >
                           {React.cloneElement(item.icon as any, {
@@ -569,8 +569,8 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
                           <span
                             className={`flex-shrink-0 transition-transform duration-200 ${collapsed ? "mr-0" : "mr-2.5 2xl:mr-3"
                               } ${pathname.startsWith(`/${item.key}`)
-                              ? "scale-105"
-                              : "group-hover:scale-105"
+                                ? "scale-105"
+                                : "group-hover:scale-105"
                               }`}
                           >
                             {React.cloneElement(item.icon as any, {
