@@ -39,9 +39,9 @@ export default function InquiriesPage() {
   const { admin } = useAppSelector((state) => state.auth);
   
   const canEdit =
-    admin?.role === "super_admin" ||
     admin?.role === "admin" ||
-    admin?.role === "store_admin" ||
+    admin?.role === "admin" ||
+    admin?.role === "admin" ||
     admin?.permissions?.includes("inquiries.edit");
 
   const [page, setPage] = React.useState(1);

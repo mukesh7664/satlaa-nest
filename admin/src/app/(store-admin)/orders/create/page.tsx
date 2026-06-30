@@ -109,7 +109,7 @@ export default function CreateOrderPage() {
       setProductLoading(true);
       const token = localStorage.getItem("token");
       let apiUrl = `${API_URL}/admin/products-manage?search=${encodeURIComponent(searchTerm)}`;
-      if (admin?.role !== "super_admin" && admin?.storeId) apiUrl += `&storeId=${admin.storeId}`;
+      if (admin?.role !== "admin" && admin?.storeId) apiUrl += `&storeId=${admin.storeId}`;
       const response = await axios.get(apiUrl, { headers: { Authorization: `Bearer ${token}` } });
       setProductOptions(response.data.products || response.data.data || []);
     } catch { setProductOptions([]); } finally { setProductLoading(false); }

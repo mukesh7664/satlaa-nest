@@ -38,8 +38,8 @@ export default function AdminDetailsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { admin: loggedInAdmin } = useAppSelector((state) => state.auth);
-  const isSuperAdmin = loggedInAdmin?.role === "super_admin";
-  const isStoreAdmin = loggedInAdmin?.role === "store_admin";
+  const isSuperAdmin = loggedInAdmin?.role === "admin";
+  const isStoreAdmin = loggedInAdmin?.role === "admin";
   const isEdit = searchParams.get("edit") === "true";
   const { subscription, loading: limitsLoading } = usePlanLimits();
   const planCategory = subscription?.plan?.category || "ecommerce";
@@ -52,7 +52,7 @@ export default function AdminDetailsPage() {
     name: "",
     email: "",
     password: "",
-    role: "store_admin",
+    role: "admin",
     adminType: "admin",
     customType: "",
     phone: "",

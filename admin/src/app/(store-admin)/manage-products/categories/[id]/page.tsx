@@ -47,7 +47,7 @@ export default function EditCategoryPage() {
   const router = useRouter();
   const categoryId = params.id as string;
   const { admin } = useAppSelector((state) => state.auth);
-  const isSuperAdmin = admin?.role === "super_admin";
+  const isSuperAdmin = admin?.role === "admin";
 
   const [category, setCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);

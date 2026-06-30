@@ -233,9 +233,9 @@ export default function OrderDetailsPage() {
   };
   const { admin } = useAppSelector((state) => state.auth);
   const canEdit =
-    admin?.role === "super_admin" ||
     admin?.role === "admin" ||
-    admin?.role === "store_admin" ||
+    admin?.role === "admin" ||
+    admin?.role === "admin" ||
     admin?.permissions?.includes("orders.edit");
 
   const [order, setOrder] = useState<Order | null>(null);

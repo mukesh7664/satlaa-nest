@@ -24,8 +24,8 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 export default function NewAdminPage() {
   const router = useRouter();
   const { admin } = useAppSelector((state) => state.auth);
-  const isSuperAdmin = admin?.role === "super_admin";
-  const isStoreAdmin = admin?.role === "store_admin";
+  const isSuperAdmin = admin?.role === "admin";
+  const isStoreAdmin = admin?.role === "admin";
   const { subscription, loading: limitsLoading } = usePlanLimits();
   const planCategory = subscription?.plan?.category || "ecommerce";
 
@@ -34,7 +34,7 @@ export default function NewAdminPage() {
     name: "",
     email: "",
     password: "",
-    role: isStoreAdmin ? "store_sub_admin" : "store_admin",
+    role: "sub_admin",
     adminType: isStoreAdmin ? "admin" : "store_owner",
     customType: "",
     phone: "",
@@ -242,19 +242,8 @@ export default function NewAdminPage() {
                         }))
                       }
                     >
-                      {isSuperAdmin && (
-                        <>
-                          <MenuItem value="super_admin">Super Admin</MenuItem>
-                          <MenuItem value="super_sub_admin">Super Sub-Admin</MenuItem>
-                          <MenuItem value="store_admin">Store Admin</MenuItem>
-                        </>
-                      )}
-                      {isStoreAdmin && (
-                        <MenuItem value="store_sub_admin">Store Sub-Admin</MenuItem>
-                      )}
-                      {!isSuperAdmin && !isStoreAdmin && (
-                        <MenuItem value="store_admin">Store Admin</MenuItem>
-                      )}
+                      <MenuItem value="admin">Admin</MenuItem>
+                      <MenuItem value="sub_admin">Sub Admin</MenuItem>
                     </Select>
                   </FormControl>
                 </div>
@@ -303,7 +292,7 @@ export default function NewAdminPage() {
                 </div>
               </div>
 
-              {formData.role !== "super_admin" && (
+              {formData.role !== "admin" && (
                 <div className="border-t pt-6">
                   {limitsLoading ? (
                     <div className="flex items-center justify-center py-8">

@@ -7,7 +7,7 @@ export class AdminRoleGuard implements CanActivate {
         const request = context.switchToHttp().getRequest();
         const user = request.user;
 
-        const adminRoles = [AdminRole.SUPER_ADMIN, AdminRole.SUPER_SUB_ADMIN, AdminRole.STORE_ADMIN, AdminRole.STORE_SUB_ADMIN];
+        const adminRoles = [AdminRole.ADMIN, AdminRole.SUB_ADMIN];
         if (!user || !adminRoles.includes(user.role)) {
             throw new ForbiddenException('Admin access required');
         }

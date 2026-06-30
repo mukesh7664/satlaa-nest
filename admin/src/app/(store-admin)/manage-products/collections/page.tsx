@@ -55,9 +55,9 @@ export default function CollectionsPage() {
   const { admin } = useAppSelector((state) => state.auth);
   // Using collections.edit if available, fallback to products.manage or super_admin or admin
   const canEdit =
-    admin?.role === "super_admin" ||
     admin?.role === "admin" ||
-    admin?.role === "store_admin" ||
+    admin?.role === "admin" ||
+    admin?.role === "admin" ||
     admin?.permissions?.includes("collections.edit") ||
     admin?.permissions?.includes("products.manage");
 

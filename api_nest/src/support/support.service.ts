@@ -247,8 +247,8 @@ export class SupportService {
 
         // Update ticket's updatedAt timestamp to indicate activity
         ticket.updatedAt = new Date();
-        // If a message is sent from store_admin, auto mark ticket as Open if it was resolved/closed
-        if (senderRole === 'store_admin' && (ticket.status === TicketStatus.RESOLVED || ticket.status === TicketStatus.CLOSED)) {
+        // If a message is sent from admin, auto mark ticket as Open if it was resolved/closed
+        if (senderRole === 'admin' && (ticket.status === TicketStatus.RESOLVED || ticket.status === TicketStatus.CLOSED)) {
             ticket.status = TicketStatus.OPEN;
         }
         await this.ticketRepository.save(ticket);

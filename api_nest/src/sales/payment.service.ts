@@ -740,15 +740,10 @@ export class PaymentService {
     async getPaymentsForAdmin(role: string, storeId: string, limit: number = 20, offset: number = 0, startDate?: string, endDate?: string) {
         let where: any = {};
 
-        if (role === 'super_admin' || role === 'super_sub_admin') {
-            // Super admin sees only subscription payments (platform-level)
-            where.payment_type = 'SUBSCRIPTION';
-        } else {
-            // Store admin sees only their own store ORDER payments
-            if (!storeId) return { items: [], total: 0 };
-            where.store_id = storeId;
-            where.payment_type = 'ORDER';
-        }
+        // Single-store: admins see their own store's ORDER payments
+        if (!storeId) return { items: [], total: 0 };
+        where.store_id = storeId;
+        where.payment_type = 'ORDER';
 
         if (startDate || endDate) {
             if (startDate && endDate) {
@@ -770,7 +765,6 @@ export class PaymentService {
 
         const [items, total] = await this.paymentRepository.findAndCount({
             where,
-            relations: role === 'super_admin' || role === 'super_sub_admin' ? ['store'] : [],
             order: { created_at: 'DESC' },
             take: limit,
             skip: offset,
@@ -788,16 +782,9 @@ export class PaymentService {
             .take(limit)
             .skip(offset);
 
-        if (role === 'super_admin' || role === 'super_sub_admin') {
-            // Super admin: only subscription attempts (plan_id is set, no order_id)
-            query.where('(attempt.entity_type = :type OR attempt.plan_id IS NOT NULL)', { type: 'SUBSCRIPTION' });
-        } else {
-            // Store admin: only ORDER attempts belonging to this store
-            if (!storeId) return { items: [], total: 0 };
-
-            // Direct filter using the new store_id column
-            query.where('attempt.store_id = :storeId AND attempt.entity_type = :type', { storeId, type: 'ORDER' });
-        }
+        // Single-store: admins see their own store's ORDER attempts
+        if (!storeId) return { items: [], total: 0 };
+        query.where('attempt.store_id = :storeId AND attempt.entity_type = :type', { storeId, type: 'ORDER' });
 
         if (startDate) {
             const start = new Date(startDate);

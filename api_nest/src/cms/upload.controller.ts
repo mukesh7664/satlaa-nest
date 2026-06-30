@@ -37,7 +37,7 @@ export class UploadController {
 
         const storeId = req.user?.storeId;
         const role = req.user?.role;
-        const isGlobal = role === AdminRole.SUPER_ADMIN;
+        const isGlobal = role === AdminRole.ADMIN;
         const folder = body.folder || 'icons';
         
         const basePath = isGlobal ? `global-assets/${folder}` : `stores/${storeId}/${folder}`;
@@ -76,7 +76,7 @@ export class UploadController {
         const storeId = req.user?.storeId;
         const role = req.user?.role;
         // Only super_admin can set isGlobal to true
-        const isGlobal = role === AdminRole.SUPER_ADMIN && (body.isGlobal === 'true' || body.isGlobal === true);
+        const isGlobal = role === AdminRole.ADMIN && (body.isGlobal === 'true' || body.isGlobal === true);
         const folder = body.folder || 'uploads';
 
         const basePath = isGlobal ? `global-assets/${folder}` : `stores/${storeId}/${folder}`;
@@ -203,7 +203,7 @@ export class UploadController {
         const media = await this.mediaRepository.findOne({ where: { id } });
         if (!media) throw new NotFoundException('Image not found');
 
-        const isAdmin = req.user?.role === AdminRole.SUPER_ADMIN;
+        const isAdmin = req.user?.role === AdminRole.ADMIN;
         const storeId = req.user?.storeId;
 
         // Security Check: Only super_admin can delete global assets
@@ -237,7 +237,7 @@ export class UploadController {
         const media = await this.mediaRepository.findOne({ where: { id } });
         if (!media) throw new NotFoundException('Media not found');
 
-        const isAdmin = req.user?.role === AdminRole.SUPER_ADMIN;
+        const isAdmin = req.user?.role === AdminRole.ADMIN;
         const storeId = req.user?.storeId;
 
         // Security Check

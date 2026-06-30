@@ -52,7 +52,7 @@ import { Alert } from "@mui/material";
 
 export default function SectionsPage() {
   const { admin } = useAppSelector((state: RootState) => state.auth);
-  const isSuperAdmin = admin?.role === "super_admin";
+  const isSuperAdmin = admin?.role === "admin";
 
   const [sections, setSections] = useState<ISection[]>([]);
   const [loading, setLoading] = useState(true);

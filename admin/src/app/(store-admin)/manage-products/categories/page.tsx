@@ -257,7 +257,7 @@ const CategoryTreeItem = ({
 
 export default function CategoriesPage() {
     const { admin } = useAppSelector((state) => state.auth);
-    const isSuperAdmin = admin?.role === "super_admin";
+    const isSuperAdmin = admin?.role === "admin";
     const router = useRouter();
 
     const [categories, setCategories] = useState<Category[]>([]);

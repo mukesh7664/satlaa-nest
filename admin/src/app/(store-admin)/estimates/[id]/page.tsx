@@ -36,9 +36,9 @@ export default function EstimateDetailsPage() {
   const router = useRouter();
   const { admin } = useAppSelector((state) => state.auth);
   const canEdit =
-    admin?.role === "super_admin" ||
     admin?.role === "admin" ||
-    admin?.role === "store_admin" ||
+    admin?.role === "admin" ||
+    admin?.role === "admin" ||
     admin?.permissions?.includes("estimates.edit");
 
   const [estimate, setEstimate] = useState<any>(null);

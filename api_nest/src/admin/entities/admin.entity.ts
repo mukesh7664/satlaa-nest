@@ -1,10 +1,8 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 export enum AdminRole {
-    SUPER_ADMIN = 'super_admin',
-    SUPER_SUB_ADMIN = 'super_sub_admin',
-    STORE_ADMIN = 'store_admin',
-    STORE_SUB_ADMIN = 'store_sub_admin',
+    ADMIN = 'admin',
+    SUB_ADMIN = 'sub_admin',
 }
 
 @Entity('admins')
@@ -24,7 +22,7 @@ export class Admin {
 
     @Column({
         type: 'varchar',
-        default: AdminRole.STORE_ADMIN,
+        default: AdminRole.ADMIN,
     })
     @Index()
     role: AdminRole;

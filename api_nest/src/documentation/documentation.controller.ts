@@ -30,7 +30,7 @@ export class DocumentationController {
     @UseGuards(JwtAuthGuard)
     @Get('admin/documentation')
     async findAllAdmin(@Req() req: any) {
-        if (![AdminRole.SUPER_ADMIN, AdminRole.STORE_ADMIN].includes(req.user?.role)) {
+        if (![AdminRole.ADMIN, AdminRole.SUB_ADMIN].includes(req.user?.role)) {
             throw new UnauthorizedException('Insufficient permissions');
         }
         return this.documentationService.findAllAdmin();
@@ -41,7 +41,7 @@ export class DocumentationController {
     @UseGuards(JwtAuthGuard)
     @Get('admin/documentation/:id')
     async findOneAdmin(@Param('id') id: string, @Req() req: any) {
-        if (![AdminRole.SUPER_ADMIN, AdminRole.STORE_ADMIN].includes(req.user?.role)) {
+        if (![AdminRole.ADMIN, AdminRole.SUB_ADMIN].includes(req.user?.role)) {
             throw new UnauthorizedException('Insufficient permissions');
         }
         return this.documentationService.findOne(id);
@@ -52,7 +52,7 @@ export class DocumentationController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/documentation')
     async create(@Body() createDto: CreateDocumentationDto, @Req() req: any) {
-        if (req.user?.role !== AdminRole.SUPER_ADMIN) {
+        if (req.user?.role !== AdminRole.ADMIN) {
             throw new UnauthorizedException('Super admin access required');
         }
         return this.documentationService.create(createDto);
@@ -63,7 +63,7 @@ export class DocumentationController {
     @UseGuards(JwtAuthGuard)
     @Patch('admin/documentation/:id')
     async update(@Param('id') id: string, @Body() updateDto: UpdateDocumentationDto, @Req() req: any) {
-        if (req.user?.role !== AdminRole.SUPER_ADMIN) {
+        if (req.user?.role !== AdminRole.ADMIN) {
             throw new UnauthorizedException('Super admin access required');
         }
         return this.documentationService.update(id, updateDto);
@@ -74,7 +74,7 @@ export class DocumentationController {
     @UseGuards(JwtAuthGuard)
     @Delete('admin/documentation/:id')
     async remove(@Param('id') id: string, @Req() req: any) {
-        if (req.user?.role !== AdminRole.SUPER_ADMIN) {
+        if (req.user?.role !== AdminRole.ADMIN) {
             throw new UnauthorizedException('Super admin access required');
         }
         await this.documentationService.remove(id);

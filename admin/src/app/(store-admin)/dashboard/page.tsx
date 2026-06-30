@@ -126,7 +126,7 @@ export default function Dashboard() {
 
   const hasDashboardAccess = React.useMemo(() => {
     if (!admin) return false;
-    if (admin.role === "super_admin") return true;
+    if (admin.role === "admin") return true;
     return admin.permissions?.includes("dashboard.view") || admin.permissions?.includes('*');
   }, [admin]);
 
@@ -163,21 +163,8 @@ export default function Dashboard() {
         if (!dashboardData && pages.length === 0) {
           setLoading(true);
         }
-        const subData = await subscriptionApiService.getMySubscription();
-        setSubscription(subData);
-
-        const isPageBuilder = admin?.planCategory === 'page_builder';
-        if (isPageBuilder) {
-          const [pagesData, data] = await Promise.all([
-            pagesApi.getAllPages(),
-            dashboardApiService.getDashboardData(),
-          ]);
-          setPages(pagesData);
-          setDashboardData(data);
-        } else {
-          const data = await dashboardApiService.getDashboardData();
-          setDashboardData(data);
-        }
+        const data = await dashboardApiService.getDashboardData();
+        setDashboardData(data);
         setError(null);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
@@ -187,7 +174,7 @@ export default function Dashboard() {
       }
     };
     if (admin) fetchDashboardData();
-  }, [admin?.id, admin?.planCategory, hasDashboardAccess]);
+  }, [admin?.id, hasDashboardAccess]);
 
   if (loading) {
     return <div className="p-6 flex items-center justify-center py-20"><div className="text-gray-600">Loading dashboard...</div></div>;

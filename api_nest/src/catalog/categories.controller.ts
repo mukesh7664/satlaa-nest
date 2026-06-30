@@ -13,13 +13,13 @@ export class CategoriesController {
     @ApiOperation({ summary: 'Get all categories' })
     @Get()
     findAll(@Request() req: any) {
-        return this.categoriesService.findAll(req.user.storeId, req.user.role === 'super_admin');
+        return this.categoriesService.findAll(req.user.storeId, false);
     }
 
     @ApiOperation({ summary: 'Get category by ID' })
     @Get(':id')
     findOne(@Param('id') id: string, @Request() req: any) {
-        return this.categoriesService.findOne(id, req.user.storeId, req.user.role === 'super_admin');
+        return this.categoriesService.findOne(id, req.user.storeId, false);
     }
 
     @ApiOperation({ summary: 'Create category' })

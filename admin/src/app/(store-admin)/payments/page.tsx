@@ -155,7 +155,7 @@ export default function PaymentsPage() {
   };
 
   const { admin } = useAppSelector((state) => state.auth);
-  const isSuperAdmin = admin?.role === "super_admin" || admin?.role === "super_sub_admin";
+  const isSuperAdmin = admin?.role === "admin" || admin?.role === "sub_admin";
 
   useEffect(() => {
     fetchData();

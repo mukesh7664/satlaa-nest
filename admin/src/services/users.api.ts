@@ -8,7 +8,7 @@ export interface User {
   lastName: string;
   fullName?: string;
   email: string;
-  role: "user" | "admin" | "super_admin";
+  role: "user" | "admin" | "sub_admin";
   phone?: { countryCode: string; number: string };
   avatar?: string;
   isActive?: boolean;

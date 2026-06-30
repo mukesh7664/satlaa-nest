@@ -97,30 +97,9 @@ export default function SettingsLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { admin } = useAppSelector((state) => state.auth);
-  const allowedPages = admin?.allowedPages || [];
-  const isSuperAdmin = admin?.role === "super_admin";
 
-  // Prevent direct URL access to settings pages not allowed in the plan
-  React.useEffect(() => {
-    if (!admin) return;
-    if (isSuperAdmin) return;
-
-    const currentMenuItem = settingsMenu.find(item => pathname.startsWith(item.href));
-    if (currentMenuItem && currentMenuItem.key !== "settings/support-help" && !allowedPages.includes(currentMenuItem.key)) {
-      const firstAllowed = settingsMenu.find(item => allowedPages.includes(item.key));
-      if (firstAllowed) {
-        router.replace(firstAllowed.href);
-      } else {
-        router.replace("/");
-      }
-    }
-  }, [admin, allowedPages, pathname, router, isSuperAdmin]);
-
-  const filteredMenu = settingsMenu.filter(item => {
-    if (isSuperAdmin) return true;
-    if (item.key === "settings/support-help") return true;
-    return allowedPages.includes(item.key);
-  });
+  // Single-store: no plan-based gating; all settings pages are accessible.
+  const filteredMenu = settingsMenu;
 
   return (
     <div className="flex h-[calc(100vh-3.75rem)] 2xl:h-[calc(100vh-4.5rem)] overflow-hidden">

@@ -1081,7 +1081,7 @@ export default function SupportHelpPage() {
                             </div>
                         ) : (
                             messages.map((msg) => {
-                                const isMe = msg.senderRole === "store_admin" || msg.senderRole === "store_sub_admin";
+                                const isMe = msg.senderRole === "admin" || msg.senderRole === "sub_admin";
                                 return (
                                     <div
                                         key={msg.id}

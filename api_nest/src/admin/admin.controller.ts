@@ -692,7 +692,7 @@ export class AdminController {
         const page = parseInt(query.page) || 1;
         const limit = parseInt(query.limit) || 20;
 
-        const superRoles = [AdminRole.SUPER_ADMIN, AdminRole.SUPER_SUB_ADMIN];
+        const superRoles = [AdminRole.ADMIN];
         
         let filterRole: any = undefined;
         
@@ -766,13 +766,9 @@ export class AdminController {
     async createAdminUser(@Body() body: any, @Request() req: any) {
         const currentUser = await this.adminAuthService.getAdminById(req.user.userId);
         
-        // Logic for setting default role/storeId if not provided
-        if (currentUser.role !== AdminRole.SUPER_ADMIN) {
-            body.storeId = currentUser.storeId;
-            if (!body.role) body.role = AdminRole.STORE_SUB_ADMIN;
-        } else if (!body.role) {
-            // Super admin defaults
-            body.role = AdminRole.SUPER_SUB_ADMIN;
+        // Default role to sub_admin if not provided
+        if (!body.role) {
+            body.role = AdminRole.SUB_ADMIN;
         }
 
         const admin = await this.adminAuthService.createAdmin(body, currentUser);
@@ -801,7 +797,7 @@ export class AdminController {
             throw new UnauthorizedException('You do not have permission to edit this admin');
         }
 
-        const superRoles = [AdminRole.SUPER_ADMIN, AdminRole.SUPER_SUB_ADMIN];
+        const superRoles = [AdminRole.ADMIN];
         if (storeId && superRoles.includes(body.role)) {
             throw new UnauthorizedException('You cannot grant super admin privileges');
         }
@@ -832,8 +828,8 @@ export class AdminController {
             throw new UnauthorizedException('You do not have permission to delete this admin');
         }
 
-        const superRoles = [AdminRole.SUPER_ADMIN, AdminRole.SUPER_SUB_ADMIN];
-        if (superRoles.includes(existingAdmin.role) && req.user?.role !== AdminRole.SUPER_ADMIN) {
+        const superRoles = [AdminRole.ADMIN];
+        if (superRoles.includes(existingAdmin.role) && req.user?.role !== AdminRole.ADMIN) {
             throw new UnauthorizedException('Only a Super Admin can delete Super/Sub Admin roles');
         }
 

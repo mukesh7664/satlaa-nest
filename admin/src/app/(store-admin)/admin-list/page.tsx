@@ -37,8 +37,8 @@ export default function AdminListPage() {
   const { admin } = useAppSelector((state) => state.auth);
   // Only super_admin or admins.edit can manage admins
   const canEdit =
-    admin?.role === "super_admin" ||
-    admin?.role === "store_admin" ||
+    admin?.role === "admin" ||
+    admin?.role === "admin" ||
     admin?.permissions?.includes("admins.edit");
 
   const [page, setPage] = React.useState(0);
@@ -54,8 +54,8 @@ export default function AdminListPage() {
   const adminLimit = usage?.users?.limit || limits.users;
   const isLimitReached = adminLimit !== -1 && adminUsed >= adminLimit;
   
-  const storeOwner = admins.find((a) => a.role === "store_admin");
-  const subAdmins = admins.filter((a) => a.role !== "store_admin");
+  const storeOwner = admins.find((a) => a.role === "admin");
+  const subAdmins = admins.filter((a) => a.role !== "admin");
 
   const paginatedSubAdmins = subAdmins.slice(
     page * rowsPerPage,
@@ -100,10 +100,8 @@ export default function AdminListPage() {
 
   const getRoleLabel = (role: string) => {
     const roleMap: Record<string, string> = {
-      super_admin: "Super Admin",
-      super_sub_admin: "Super Sub-Admin",
-      store_admin: "Store Admin",
-      store_sub_admin: "Store Sub-Admin",
+      admin: "Admin",
+      sub_admin: "Sub Admin",
     };
     return roleMap[role] || role;
   };
@@ -133,7 +131,7 @@ export default function AdminListPage() {
                   px: 3,
                 }}
               >
-                {admin?.role === "store_admin" ? "Add Sub-Admin" : "Add Admin"}
+                {admin?.role === "admin" ? "Add Sub-Admin" : "Add Admin"}
               </Button>
             )}
           </div>
@@ -348,11 +346,11 @@ export default function AdminListPage() {
                         </TableCell>
                         <TableCell>
                           <span
-                            className={`px-2 py-0.5 rounded text-[11px] font-medium border ${admin.role === "super_admin"
+                            className={`px-2 py-0.5 rounded text-[11px] font-medium border ${admin.role === "admin"
                               ? "bg-red-50 text-red-700 border-red-100"
-                              : admin.role === "store_admin"
+                              : admin.role === "admin"
                                 ? "bg-blue-50 text-blue-700 border-blue-100"
-                                : admin.role === "store_sub_admin"
+                                : admin.role === "sub_admin"
                                   ? "bg-purple-50 text-purple-700 border-purple-100"
                                   : "bg-green-50 text-green-700 border-green-100"
                               }`}
@@ -396,12 +394,12 @@ export default function AdminListPage() {
                                 <IconButton
                                   size="small"
                                   onClick={() => handleDeleteClick(admin.id || admin._id)}
-                                  disabled={admin.role === "store_admin"}
+                                  disabled={admin.role === "admin"}
                                   sx={{
-                                    color: admin.role === "store_admin" ? "#e2e8f0" : "#ef4444",
-                                    "&:hover": { bgcolor: admin.role === "store_admin" ? "transparent" : "#fef2f2" },
+                                    color: admin.role === "admin" ? "#e2e8f0" : "#ef4444",
+                                    "&:hover": { bgcolor: admin.role === "admin" ? "transparent" : "#fef2f2" },
                                   }}
-                                  title={admin.role === "store_admin" ? "Store Owner cannot be deleted" : "Delete Admin"}
+                                  title={admin.role === "admin" ? "Store Owner cannot be deleted" : "Delete Admin"}
                                 >
                                   <DeleteIcon fontSize="small" />
                                 </IconButton>

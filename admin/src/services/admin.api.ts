@@ -8,7 +8,7 @@ export interface Admin {
   _id?: string;
   name: string;
   email: string;
-  role: "super_admin" | "super_sub_admin" | "store_admin" | "store_sub_admin";
+  role: "admin" | "sub_admin";
   adminType?: string;
   phone?: string;
   avatar?: string;
@@ -26,7 +26,7 @@ export interface CreateAdminData {
   name: string;
   email: string;
   password: string;
-  role?: "super_admin" | "super_sub_admin" | "store_admin" | "store_sub_admin";
+  role?: "admin" | "sub_admin";
   adminType?: string;
   customType?: string;
   phone?: string;
@@ -37,7 +37,7 @@ export interface UpdateAdminData {
   name?: string;
   email?: string;
   password?: string;
-  role?: "super_admin" | "super_sub_admin" | "store_admin" | "store_sub_admin";
+  role?: "admin" | "sub_admin";
   adminType?: string;
   customType?: string;
   phone?: string;

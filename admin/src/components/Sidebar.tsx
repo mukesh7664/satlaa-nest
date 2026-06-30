@@ -292,7 +292,7 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
 
   // Ensure permissions is at least an empty array to prevent issues
   useEffect(() => {
-    if (admin && admin.role !== "super_admin" && !admin.permissions) {
+    if (admin && admin.role !== "admin" && !admin.permissions) {
       // Don't logout, just treat as empty and let the profile fetcher try to update it
       console.warn("Admin permissions missing in state.");
     }
@@ -348,21 +348,13 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
 
   // Permission check helper
   const hasPermission = (item: any) => {
-    // Super admin has all permissions
-    if (admin?.role === "super_admin") return true;
+    // Full admin has all permissions
+    if (admin?.role === "admin") return true;
 
-    // Check SaaS plan allowed pages/modules access
-    const allowedPages = admin?.allowedPages || [];
-    
-    // Special case for Settings sidebar item (always visible since Support & Help is free)
+    // Settings is always visible
     if (item.key === "settings") {
       return true;
     }
-
-    if (!allowedPages.includes(item.key)) return false;
-
-    // Special case for super_admin only items
-    if (item.permission === "super_admin.only") return false;
 
     // If item has no permission key, it's public (or common)
     if (!item.permission) return true;

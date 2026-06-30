@@ -247,7 +247,7 @@ export default function Header() {
             </div>
             <div className="hidden sm:block">
               <div className="text-[13px] 2xl:text-sm font-bold text-gray-900 leading-tight">{admin?.name || 'Admin User'}</div>
-              <div className="text-[10px] 2xl:text-xs text-gray-500 font-medium">{admin?.role === 'super_admin' ? 'Super Admin' : 'Admin'}</div>
+              <div className="text-[10px] 2xl:text-xs text-gray-500 font-medium">{admin?.role === 'admin' ? 'Admin' : 'Sub Admin'}</div>
             </div>
           </div>
 

@@ -71,13 +71,8 @@ export class CategoriesService {
         if (data.parentId === "") data.parentId = null;
         
         const categoryData = { ...data };
-        // If not super admin, force storeId
-        if (user.role !== 'super_admin') {
-            categoryData.storeId = user.storeId;
-        } else {
-            // Super admins create global categories if not specified
-            categoryData.storeId = data.storeId || null;
-        }
+        // Single-store: always scope category to the user's store
+        categoryData.storeId = user.storeId;
 
         const category = this.categoryRepository.create(categoryData);
         return this.categoryRepository.save(category);
@@ -85,15 +80,15 @@ export class CategoriesService {
 
     async update(id: string, data: any, user: any) {
         if (data.parentId === "") data.parentId = null;
-        const category = await this.findOne(id, user.storeId, user.role === 'super_admin');
+        const category = await this.findOne(id, user.storeId, false);
 
-        // Protection: Cannot update global category if not super admin
-        if (user.role !== 'super_admin' && category.storeId === null) {
+        // Protection: Cannot update global category
+        if (category.storeId === null) {
             throw new ForbiddenException('Cannot update global categories');
         }
-        
+
         // Protection: Cannot update other store's category
-        if (user.role !== 'super_admin' && category.storeId !== user.storeId) {
+        if (category.storeId !== user.storeId) {
             throw new ForbiddenException('Access denied');
         }
 
@@ -102,13 +97,13 @@ export class CategoriesService {
     }
 
     async remove(id: string, user: any) {
-        const category = await this.findOne(id, user.storeId, user.role === 'super_admin');
+        const category = await this.findOne(id, user.storeId, false);
 
-        if (user.role !== 'super_admin' && category.storeId === null) {
+        if (category.storeId === null) {
             throw new ForbiddenException('Cannot delete global categories');
         }
-        
-        if (user.role !== 'super_admin' && category.storeId !== user.storeId) {
+
+        if (category.storeId !== user.storeId) {
             throw new ForbiddenException('Access denied');
         }
 

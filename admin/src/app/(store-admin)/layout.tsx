@@ -39,30 +39,8 @@ const ROUTE_PERMISSIONS = [
 ];
 
 const checkRouteAccess = (pathname: string, admin: any) => {
-  if (!admin) return { hasAccess: true, label: "" };
-  if (admin.role === "super_admin") return { hasAccess: true, label: "" };
-
-  const sortedPermissions = [...ROUTE_PERMISSIONS].sort((a, b) => {
-    const maxA = Math.max(...a.routes.map(r => r.length));
-    const maxB = Math.max(...b.routes.map(r => r.length));
-    return maxB - maxA;
-  });
-
-  let matchedConfig = null;
-  for (const config of sortedPermissions) {
-    if (config.routes.some(route => pathname === route || pathname.startsWith(route + "/"))) {
-      matchedConfig = config;
-      break;
-    }
-  }
-
-  if (!matchedConfig) return { hasAccess: true, label: "" };
-
-  const allowedPages = admin.allowedPages || [];
-  return {
-    hasAccess: allowedPages.includes(matchedConfig.key),
-    label: matchedConfig.label
-  };
+  // Single-store: no plan-based page gating. All authenticated admins have full access.
+  return { hasAccess: true, label: "" };
 };
 
 const UpgradeRequiredView = ({ moduleName }: { moduleName: string }) => {

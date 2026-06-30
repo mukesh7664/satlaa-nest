@@ -40,9 +40,9 @@ export class AdminAuthService {
             name: data.name,
             email: data.email,
             password: hashedPassword,
-            role: isFirstAdmin ? AdminRole.SUPER_ADMIN : (data.role as AdminRole) || AdminRole.STORE_ADMIN,
+            role: isFirstAdmin ? AdminRole.ADMIN : (data.role as AdminRole) || AdminRole.ADMIN,
             phone: data.phone,
-            adminType: data.storeName || data.role === AdminRole.STORE_ADMIN ? 'store_owner' : undefined,
+            adminType: data.storeName || data.role === AdminRole.ADMIN ? 'store_owner' : undefined,
         });
 
         const savedAdmin = await this.adminRepository.save(admin);
@@ -262,23 +262,12 @@ export class AdminAuthService {
     }
 
     async validateUserCreation(currentUser: Admin, newUserRole: AdminRole) {
-        const superRoles = [AdminRole.SUPER_ADMIN, AdminRole.SUPER_SUB_ADMIN];
-        const storeRoles = [AdminRole.STORE_ADMIN, AdminRole.STORE_SUB_ADMIN];
-
-        // SUPER_ADMIN and SUPER_SUB_ADMIN can add SUPER_SUB_ADMIN OR STORE_ADMIN
-        if (superRoles.includes(currentUser.role)) {
-            // Super admins can create other super sub admins or store admins
-            if (newUserRole !== AdminRole.SUPER_SUB_ADMIN && newUserRole !== AdminRole.STORE_ADMIN) {
-                throw new BadRequestException('Super admins can only add Super Sub-Admin or Store Admin');
+        // Only an admin can create users; they may create admin or sub_admin.
+        if (currentUser.role === AdminRole.ADMIN) {
+            if (newUserRole !== AdminRole.ADMIN && newUserRole !== AdminRole.SUB_ADMIN) {
+                throw new BadRequestException('Invalid role. Allowed: admin or sub_admin');
             }
-        } 
-        // STORE_ADMIN can add STORE_SUB_ADMIN
-        else if (currentUser.role === AdminRole.STORE_ADMIN) {
-            if (newUserRole !== AdminRole.STORE_SUB_ADMIN) {
-                throw new BadRequestException('Store Admin can only add Store Sub-Admin');
-            }
-        } 
-        else {
+        } else {
             throw new BadRequestException('You do not have permission to add users');
         }
     }
@@ -286,27 +275,15 @@ export class AdminAuthService {
     async createAdmin(data: any, currentUser?: Admin): Promise<Admin> {
         if (currentUser) {
             await this.validateUserCreation(currentUser, data.role as AdminRole);
-            
-            // Set parentId
-            data.parentId = currentUser.id;
 
-            // Logic: Kaun kise add kar sakta hai?
-            if (currentUser.role === AdminRole.STORE_ADMIN && data.role === AdminRole.STORE_SUB_ADMIN) {
-                // storeId wahi rahega jo Admin ka hai.
-                data.storeId = currentUser.storeId;
-            }
-            
-            // Super Admin can add Store Admin -> Store Admin ke liye naya UUID generate hoga.
-            // This usually happens when creating a new store, or if we just want a fresh storeId.
-            // If data.storeName is provided, we should create a store.
-            if (currentUser.role === AdminRole.SUPER_ADMIN && data.role === AdminRole.STORE_ADMIN && data.storeName) {
-                // We'll create the store after creating the admin to get the ownerId
-            }
+            // Set parentId and inherit the creator's store
+            data.parentId = currentUser.id;
+            data.storeId = currentUser.storeId;
         }
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
-        
-        if (data.role === AdminRole.SUPER_ADMIN && (!data.permissions || data.permissions.length === 0)) {
+
+        if (data.role === AdminRole.ADMIN && (!data.permissions || data.permissions.length === 0)) {
             data.permissions = ['*'];
         }
 
@@ -314,21 +291,8 @@ export class AdminAuthService {
             ...data,
             password: hashedPassword,
         } as Partial<Admin>);
-        
+
         const savedAdmin = await this.adminRepository.save(newAdmin);
-
-        // If SUPER_ADMIN is creating STORE_ADMIN with a storeName
-        if (currentUser?.role === AdminRole.SUPER_ADMIN && data.role === AdminRole.STORE_ADMIN && data.storeName) {
-             const savedStore = await this.tenantService.createStore(savedAdmin.id, data.storeName, data.planCategory);
-             savedAdmin.storeId = savedStore.id;
-             savedAdmin.adminType = 'store_owner'; // Ensure it's set as store_owner
-             await this.adminRepository.save(savedAdmin);
-        } else if (data.role === AdminRole.STORE_ADMIN) {
-            // Even without storeName, a STORE_ADMIN should ideally be a store_owner type
-            savedAdmin.adminType = 'store_owner';
-            await this.adminRepository.save(savedAdmin);
-        }
-
         return savedAdmin;
     }
 
