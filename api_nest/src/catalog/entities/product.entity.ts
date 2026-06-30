@@ -17,7 +17,6 @@ export class Product {
     title: string;
 
     @Column()
-    @Index()
     slug: string;
 
     @Column({ nullable: true })

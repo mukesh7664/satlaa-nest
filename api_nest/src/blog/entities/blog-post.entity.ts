@@ -14,7 +14,6 @@ export class BlogPost {
     title: string;
 
     @Column()
-    @Index()
     slug: string;
 
     @Column({ type: 'text', nullable: true })

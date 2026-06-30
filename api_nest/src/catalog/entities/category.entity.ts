@@ -13,7 +13,6 @@ export class Category {
     fieldsConfig: any;
 
     @Column()
-    @Index()
     slug: string;
 
     @ManyToOne(() => Category, (category) => category.children, { nullable: true, onDelete: 'SET NULL' })

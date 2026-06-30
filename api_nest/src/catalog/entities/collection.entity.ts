@@ -23,7 +23,6 @@ export class Collection {
     name: string;
 
     @Column()
-    @Index()
     slug: string;
 
     @Column({ length: 500, nullable: true })
