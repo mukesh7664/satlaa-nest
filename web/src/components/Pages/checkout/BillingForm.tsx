@@ -76,9 +76,8 @@ export function BillingForm({
       if (!token) return;
 
       const response = await fetch(`${apiUrl}/addresses`, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
-          "x-tenant-domain": window.location.hostname,
         },
       });
       const data = await response.json();
@@ -118,7 +117,6 @@ export function BillingForm({
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
-        "x-tenant-domain": window.location.hostname,
       },
       body: JSON.stringify(formData),
     });
@@ -237,7 +235,6 @@ export function BillingForm({
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
-          "x-tenant-domain": window.location.hostname,
         },
         body: JSON.stringify(orderData),
       });

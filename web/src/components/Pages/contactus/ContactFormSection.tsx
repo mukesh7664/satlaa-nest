@@ -78,7 +78,6 @@ export function ContactFormSection({ data }: ContactFormSectionProps) {
             phone: formData.phone,
             subject: "Contact Form Message",
             message: formData.query,
-            // storeId will be handled by the backend middleware if not provided
           }),
         }
       );

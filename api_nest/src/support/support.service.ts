@@ -1,11 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { HelpResource, HelpResourceType } from './entities/help-resource.entity';
 import { SupportTicket, TicketStatus, TicketPriority } from './entities/support-ticket.entity';
 import { TicketMessage } from './entities/ticket-message.entity';
 import { Admin } from '../admin/entities/admin.entity';
-import { Store } from '../stores/entities/store.entity';
 import { CreateHelpResourceDto } from './dto/create-help-resource.dto';
 import { UpdateHelpResourceDto } from './dto/update-help-resource.dto';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -25,9 +24,6 @@ export class SupportService {
 
         @InjectRepository(Admin)
         private adminRepository: Repository<Admin>,
-
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
     ) {}
 
     // ==========================================
@@ -80,18 +76,17 @@ export class SupportService {
     // Support Tickets (Store Admin Panel)
     // ==========================================
 
-    async createTicket(storeId: string, adminId: string, createTicketDto: CreateTicketDto): Promise<SupportTicket> {
+    async createTicket(adminId: string, createTicketDto: CreateTicketDto): Promise<SupportTicket> {
         const ticket = this.ticketRepository.create({
             ...createTicketDto,
-            storeId,
             adminId,
             status: TicketStatus.OPEN,
         });
         return this.ticketRepository.save(ticket);
     }
 
-    async findStoreTickets(storeId: string, status?: TicketStatus): Promise<SupportTicket[]> {
-        const query: any = { storeId };
+    async findStoreTickets(status?: TicketStatus): Promise<SupportTicket[]> {
+        const query: any = {};
         if (status) query.status = status;
 
         return this.ticketRepository.find({
@@ -100,15 +95,10 @@ export class SupportService {
         });
     }
 
-    async findTicketDetails(ticketId: string, storeId?: string): Promise<any> {
+    async findTicketDetails(ticketId: string): Promise<any> {
         const ticket = await this.ticketRepository.findOne({ where: { id: ticketId } });
         if (!ticket) {
             throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
-        }
-
-        // Enforce store-level isolation for store admins
-        if (storeId && ticket.storeId !== storeId) {
-            throw new ForbiddenException('You do not have permission to view this ticket');
         }
 
         // Fetch creator details
@@ -117,30 +107,16 @@ export class SupportService {
             select: ['id', 'name', 'email', 'avatar'],
         });
 
-        // Fetch store details
-        let store = null;
-        if (ticket.storeId) {
-            store = await this.storeRepository.findOne({
-                where: { id: ticket.storeId },
-                select: ['id', 'name', 'slug'],
-            });
-        }
-
         return {
             ...ticket,
             creator,
-            store,
         };
     }
 
-    async closeTicket(ticketId: string, storeId?: string): Promise<SupportTicket> {
+    async closeTicket(ticketId: string): Promise<SupportTicket> {
         const ticket = await this.ticketRepository.findOne({ where: { id: ticketId } });
         if (!ticket) {
             throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
-        }
-
-        if (storeId && ticket.storeId !== storeId) {
-            throw new ForbiddenException('You do not have permission to modify this ticket');
         }
 
         ticket.status = TicketStatus.CLOSED;
@@ -154,13 +130,11 @@ export class SupportService {
     async findAdminTickets(
         status?: TicketStatus,
         priority?: TicketPriority,
-        storeId?: string,
         search?: string,
     ): Promise<any[]> {
         const query: any = {};
         if (status) query.status = status;
         if (priority) query.priority = priority;
-        if (storeId) query.storeId = storeId;
         if (search) query.subject = Like(`%${search}%`);
 
         const tickets = await this.ticketRepository.find({
@@ -168,7 +142,7 @@ export class SupportService {
             order: { createdAt: 'DESC' },
         });
 
-        // Enrich tickets with Store and Creator info
+        // Enrich tickets with Creator info
         const enrichedTickets = await Promise.all(
             tickets.map(async (ticket) => {
                 const creator = await this.adminRepository.findOne({
@@ -176,19 +150,10 @@ export class SupportService {
                     select: ['id', 'name', 'email', 'avatar'],
                 });
 
-                let store = null;
-                if (ticket.storeId) {
-                    store = await this.storeRepository.findOne({
-                        where: { id: ticket.storeId },
-                        select: ['id', 'name', 'slug'],
-                    });
-                }
-
                 return {
                     ...ticket,
                     creatorName: creator?.name || 'Unknown',
                     creatorEmail: creator?.email || '',
-                    storeName: store?.name || 'Platform / Super Admin',
                 };
             }),
         );
@@ -225,15 +190,10 @@ export class SupportService {
         senderId: string,
         senderRole: string,
         createMessageDto: CreateMessageDto,
-        storeId?: string,
     ): Promise<TicketMessage> {
         const ticket = await this.ticketRepository.findOne({ where: { id: ticketId } });
         if (!ticket) {
             throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
-        }
-
-        if (storeId && ticket.storeId !== storeId) {
-            throw new ForbiddenException('You do not have permission to reply to this ticket');
         }
 
         const message = this.messageRepository.create({
@@ -256,14 +216,10 @@ export class SupportService {
         return savedMessage;
     }
 
-    async findTicketMessages(ticketId: string, storeId?: string): Promise<any[]> {
+    async findTicketMessages(ticketId: string): Promise<any[]> {
         const ticket = await this.ticketRepository.findOne({ where: { id: ticketId } });
         if (!ticket) {
             throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
-        }
-
-        if (storeId && ticket.storeId !== storeId) {
-            throw new ForbiddenException('You do not have permission to view messages for this ticket');
         }
 
         const messages = await this.messageRepository.find({

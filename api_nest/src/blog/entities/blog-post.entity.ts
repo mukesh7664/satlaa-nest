@@ -1,12 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, ManyToMany, JoinTable, JoinColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToMany, JoinTable, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 import { BlogCategory } from './blog-category.entity';
 import { BlogTag } from './blog-tag.entity';
 
 export type BlogPostStatus = 'draft' | 'published';
 
 @Entity('blog_posts')
-@Index(['storeId', 'slug'], { unique: true })
+@Index(['slug'], { unique: true })
 export class BlogPost {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -53,15 +52,6 @@ export class BlogPost {
     @ManyToMany(() => BlogTag, { onDelete: 'CASCADE' })
     @JoinTable({ name: 'blog_post_tags' })
     tags: BlogTag[];
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    @Index()
-    storeId: string;
 
     @CreateDateColumn()
     createdAt: Date;

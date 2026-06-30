@@ -57,10 +57,9 @@ export class SupportAdminController {
     async getAdminTickets(
         @Query('status') status?: TicketStatus,
         @Query('priority') priority?: TicketPriority,
-        @Query('storeId') storeId?: string,
         @Query('search') search?: string,
     ) {
-        return this.supportService.findAdminTickets(status, priority, storeId, search);
+        return this.supportService.findAdminTickets(status, priority, search);
     }
 
     @ApiOperation({ summary: 'Admin: Get details of a specific ticket' })

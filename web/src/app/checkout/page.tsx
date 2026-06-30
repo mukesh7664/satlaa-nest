@@ -1,15 +1,11 @@
 import { SectionRenderer } from "@/components/SectionRenderer";
-import { headers } from "next/headers";
 import { CheckoutMain } from "@/components/sections/CheckoutMain";
 
-async function getPage(slug: string, host: string) {
+async function getPage(slug: string) {
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/homepage/pages/${slug}`,
       {
-        headers: {
-          "x-tenant-domain": host,
-        },
         next: { revalidate: 10 },
       }
     );
@@ -27,11 +23,8 @@ async function getPage(slug: string, host: string) {
 }
 
 export default async function CheckoutPage() {
-  const headersList = await headers();
-  const host = headersList.get("host") || "";
-  
   // Try to fetch the 'checkout' template page
-  const page = await getPage('checkout', host);
+  const page = await getPage('checkout');
 
   const sections = page?.sections?.filter((s: any) =>
     s.group === "template" || (!s.group && s.group !== "header" && s.group !== "footer" && s.group !== "top" && s.group !== "bottom")

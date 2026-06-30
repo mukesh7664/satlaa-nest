@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { InlineEditable } from "@/components/InlineEditable";
 import { PriceDisplay } from "@/components/common/PriceDisplay";
 import { ShoppingBag, Star, Heart, Eye } from "lucide-react";
-import { usePreview } from "@/contexts/PreviewContext";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 
@@ -52,7 +51,6 @@ export default function EcommerceFeaturedProducts({ data, sectionIndex }: Ecomme
     filter = null,
   } = data || {};
 
-  const { isPreview, pageData } = usePreview();
   const { addToCart, openCart } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,13 +71,6 @@ export default function EcommerceFeaturedProducts({ data, sectionIndex }: Ecomme
         }
 
         const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (isPreview && pageData?.storeId) {
-          headers["x-tenant-domain"] = pageData.storeId;
-        } else if (typeof window !== "undefined") {
-          const host = window.location.host;
-          const cleanHost = host.split(":")[0];
-          headers["x-tenant-domain"] = cleanHost;
-        }
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5004/api/v1";
         const res = await fetch(`${apiUrl}/products?${queryParams.toString()}`, { headers });
@@ -127,7 +118,7 @@ export default function EcommerceFeaturedProducts({ data, sectionIndex }: Ecomme
     };
 
     fetchFeaturedProducts();
-  }, [filter, limit, isPreview, pageData?.storeId]);
+  }, [filter, limit]);
 
   const colSpanClass = {
     1: "grid-cols-1",

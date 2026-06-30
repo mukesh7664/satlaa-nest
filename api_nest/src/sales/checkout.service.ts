@@ -7,7 +7,6 @@ import { PaymentAttempt } from '../payments/entities/payment-attempt.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EmailService } from '../notifications/email.service';
-import { Store } from '../stores/entities/store.entity';
 
 @Injectable()
 export class CheckoutService {
@@ -18,15 +17,13 @@ export class CheckoutService {
         @InjectRepository(PaymentAttempt)
         private paymentAttemptRepository: Repository<PaymentAttempt>,
         private emailService: EmailService,
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
     ) { }
 
     /**
      * Pre-checkout validation: Verify stock, pricing, coupon validity
      */
-    async validateCheckout(userId: string, storeId: string) {
-        const cart = await this.cartService.findOrCreateCart(storeId, userId);
+    async validateCheckout(userId: string) {
+        const cart = await this.cartService.findOrCreateCart(userId);
         if (!cart.items || cart.items.length === 0) {
             throw new BadRequestException('Cart is empty');
         }
@@ -41,20 +38,19 @@ export class CheckoutService {
     /**
      * Create order + initiate payment (Razorpay order creation or Stripe Session)
      */
-    async createOrder(userId: string, orderData: any, storeId: string, origin?: string) {
+    async createOrder(userId: string, orderData: any, origin?: string) {
         // 1. Create the order
         let order;
         if (orderData.items && orderData.items.length > 0) {
-            order = await this.orderService.createOrderDirectly(userId, orderData, storeId);
+            order = await this.orderService.createOrderDirectly(userId, orderData);
         } else {
-            order = await this.orderService.createOrderFromCart(userId, orderData, storeId);
+            order = await this.orderService.createOrderFromCart(userId, orderData);
         }
 
         // For Quote Requests, we don't need to initiate a payment gateway order
         if (order.orderType === 'quote_request') {
-             await this.cartService.clearCart(storeId, userId, undefined);
-             const store = await this.storeRepository.findOne({ where: { id: storeId } });
-             this.emailService.sendOrderConfirmationEmail(order, store).catch(err => {
+             await this.cartService.clearCart(userId, undefined);
+             this.emailService.sendOrderConfirmationEmail(order).catch(err => {
                  console.error('Failed to send order confirmation email for quote request', err);
              });
              return { order };
@@ -63,14 +59,14 @@ export class CheckoutService {
         // 2. Check for active payment provider configuration
         // We prioritize Stripe if configured and active, otherwise Razorpay
         let stripeSkippedDueToAmount = false;
-        
+
         // Check Stripe
-        const stripePublishableKey = await this.paymentService.getStripePublishableKey(storeId);
+        const stripePublishableKey = await this.paymentService.getStripePublishableKey();
         if (stripePublishableKey) {
             try {
                 const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
                 const host = process.env.FRONTEND_URL || 'localhost:3000';
-                
+
                 let successUrl: string;
                 let cancelUrl: string;
 
@@ -93,9 +89,8 @@ export class CheckoutService {
                 }
 
                 const stripeSession = await this.paymentService.createStripeCheckoutSession(
-                    order, 
-                    storeId, 
-                    successUrl, 
+                    order,
+                    successUrl,
                     cancelUrl
                 );
 
@@ -103,7 +98,6 @@ export class CheckoutService {
                 await this.paymentAttemptRepository.save(
                     this.paymentAttemptRepository.create({
                         entity_type: 'ORDER',
-                        store_id: storeId,
                         customer_id: userId,
                         order_id: order.id,
                         amount: Number(order.totalAmount),
@@ -120,7 +114,7 @@ export class CheckoutService {
                     transactionId: stripeSession.id,
                     paymentGateway: 'Stripe',
                 };
-                await this.orderService.updateStatus(order.id, order.status, order.paymentInfo, storeId);
+                await this.orderService.updateStatus(order.id, order.status, order.paymentInfo);
 
                 return {
                     order,
@@ -138,13 +132,12 @@ export class CheckoutService {
         }
 
         // Check Razorpay
-        const razorpayKeyId = await this.paymentService.getRazorpayKeyId(storeId);
+        const razorpayKeyId = await this.paymentService.getRazorpayKeyId();
         if (razorpayKeyId) {
             const razorpayOrder = await this.paymentService.createRazorpayOrder(
                 Number(order.totalAmount),
                 order.currency || 'INR',
                 order.orderNumber,
-                storeId,
                 { orderId: order.id },
             );
 
@@ -152,7 +145,6 @@ export class CheckoutService {
             await this.paymentAttemptRepository.save(
                 this.paymentAttemptRepository.create({
                     entity_type: 'ORDER',
-                    store_id: storeId,
                     customer_id: userId,
                     order_id: order.id,
                     amount: Number(order.totalAmount),
@@ -169,7 +161,7 @@ export class CheckoutService {
                 transactionId: razorpayOrder.id,
                 paymentGateway: 'Razorpay',
             };
-            await this.orderService.updateStatus(order.id, order.status, order.paymentInfo, storeId);
+            await this.orderService.updateStatus(order.id, order.status, order.paymentInfo);
 
             return {
                 order,
@@ -187,21 +179,20 @@ export class CheckoutService {
             throw new BadRequestException(`Order amount (${Number(order.totalAmount).toFixed(2)} ${orderCurrency}) is too small for payment. Minimum ${minText} is required.`);
         }
 
-        const store = await this.storeRepository.findOne({ where: { id: storeId } });
-        throw new BadRequestException(`No active payment gateway found for store "${store?.name || storeId}". Please ensure keys are added and the "Active" status is toggled ON in Admin Payment Settings.`);
+        throw new BadRequestException(`No active payment gateway found. Please ensure keys are added and the "Active" status is toggled ON in Admin Payment Settings.`);
     }
 
     /**
      * Get user's orders (proxy to OrderService)
      */
-    async getUserOrders(userId: string, storeId: string) {
-        return this.orderService.findAllOrders(userId, storeId);
+    async getUserOrders(userId: string) {
+        return this.orderService.findAllOrders(userId);
     }
 
     /**
      * Get specific order
      */
-    async getOrder(userId: string, orderId: string, storeId: string) {
-        return this.orderService.findOneOrder(orderId, userId, storeId);
+    async getOrder(userId: string, orderId: string) {
+        return this.orderService.findOneOrder(orderId, userId);
     }
 }

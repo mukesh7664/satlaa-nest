@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { Star, Heart, Eye, GitCompare, ShoppingCart, Check } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
-import { usePreview } from "@/contexts/PreviewContext";
 import { useRouter } from "next/navigation";
 import { useWishlist } from "@/contexts/WishlistContext";
 
@@ -44,7 +43,6 @@ interface ShoesProductGridProps {
 
 export default function ShoesProductGrid({ data, sectionIndex }: ShoesProductGridProps) {
   const { addToCart } = useCart();
-  const { isPreview, pageData } = usePreview();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const router = useRouter();
 
@@ -77,13 +75,6 @@ export default function ShoesProductGrid({ data, sectionIndex }: ShoesProductGri
         queryParams.append("limit", String(data?.limit || 8));
 
         const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (isPreview && pageData?.storeId) {
-          headers["x-tenant-domain"] = pageData.storeId;
-        } else if (typeof window !== "undefined") {
-          const host = window.location.host;
-          const cleanHost = host.split(":")[0];
-          headers["x-tenant-domain"] = cleanHost;
-        }
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5004/api/v1";
         const res = await fetch(`${apiUrl}/products?${queryParams.toString()}`, { headers });
@@ -130,7 +121,7 @@ export default function ShoesProductGrid({ data, sectionIndex }: ShoesProductGri
     };
 
     fetchDynamicProducts();
-  }, [productsSource, data?.filter, data?.limit, isPreview, pageData?.storeId]);
+  }, [productsSource, data?.filter, data?.limit]);
 
   const handleAddToCartClick = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault();

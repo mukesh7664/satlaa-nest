@@ -13,14 +13,13 @@ import { OrderItem } from './entities/order-item.entity';
 import { StorePaymentConfigService } from '../payments/store-payment-config.service';
 import { SystemGatewayConfigService } from '../payments/system-gateway-config.service';
 import { EmailService } from '../notifications/email.service';
-import { Store } from '../stores/entities/store.entity';
 import { CartService } from './cart.service';
 
 @Injectable()
 export class PaymentService {
     private readonly logger = new Logger(PaymentService.name);
-    private razorpayClients: Map<string, any> = new Map();
-    private stripeClients: Map<string, any> = new Map();
+    private razorpayClient: any = null;
+    private stripeClient: any = null;
 
     constructor(
         @InjectRepository(Order)
@@ -37,50 +36,47 @@ export class PaymentService {
         private storePaymentConfigService: StorePaymentConfigService,
         private systemGatewayConfigService: SystemGatewayConfigService,
         private emailService: EmailService,
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
         @Inject(forwardRef(() => CartService))
         private cartService: CartService,
     ) { }
 
     /**
-     * Get or create a Stripe instance for a specific store
+     * Get or create the Stripe instance
      */
-    private async getStripeInstance(storeId: string): Promise<any | null> {
+    private async getStripeInstance(): Promise<any | null> {
         let secretKey: string;
         let source = 'unknown';
 
-        // 1. Try Store-specific config
-        const storeConfig = await this.storePaymentConfigService.getRawConfig(storeId, 'stripe');
+        // 1. Try config
+        const storeConfig = await this.storePaymentConfigService.getRawConfig('stripe');
         if (storeConfig?.keySecret) {
             secretKey = storeConfig.keySecret;
             source = 'StorePaymentConfig';
         }
 
         // Check if credentials changed to clear cache
-        if (this.stripeClients.has(storeId)) {
-            const cachedInstance = this.stripeClients.get(storeId);
-            const cachedSource = cachedInstance._sourceInfo || {};
-            
+        if (this.stripeClient) {
+            const cachedSource = this.stripeClient._sourceInfo || {};
+
             if (
                 cachedSource.secretKeyLength === (secretKey ? secretKey.length : 0) &&
                 cachedSource.source === source
             ) {
-                return cachedInstance;
+                return this.stripeClient;
             }
-            
-            this.logger.log(`Stripe credentials changed for store ${storeId}. Reinitializing client.`);
-            this.stripeClients.delete(storeId);
+
+            this.logger.log(`Stripe credentials changed. Reinitializing client.`);
+            this.stripeClient = null;
         }
 
         if (secretKey) {
             try {
                 const stripe = new Stripe(secretKey);
                 stripe._sourceInfo = { source, secretKeyLength: secretKey.length };
-                this.stripeClients.set(storeId, stripe);
+                this.stripeClient = stripe;
                 return stripe;
             } catch (e) {
-                this.logger.error(`Failed to initialize Stripe for store ${storeId} from ${source}: ${e.message}`);
+                this.logger.error(`Failed to initialize Stripe from ${source}: ${e.message}`);
                 return null;
             }
         }
@@ -91,8 +87,8 @@ export class PaymentService {
     /**
      * Get Stripe Key Secret for verification/webhooks
      */
-    private async getStripeSecret(storeId: string): Promise<string | null> {
-        const storeConfig = await this.storePaymentConfigService.getRawConfig(storeId, 'stripe');
+    private async getStripeSecret(): Promise<string | null> {
+        const storeConfig = await this.storePaymentConfigService.getRawConfig('stripe');
         if (storeConfig?.keySecret) return storeConfig.keySecret;
 
         return null;
@@ -101,8 +97,8 @@ export class PaymentService {
     /**
      * Get Stripe Webhook Secret
      */
-    async getStripeWebhookSecret(storeId: string): Promise<string | null> {
-        const storeConfig = await this.storePaymentConfigService.getRawConfig(storeId, 'stripe');
+    async getStripeWebhookSecret(): Promise<string | null> {
+        const storeConfig = await this.storePaymentConfigService.getRawConfig('stripe');
         if (storeConfig?.webhookSecret) return storeConfig.webhookSecret;
 
         return null;
@@ -111,8 +107,8 @@ export class PaymentService {
     /**
      * Get Stripe Publishable Key for frontend
      */
-    async getStripePublishableKey(storeId: string): Promise<string | null> {
-        const storeConfig = await this.storePaymentConfigService.getRawConfig(storeId, 'stripe');
+    async getStripePublishableKey(): Promise<string | null> {
+        const storeConfig = await this.storePaymentConfigService.getRawConfig('stripe');
         if (storeConfig?.keyId) return storeConfig.keyId;
 
         return null;
@@ -137,16 +133,16 @@ export class PaymentService {
     /**
      * Create a Stripe Checkout Session
      */
-    async createStripeCheckoutSession(order: Order, storeId: string, successUrl: string, cancelUrl: string) {
-        const stripe = await this.getStripeInstance(storeId);
+    async createStripeCheckoutSession(order: Order, successUrl: string, cancelUrl: string) {
+        const stripe = await this.getStripeInstance();
 
         if (!stripe) {
-            throw new BadRequestException('Stripe keys not configured for this store. Please add them in Payment Settings.');
+            throw new BadRequestException('Stripe keys not configured. Please add them in Payment Settings.');
         }
 
         const totalAmount = Number(order.totalAmount);
         const orderCurrency = order.currency?.toLowerCase() || 'inr';
-        
+
         if (!this.isAmountValidForStripe(totalAmount, orderCurrency)) {
             const minAmount = orderCurrency === 'inr' ? '₹50' : `0.51 ${orderCurrency.toUpperCase()}`;
             throw new BadRequestException(`Order amount (${totalAmount} ${orderCurrency.toUpperCase()}) is too small for Stripe payment. Minimum required is ${minAmount}.`);
@@ -182,7 +178,6 @@ export class PaymentService {
                 client_reference_id: order.id,
                 metadata: {
                     orderId: order.id,
-                    storeId: storeId,
                     orderNumber: order.orderNumber,
                 },
                 customer_email: order.billingAddress?.email || undefined,
@@ -190,7 +185,7 @@ export class PaymentService {
 
             return session;
         } catch (err: any) {
-            this.logger.error(`Stripe session creation failed for store ${storeId}. Error: ${err.message}`);
+            this.logger.error(`Stripe session creation failed. Error: ${err.message}`);
             throw err;
         }
     }
@@ -198,8 +193,8 @@ export class PaymentService {
     /**
      * Verify Stripe Session and update order
      */
-    async verifyStripeSession(sessionId: string, storeId: string) {
-        const stripe: any = await this.getStripeInstance(storeId);
+    async verifyStripeSession(sessionId: string) {
+        const stripe: any = await this.getStripeInstance();
         if (!stripe) throw new BadRequestException('Stripe not configured');
 
         const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -208,8 +203,8 @@ export class PaymentService {
 
         if (session.payment_status === 'paid') {
             const orderId = session.metadata.orderId;
-            const order = await this.orderRepository.findOne({ 
-                where: { id: orderId, storeId },
+            const order = await this.orderRepository.findOne({
+                where: { id: orderId },
                 relations: ['items']
             });
 
@@ -237,8 +232,7 @@ export class PaymentService {
             const savedOrder = await this.orderRepository.save(order);
 
             // Send Confirmation Email
-            const store = await this.storeRepository.findOne({ where: { id: storeId } });
-            this.emailService.sendOrderConfirmationEmail(savedOrder, store).catch(err => {
+            this.emailService.sendOrderConfirmationEmail(savedOrder).catch(err => {
                 this.logger.error('Failed to send Stripe payment confirmation email', err);
             });
 
@@ -247,7 +241,7 @@ export class PaymentService {
 
             // Log the payment
             const attempt = await this.paymentAttemptRepository.findOne({ where: { gateway_order_id: sessionId } });
-            
+
             if (attempt) {
                 attempt.payment_status = 'success';
                 await this.paymentAttemptRepository.save(attempt);
@@ -255,7 +249,6 @@ export class PaymentService {
                 await this.paymentRepository.save(
                     this.paymentRepository.create({
                         payment_attempt_id: attempt.id,
-                        store_id: storeId,
                         order_id: order.id,
                         customer_id: attempt.customer_id,
                         amount: Number(order.totalAmount),
@@ -273,7 +266,7 @@ export class PaymentService {
 
             // Clear the cart
             if (order.customerId) {
-                await this.cartService.clearCart(storeId, order.customerId, undefined);
+                await this.cartService.clearCart(order.customerId, undefined);
             }
 
             return { success: true, order: savedOrder };
@@ -283,24 +276,24 @@ export class PaymentService {
     }
 
     /**
-     * Get or create a Razorpay instance for a specific store
+     * Get or create the Razorpay instance
      */
-    private async getRazorpayInstance(storeId: string) {
+    private async getRazorpayInstance() {
         let keyId: string;
         let keySecret: string;
         let source = 'unknown';
 
-        // 1. Try Store-specific config (New table)
-        const storeConfig = await this.storePaymentConfigService.getRawConfig(storeId, 'razorpay');
+        // 1. Try config (New table)
+        const storeConfig = await this.storePaymentConfigService.getRawConfig('razorpay');
         if (storeConfig?.keyId && storeConfig?.keySecret) {
             keyId = storeConfig.keyId;
             keySecret = storeConfig.keySecret;
             source = 'StorePaymentConfig';
         } else {
             // 2. Try legacy settings (JSON blob)
-            const settings = await this.settingsService.getSettings(storeId) as any;
+            const settings = await this.settingsService.getSettings() as any;
             const razorpayConfig = (settings?.paymentGateways || []).find((pg: any) => pg.type === 'razorpay' && pg.isEnabled);
-            
+
             if (razorpayConfig?.config?.keyId && razorpayConfig?.config?.keySecret) {
                 keyId = razorpayConfig.config.keyId;
                 keySecret = razorpayConfig.config.keySecret;
@@ -309,20 +302,19 @@ export class PaymentService {
         }
 
         // Check if credentials changed to clear cache
-        if (this.razorpayClients.has(storeId)) {
-            const cachedInstance = this.razorpayClients.get(storeId);
-            const cachedSource = cachedInstance._sourceInfo || {};
-            
+        if (this.razorpayClient) {
+            const cachedSource = this.razorpayClient._sourceInfo || {};
+
             if (
-                cachedSource.keyId === keyId && 
+                cachedSource.keyId === keyId &&
                 cachedSource.keySecretLength === (keySecret ? keySecret.length : 0) &&
                 cachedSource.source === source
             ) {
-                return cachedInstance;
+                return this.razorpayClient;
             }
-            
-            this.logger.log(`Razorpay credentials changed for store ${storeId}. Reinitializing client.`);
-            this.razorpayClients.delete(storeId);
+
+            this.logger.log(`Razorpay credentials changed. Reinitializing client.`);
+            this.razorpayClient = null;
         }
 
         if (keyId && keySecret) {
@@ -332,14 +324,14 @@ export class PaymentService {
                     key_id: keyId,
                     key_secret: keySecret,
                 });
-                const secretPreview = keySecret.length > 4 
-                    ? `${keySecret.slice(0, 2)}...${keySecret.slice(-2)}` 
+                const secretPreview = keySecret.length > 4
+                    ? `${keySecret.slice(0, 2)}...${keySecret.slice(-2)}`
                     : '***';
                 instance._sourceInfo = { source, keyId, keySecretLength: keySecret.length, secretPreview }; // Store metadata for debugging
-                this.razorpayClients.set(storeId, instance);
+                this.razorpayClient = instance;
                 return instance;
             } catch (e) {
-                this.logger.error(`Failed to initialize Razorpay for store ${storeId} from ${source}: ${e.message}`);
+                this.logger.error(`Failed to initialize Razorpay from ${source}: ${e.message}`);
                 return null;
             }
         }
@@ -350,13 +342,13 @@ export class PaymentService {
     /**
      * Get Razorpay Key Secret for verification
      */
-    private async getRazorpaySecret(storeId: string): Promise<string | null> {
-        // 1. Store config
-        const storeConfig = await this.storePaymentConfigService.getRawConfig(storeId, 'razorpay');
+    private async getRazorpaySecret(): Promise<string | null> {
+        // 1. Config
+        const storeConfig = await this.storePaymentConfigService.getRawConfig('razorpay');
         if (storeConfig?.keySecret) return storeConfig.keySecret;
 
         // 2. Legacy settings
-        const settings = await this.settingsService.getSettings(storeId) as any;
+        const settings = await this.settingsService.getSettings() as any;
         const razorpayConfig = (settings?.paymentGateways || []).find((pg: any) => pg.type === 'razorpay' && pg.isEnabled);
         if (razorpayConfig?.config?.keySecret) return razorpayConfig.config.keySecret;
 
@@ -366,13 +358,13 @@ export class PaymentService {
     /**
      * Get Razorpay Key ID for frontend
      */
-    async getRazorpayKeyId(storeId: string): Promise<string | null> {
-        // 1. Store config
-        const storeConfig = await this.storePaymentConfigService.getRawConfig(storeId, 'razorpay');
+    async getRazorpayKeyId(): Promise<string | null> {
+        // 1. Config
+        const storeConfig = await this.storePaymentConfigService.getRawConfig('razorpay');
         if (storeConfig?.keyId) return storeConfig.keyId;
 
         // 2. Legacy settings
-        const settings = await this.settingsService.getSettings(storeId) as any;
+        const settings = await this.settingsService.getSettings() as any;
         const razorpayConfig = (settings?.paymentGateways || []).find((pg: any) => pg.type === 'razorpay' && pg.isEnabled);
         if (razorpayConfig?.config?.keyId) return razorpayConfig.config.keyId;
 
@@ -382,11 +374,11 @@ export class PaymentService {
     /**
      * Create a Razorpay order (or mock one)
      */
-    async createRazorpayOrder(amount: number, currency: string = 'INR', receipt: string, storeId: string, notes?: any) {
-        const razorpay = await this.getRazorpayInstance(storeId);
+    async createRazorpayOrder(amount: number, currency: string = 'INR', receipt: string, notes?: any) {
+        const razorpay = await this.getRazorpayInstance();
 
         if (!razorpay) {
-            throw new BadRequestException('Razorpay keys not configured for this store. Please add them in Payment Settings.');
+            throw new BadRequestException('Razorpay keys not configured. Please add them in Payment Settings.');
         }
 
         const options = {
@@ -404,8 +396,8 @@ export class PaymentService {
         } catch (err: any) {
             const source = razorpay._sourceInfo || {};
             const errorMessage = err.description || err.message || JSON.stringify(err);
-            this.logger.error(`Razorpay order creation failed for store ${storeId}. Source: ${source.source}. Error: ${errorMessage}`);
-            
+            this.logger.error(`Razorpay order creation failed. Source: ${source.source}. Error: ${errorMessage}`);
+
             if (err.statusCode === 401) {
                 this.logger.error(`AUTHENTICATION FAILED: Check Key ID and Secret for ${source.source}.`);
                 this.logger.error(`Debug Info: KeyID=${source.keyId}, SecretLength=${source.keySecretLength || 0}, Preview=${source.secretPreview}`);
@@ -422,18 +414,16 @@ export class PaymentService {
         razorpayPaymentId: string,
         razorpayOrderId: string,
         razorpaySignature: string,
-        storeId: string,
     ) {
         // Find the order
         let order: Order;
         if (orderId) {
-            order = await this.orderRepository.findOne({ where: { id: orderId, storeId }, relations: ['items'] });
+            order = await this.orderRepository.findOne({ where: { id: orderId }, relations: ['items'] });
         } else {
             // Look up by razorpay order ID stored in paymentInfo
             order = await this.orderRepository
                 .createQueryBuilder('order')
-                .where("order.storeId = :storeId", { storeId })
-                .andWhere("order.paymentInfo->>'transactionId' = :razorpayOrderId", { razorpayOrderId })
+                .where("order.paymentInfo->>'transactionId' = :razorpayOrderId", { razorpayOrderId })
                 .leftJoinAndSelect('order.items', 'items') // Fetch items
                 .getOne();
         }
@@ -442,8 +432,8 @@ export class PaymentService {
             throw new NotFoundException('Order not found');
         }
 
-        const razorpay = await this.getRazorpayInstance(storeId);
-        const keySecret = await this.getRazorpaySecret(storeId);
+        const razorpay = await this.getRazorpayInstance();
+        const keySecret = await this.getRazorpaySecret();
 
         if (razorpay && keySecret) {
             // Verify signature
@@ -474,9 +464,8 @@ export class PaymentService {
             const savedOrder = await this.orderRepository.save(order);
 
             // Send Confirmation Email after successful payment
-            const store = await this.storeRepository.findOne({ where: { id: storeId } });
             const emailOrder = await this.orderRepository.findOne({ where: { id: order.id }, relations: ['items'] });
-            this.emailService.sendOrderConfirmationEmail(emailOrder, store).catch(err => {
+            this.emailService.sendOrderConfirmationEmail(emailOrder).catch(err => {
                 this.logger.error('Failed to send payment confirmation email', err);
             });
 
@@ -492,7 +481,6 @@ export class PaymentService {
                 await this.paymentRepository.save(
                     this.paymentRepository.create({
                         payment_attempt_id: attempt.id,
-                        store_id: storeId,
                         order_id: attempt.order_id,
                         customer_id: attempt.customer_id,
                         amount: attempt.amount,
@@ -510,7 +498,7 @@ export class PaymentService {
 
             // Clear the cart after successful payment verification
             if (order.customerId) {
-                await this.cartService.clearCart(storeId, order.customerId, undefined);
+                await this.cartService.clearCart(order.customerId, undefined);
             }
 
             return { success: true, order: savedOrder, payment };
@@ -521,20 +509,19 @@ export class PaymentService {
 
     /**
      * Handle Razorpay webhook events
-     * NOTE: Webhooks need storeId identification, usually via URL param or metadata
      */
-    async handleWebhook(event: string, payload: any, storeId: string) {
-        this.logger.log(`Processing webhook event for store ${storeId}: ${event}`);
+    async handleWebhook(event: string, payload: any) {
+        this.logger.log(`Processing webhook event: ${event}`);
 
         switch (event) {
             case 'payment.captured':
-                await this.handlePaymentCaptured(payload, storeId);
+                await this.handlePaymentCaptured(payload);
                 break;
             case 'payment.failed':
-                await this.handlePaymentFailed(payload, storeId);
+                await this.handlePaymentFailed(payload);
                 break;
             case 'order.paid':
-                await this.handleOrderPaid(payload, storeId);
+                await this.handleOrderPaid(payload);
                 break;
             default:
                 this.logger.log(`Unhandled webhook event: ${event}`);
@@ -544,14 +531,14 @@ export class PaymentService {
     /**
      * Verify webhook signature
      */
-    async verifyWebhookSignature(body: string, signature: string, storeId: string): Promise<boolean> {
+    async verifyWebhookSignature(body: string, signature: string): Promise<boolean> {
         // Fetch webhook secret from settings
-        const settings = await this.settingsService.getSettings(storeId) as any;
+        const settings = await this.settingsService.getSettings() as any;
         const razorpayConfig = (settings?.paymentGateways || []).find((pg: any) => pg.type === 'razorpay' && pg.isEnabled);
-        
-        const webhookSecret = razorpayConfig?.config?.webhookSecret || 
+
+        const webhookSecret = razorpayConfig?.config?.webhookSecret ||
                               this.configService.get<string>('RAZORPAY_WEBHOOK_SECRET') || '';
-        
+
         const expectedSignature = crypto
             .createHmac('sha256', webhookSecret)
             .update(body)
@@ -563,8 +550,8 @@ export class PaymentService {
     /**
      * Upload payment proof (for bank transfer / manual payments)
      */
-    async uploadPaymentProof(orderId: string, customerId: string, paymentProof: string, storeId: string, transactionDetails?: string) {
-        const order = await this.orderRepository.findOne({ where: { id: orderId, storeId } });
+    async uploadPaymentProof(orderId: string, customerId: string, paymentProof: string, transactionDetails?: string) {
+        const order = await this.orderRepository.findOne({ where: { id: orderId } });
         if (!order) {
             throw new NotFoundException('Order not found');
         }
@@ -589,8 +576,8 @@ export class PaymentService {
     /**
      * Admin: Update payment status
      */
-    async updatePaymentStatus(orderId: string, paymentStatus: string, storeId: string, orderStatus?: string, adminNotes?: string) {
-        const order = await this.orderRepository.findOne({ where: { id: orderId, storeId } });
+    async updatePaymentStatus(orderId: string, paymentStatus: string, orderStatus?: string, adminNotes?: string) {
+        const order = await this.orderRepository.findOne({ where: { id: orderId } });
         if (!order) {
             throw new NotFoundException('Order not found');
         }
@@ -618,8 +605,8 @@ export class PaymentService {
     /**
      * Initiate refund
      */
-    async initiateRefund(orderId: string, storeId: string, amount?: number, reason?: string) {
-        const order = await this.orderRepository.findOne({ where: { id: orderId, storeId } });
+    async initiateRefund(orderId: string, amount?: number, reason?: string) {
+        const order = await this.orderRepository.findOne({ where: { id: orderId } });
         if (!order) {
             throw new NotFoundException('Order not found');
         }
@@ -633,14 +620,14 @@ export class PaymentService {
         }
 
         let refund: any = { _mock: true, status: 'processed' };
-        const razorpay = await this.getRazorpayInstance(storeId);
+        const razorpay = await this.getRazorpayInstance();
 
         if (razorpay) {
             refund = await razorpay.payments.refund(order.paymentInfo.transactionId, {
                 amount: amount ? Math.round(amount * 100) : undefined,
             });
         } else {
-            this.logger.log(`[MOCK] Refund initiated for order ${orderId} in store ${storeId}`);
+            this.logger.log(`[MOCK] Refund initiated for order ${orderId}`);
         }
 
         order.paymentInfo = {
@@ -661,7 +648,7 @@ export class PaymentService {
 
     // --- Private helpers ---
 
-    private async handlePaymentCaptured(payload: any, storeId: string) {
+    private async handlePaymentCaptured(payload: any) {
         const razorpayOrderId = payload?.order?.entity?.id;
         const razorpayPaymentId = payload?.payment?.entity?.id;
 
@@ -669,8 +656,7 @@ export class PaymentService {
 
         const order = await this.orderRepository
             .createQueryBuilder('order')
-            .where("order.storeId = :storeId", { storeId })
-            .andWhere("order.paymentInfo->>'transactionId' = :razorpayOrderId", { razorpayOrderId })
+            .where("order.paymentInfo->>'transactionId' = :razorpayOrderId", { razorpayOrderId })
             .getOne();
 
         if (order) {
@@ -686,19 +672,18 @@ export class PaymentService {
 
             // Clear cart on payment capture
             if (order.customerId) {
-                await this.cartService.clearCart(storeId, order.customerId, undefined);
+                await this.cartService.clearCart(order.customerId, undefined);
             }
         }
     }
 
-    private async handlePaymentFailed(payload: any, storeId: string) {
+    private async handlePaymentFailed(payload: any) {
         const razorpayOrderId = payload?.payment?.entity?.order_id;
         if (!razorpayOrderId) return;
 
         const order = await this.orderRepository
             .createQueryBuilder('order')
-            .where("order.storeId = :storeId", { storeId })
-            .andWhere("order.paymentInfo->>'transactionId' = :razorpayOrderId", { razorpayOrderId })
+            .where("order.paymentInfo->>'transactionId' = :razorpayOrderId", { razorpayOrderId })
             .getOne();
 
         if (order) {
@@ -709,14 +694,13 @@ export class PaymentService {
         }
     }
 
-    private async handleOrderPaid(payload: any, storeId: string) {
+    private async handleOrderPaid(payload: any) {
         const razorpayOrderId = payload?.order?.entity?.id;
         if (!razorpayOrderId) return;
 
         const order = await this.orderRepository
             .createQueryBuilder('order')
-            .where("order.storeId = :storeId", { storeId })
-            .andWhere("order.paymentInfo->>'transactionId' = :razorpayOrderId", { razorpayOrderId })
+            .where("order.paymentInfo->>'transactionId' = :razorpayOrderId", { razorpayOrderId })
             .getOne();
 
         if (order && order.paymentInfo?.status !== 'completed') {
@@ -727,7 +711,7 @@ export class PaymentService {
 
             // Clear cart on order paid event
             if (order.customerId) {
-                await this.cartService.clearCart(storeId, order.customerId, undefined);
+                await this.cartService.clearCart(order.customerId, undefined);
             }
         }
     }
@@ -735,14 +719,11 @@ export class PaymentService {
     // --- Admin methods ---
 
     /**
-     * Admin: Get all successful payments for the store
+     * Admin: Get all successful payments
      */
-    async getPaymentsForAdmin(role: string, storeId: string, limit: number = 20, offset: number = 0, startDate?: string, endDate?: string) {
+    async getPaymentsForAdmin(role: string, limit: number = 20, offset: number = 0, startDate?: string, endDate?: string) {
         let where: any = {};
 
-        // Single-store: admins see their own store's ORDER payments
-        if (!storeId) return { items: [], total: 0 };
-        where.store_id = storeId;
         where.payment_type = 'ORDER';
 
         if (startDate || endDate) {
@@ -774,17 +755,15 @@ export class PaymentService {
     }
 
     /**
-     * Admin: Get all payment attempts (including failed) for the store
+     * Admin: Get all payment attempts (including failed)
      */
-    async getPaymentAttemptsForAdmin(role: string, storeId: string, limit: number = 20, offset: number = 0, startDate?: string, endDate?: string) {
+    async getPaymentAttemptsForAdmin(role: string, limit: number = 20, offset: number = 0, startDate?: string, endDate?: string) {
         const query = this.paymentAttemptRepository.createQueryBuilder('attempt')
             .orderBy('attempt.created_at', 'DESC')
             .take(limit)
             .skip(offset);
 
-        // Single-store: admins see their own store's ORDER attempts
-        if (!storeId) return { items: [], total: 0 };
-        query.where('attempt.store_id = :storeId AND attempt.entity_type = :type', { storeId, type: 'ORDER' });
+        query.where('attempt.entity_type = :type', { type: 'ORDER' });
 
         if (startDate) {
             const start = new Date(startDate);
@@ -798,7 +777,7 @@ export class PaymentService {
         }
 
         const [items, total] = await query.getManyAndCount();
-        
+
         // Post-process to add store_name for subscriptions (since the column was removed)
         const mappedItems = items.map(item => {
             const data = item as any;
@@ -821,4 +800,3 @@ export class PaymentService {
         return mapping[method] || 'credit_card';
     }
 }
-

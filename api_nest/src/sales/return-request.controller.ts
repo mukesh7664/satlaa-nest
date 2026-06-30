@@ -22,13 +22,7 @@ export class ReturnRequestController {
         replacementVariantInfo?: any;
     }) {
         const customerId = req.user.customerId || req.user.userId || req.user.id;
-        const storeId = req.headers['x-store-id'] || req.user.storeId;
-        
-        if (!storeId) {
-            throw new ForbiddenException('Store ID is required');
-        }
-
-        return this.returnRequestService.createBulkRequest(customerId, storeId, data);
+        return this.returnRequestService.createBulkRequest(customerId, data);
     }
 
     @Post()
@@ -43,20 +37,13 @@ export class ReturnRequestController {
         replacementVariantInfo?: any;
     }) {
         const customerId = req.user.customerId || req.user.userId || req.user.id;
-        const storeId = req.headers['x-store-id'] || req.user.storeId;
-        
-        if (!storeId) {
-            throw new ForbiddenException('Store ID is required');
-        }
-
-        return this.returnRequestService.createRequest(customerId, storeId, data);
+        return this.returnRequestService.createRequest(customerId, data);
     }
 
     @Get('my')
     async findMyRequests(@Req() req: any) {
         const customerId = req.user.id;
-        const storeId = req.headers['x-store-id'] || req.user.storeId;
-        return this.returnRequestService.findAll(storeId, customerId);
+        return this.returnRequestService.findAll(customerId);
     }
 
     // Admin Endpoints
@@ -67,14 +54,12 @@ export class ReturnRequestController {
         @Query('startDate') startDate?: string,
         @Query('endDate') endDate?: string,
     ) {
-        const storeId = req.user.storeId; // For store admin
-        return this.returnRequestService.findAll(storeId, undefined, startDate, endDate);
+        return this.returnRequestService.findAll(undefined, startDate, endDate);
     }
 
     @Get(':id')
     async findOne(@Param('id') id: string, @Req() req: any) {
-        const storeId = req.user.storeId || req.headers['x-store-id'];
-        return this.returnRequestService.findOne(id, storeId);
+        return this.returnRequestService.findOne(id);
     }
 
     @Patch(':id/status')
@@ -89,7 +74,6 @@ export class ReturnRequestController {
             addToInventory?: boolean;
         },
     ) {
-        const storeId = req.user.storeId;
-        return this.returnRequestService.updateStatus(id, storeId, data);
+        return this.returnRequestService.updateStatus(id, data);
     }
 }

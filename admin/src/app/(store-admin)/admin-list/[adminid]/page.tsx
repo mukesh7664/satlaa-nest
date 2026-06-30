@@ -31,7 +31,6 @@ import { adminApi, Admin, UpdateAdminData } from "@/services/admin.api";
 import { toast } from "sonner";
 import PermissionSelector from "@/components/PermissionSelector";
 import { useAppSelector } from "@/store/hooks";
-import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function AdminDetailsPage() {
   const { adminid } = useParams();
@@ -41,8 +40,6 @@ export default function AdminDetailsPage() {
   const isSuperAdmin = loggedInAdmin?.role === "admin";
   const isStoreAdmin = loggedInAdmin?.role === "admin";
   const isEdit = searchParams.get("edit") === "true";
-  const { subscription, loading: limitsLoading } = usePlanLimits();
-  const planCategory = subscription?.plan?.category || "ecommerce";
 
   const [admin, setAdmin] = React.useState<Admin | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -129,10 +126,8 @@ export default function AdminDetailsPage() {
 
   const getRoleLabel = (role: string) => {
     const roleMap: Record<string, string> = {
-      super_admin: "Super Admin",
-      super_sub_admin: "Super Sub-Admin",
-      store_admin: "Store Admin",
-      store_sub_admin: "Store Sub-Admin",
+      admin: "Admin",
+      sub_admin: "Sub-Admin",
     };
     return roleMap[role] || role;
   };
@@ -159,7 +154,7 @@ export default function AdminDetailsPage() {
     );
   }
 
-  const isOwner = admin.role === "store_admin" || admin.adminType === "store_owner";
+  const isOwner = admin.adminType === "store_owner";
 
   return (
     <div className="p-6 font-sans">
@@ -175,13 +170,9 @@ export default function AdminDetailsPage() {
               {!editMode && (
                 <span
                   className={`px-2 py-0.5 rounded text-[11px] font-medium border uppercase tracking-wide ${
-                    admin.role === "super_admin"
-                      ? "bg-red-50 text-red-700 border-red-100"
-                      : admin.role === "store_admin"
+                    admin.role === "admin"
                       ? "bg-blue-50 text-blue-700 border-blue-100"
-                      : admin.role === "store_sub_admin"
-                      ? "bg-purple-50 text-purple-700 border-purple-100"
-                      : "bg-green-50 text-green-700 border-green-100"
+                      : "bg-purple-50 text-purple-700 border-purple-100"
                   }`}
                 >
                   {getRoleLabel(admin.role)}
@@ -335,14 +326,8 @@ export default function AdminDetailsPage() {
                               }))
                             }
                           >
-                            {isSuperAdmin && (
-                              <>
-                                <MenuItem value="super_admin">Super Admin</MenuItem>
-                                <MenuItem value="super_sub_admin">Super Sub-Admin</MenuItem>
-                              </>
-                            )}
-                            <MenuItem value="store_admin">Store Admin</MenuItem>
-                            <MenuItem value="store_sub_admin">Store Sub-Admin</MenuItem>
+                            <MenuItem value="admin">Admin</MenuItem>
+                            <MenuItem value="sub_admin">Sub-Admin</MenuItem>
                           </Select>
                         </FormControl>
                       </div>
@@ -372,22 +357,13 @@ export default function AdminDetailsPage() {
                     <p className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-3">
                       Assign Permissions
                     </p>
-                    {limitsLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                        <span className="ml-3 text-sm text-slate-500">Loading plan permissions...</span>
-                      </div>
-                    ) : (
-                      <PermissionSelector
-                        selectedPermissions={editData.permissions || []}
-                        onChange={(permissions) =>
-                          setEditData((d) => ({ ...d, permissions }))
-                        }
-                        disabled={false}
-                        planCategory={planCategory}
-                        allowedPages={subscription?.plan?.allowedPages}
-                      />
-                    )}
+                    <PermissionSelector
+                      selectedPermissions={editData.permissions || []}
+                      onChange={(permissions) =>
+                        setEditData((d) => ({ ...d, permissions }))
+                      }
+                      disabled={false}
+                    />
                   </div>
                 )}
 
@@ -467,23 +443,16 @@ export default function AdminDetailsPage() {
                     <p className="text-xs text-slate-500 uppercase tracking-wide font-medium mb-3">
                       Permissions
                     </p>
-                    {admin.role === "super_admin" ? (
+                    {admin.role === "admin" ? (
                       <p className="text-sm text-slate-600 italic">
-                        Super Admin has all permissions.
+                        Admin has all permissions.
                       </p>
-                    ) : limitsLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                        <span className="ml-3 text-sm text-slate-500">Loading plan permissions...</span>
-                      </div>
                     ) : (
                       <div className="opacity-75 pointer-events-none">
                         <PermissionSelector
                           selectedPermissions={admin.permissions || []}
                           onChange={() => {}}
                           disabled={true}
-                          planCategory={planCategory}
-                          allowedPages={subscription?.plan?.allowedPages}
                         />
                       </div>
                     )}

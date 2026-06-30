@@ -40,7 +40,6 @@ interface EstimateItem {
 
 export default function CreateEstimatePage() {
   const router = useRouter();
-  const { admin } = useAppSelector((state) => state.auth);
   const { themeColors, componentColors } = useAppSelector((state) => state.settings);
   const btnColor = (() => {
     const key = componentColors?.buttonContained || "primary";
@@ -86,7 +85,6 @@ export default function CreateEstimatePage() {
       setProductLoading(true);
       const token = localStorage.getItem("token");
       let apiUrl = `${API_URL}/admin/products-manage?search=${encodeURIComponent(searchTerm)}`;
-      if (admin?.role !== "admin" && admin?.storeId) apiUrl += `&storeId=${admin.storeId}`;
       const res = await axios.get(apiUrl, { headers: { Authorization: `Bearer ${token}` } });
       setProductOptions(res.data.products || res.data.data || []);
     } catch { setProductOptions([]); } finally { setProductLoading(false); }

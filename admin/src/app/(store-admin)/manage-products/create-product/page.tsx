@@ -44,7 +44,6 @@ function CreateProductContent() {
   const searchParams = useSearchParams();
   const productId = searchParams.get("id");
   const isEdit = !!productId || (typeof window !== "undefined" && window.location.search.includes("id="));
-  const { admin } = useAppSelector((state) => state.auth);
   const { themeColors, componentColors } = useAppSelector((state) => state.settings);
   const btnColor = (() => {
     const key = componentColors?.buttonContained || "primary";
@@ -367,7 +366,6 @@ function CreateProductContent() {
               setSelectedCategory(cat);
               setFormData((prev) => ({ ...prev, categoryId: cat.id }));
             }}
-            adminStoreId={admin?.storeId}
           />
         </div>
       </div>

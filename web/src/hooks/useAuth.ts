@@ -48,7 +48,6 @@ export const useAuth = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-tenant-domain": window.location.hostname,
         },
         body: JSON.stringify({ email, password }),
       });
@@ -93,7 +92,6 @@ export const useAuth = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-tenant-domain": window.location.hostname,
         },
         body: JSON.stringify({
           firstName,

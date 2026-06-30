@@ -36,21 +36,16 @@ export class AdminCollectionController {
         @Query('search') search: string,
         @Request() req: any
     ) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = {};
-        if (storeId) whereCond.storeId = storeId;
-        
         const query: any = {
             order: { createdAt: 'DESC' },
             take: Number(limit),
             skip: (Number(page) - 1) * Number(limit),
-            where: whereCond,
         };
 
         if (search) {
             query.where = [
-                { ...whereCond, name: Like(`%${search}%`) },
-                { ...whereCond, slug: Like(`%${search}%`) },
+                { name: Like(`%${search}%`) },
+                { slug: Like(`%${search}%`) },
             ];
         }
 
@@ -71,17 +66,13 @@ export class AdminCollectionController {
     @ApiParam({ name: 'slug' })
     @Get('slug/:slug')
     async getCollectionBySlug(@Param('slug') slug: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = { slug };
-        if (storeId) whereCond.storeId = storeId;
-        const collection = await this.collectionRepository.findOne({ where: whereCond });
+        const collection = await this.collectionRepository.findOne({ where: { slug } });
         return { success: true, collection };
     }
 
     @ApiOperation({ summary: 'Admin: Sync all automatic collections' })
     @Post('sync-all')
     async syncAllCollections(@Request() req: any) {
-        const storeId = req.user?.storeId;
         // TODO: implement automatic collection sync logic
         return { success: true, message: 'Collections synced' };
     }
@@ -90,20 +81,15 @@ export class AdminCollectionController {
     @ApiParam({ name: 'id' })
     @Get(':id')
     async getCollectionById(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        const collection = await this.collectionRepository.findOne({ where: whereCond });
+        const collection = await this.collectionRepository.findOne({ where: { id } });
         return { success: true, collection };
     }
 
     @ApiOperation({ summary: 'Admin: Create collection' })
     @Post()
     async createCollection(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const colData = { ...body };
-        if (storeId) colData.storeId = storeId;
-        
+
         const collection = this.collectionRepository.create(colData);
         return this.collectionRepository.save(collection);
     }
@@ -112,13 +98,9 @@ export class AdminCollectionController {
     @ApiParam({ name: 'id' })
     @Put(':id')
     async updateCollection(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
-        const collection = await this.collectionRepository.findOne({ where: whereCond });
+        const collection = await this.collectionRepository.findOne({ where: { id } });
         if (!collection) throw new NotFoundException('Collection not found');
-        
+
         Object.assign(collection, body);
         return this.collectionRepository.save(collection);
     }
@@ -127,13 +109,9 @@ export class AdminCollectionController {
     @ApiParam({ name: 'id' })
     @Delete(':id')
     async deleteCollection(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
-        const collection = await this.collectionRepository.findOne({ where: whereCond });
+        const collection = await this.collectionRepository.findOne({ where: { id } });
         if (!collection) throw new NotFoundException('Collection not found');
-        
+
         await this.collectionRepository.delete(id);
         return { success: true, message: 'Collection deleted' };
     }
@@ -142,11 +120,7 @@ export class AdminCollectionController {
     @ApiParam({ name: 'id' })
     @Post(':id/products')
     async addProducts(@Param('id') id: string, @Body() body: { productIds: string[] }, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
-        const collection = await this.collectionRepository.findOne({ where: whereCond });
+        const collection = await this.collectionRepository.findOne({ where: { id } });
         if (!collection) throw new NotFoundException('Collection not found');
 
         // Get current max sort order
@@ -182,11 +156,7 @@ export class AdminCollectionController {
     @ApiParam({ name: 'id' })
     @Delete(':id/products')
     async removeProducts(@Param('id') id: string, @Body() body: { productIds: string[] }, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
-        const collection = await this.collectionRepository.findOne({ where: whereCond });
+        const collection = await this.collectionRepository.findOne({ where: { id } });
         if (!collection) throw new NotFoundException('Collection not found');
 
         const productIds = body.productIds || [];
@@ -205,11 +175,7 @@ export class AdminCollectionController {
     @ApiParam({ name: 'id' })
     @Get(':id/products')
     async getCollectionProducts(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
-        const collection = await this.collectionRepository.findOne({ where: whereCond });
+        const collection = await this.collectionRepository.findOne({ where: { id } });
         if (!collection) throw new NotFoundException('Collection not found');
 
         const collectionProducts = await this.collectionProductRepository.find({
@@ -235,11 +201,7 @@ export class AdminCollectionController {
     @ApiParam({ name: 'id' })
     @Patch(':id/products/reorder')
     async reorderProducts(@Param('id') id: string, @Body() body: { productIds: string[] }, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
-        const collection = await this.collectionRepository.findOne({ where: whereCond });
+        const collection = await this.collectionRepository.findOne({ where: { id } });
         if (!collection) throw new NotFoundException('Collection not found');
 
         const productIds = body.productIds || [];
@@ -257,13 +219,9 @@ export class AdminCollectionController {
     @ApiParam({ name: 'id' })
     @Patch(':id/status')
     async toggleStatus(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
-        const collection = await this.collectionRepository.findOne({ where: whereCond });
+        const collection = await this.collectionRepository.findOne({ where: { id } });
         if (!collection) throw new NotFoundException('Collection not found');
-        
+
         collection.isActive = !collection.isActive;
         return this.collectionRepository.save(collection);
     }

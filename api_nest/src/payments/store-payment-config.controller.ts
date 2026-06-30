@@ -20,7 +20,7 @@ export class StorePaymentConfigController {
         @Res({ passthrough: true }) res: Response
     ) {
         res.setHeader('Cache-Control', 'no-store');
-        return this.configService.findByStore(req.user.storeId);
+        return this.configService.findByStore();
     }
 
     @ApiOperation({ summary: 'Get decrypted payment configurations (Admin only)' })
@@ -33,7 +33,7 @@ export class StorePaymentConfigController {
         res.setHeader('Cache-Control', 'no-store');
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
-        return this.configService.getDecryptedByStore(req.user.storeId, req.user, ipAddress, userAgent);
+        return this.configService.getDecryptedByStore(req.user, ipAddress, userAgent);
     }
 
     @ApiOperation({ summary: 'Create or update payment configuration' })
@@ -41,7 +41,7 @@ export class StorePaymentConfigController {
     async upsertConfig(@Request() req, @Body() dto: UpsertStorePaymentConfigDto) {
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
-        return this.configService.upsert(req.user.storeId, dto, req.user, ipAddress, userAgent);
+        return this.configService.upsert(dto, req.user, ipAddress, userAgent);
     }
 
     @ApiOperation({ summary: 'Delete payment configuration' })
@@ -49,6 +49,6 @@ export class StorePaymentConfigController {
     async deleteConfig(@Request() req, @Param('provider') provider: string) {
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
-        return this.configService.delete(req.user.storeId, provider, req.user, ipAddress, userAgent);
+        return this.configService.delete(provider, req.user, ipAddress, userAgent);
     }
 }

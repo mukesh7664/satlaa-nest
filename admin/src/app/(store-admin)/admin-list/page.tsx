@@ -31,7 +31,6 @@ import { useRouter } from "next/navigation";
 import { adminApi, Admin } from "@/services/admin.api";
 import { toast } from "sonner";
 import { useAppSelector } from "@/store/hooks";
-import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function AdminListPage() {
   const { admin } = useAppSelector((state) => state.auth);
@@ -48,12 +47,7 @@ export default function AdminListPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [adminToDelete, setAdminToDelete] = React.useState<string | null>(null);
   const router = useRouter();
-  const { subscription, usage, limits, loading: limitsLoading } = usePlanLimits();
-  
-  const adminUsed = usage?.users?.used || admins.length;
-  const adminLimit = usage?.users?.limit || limits.users;
-  const isLimitReached = adminLimit !== -1 && adminUsed >= adminLimit;
-  
+
   const storeOwner = admins.find((a) => a.role === "admin");
   const subAdmins = admins.filter((a) => a.role !== "admin");
 
@@ -112,17 +106,11 @@ export default function AdminListPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-800">Admin Users</h1>
           <div className="flex items-center gap-4">
-            {subscription && !limitsLoading && (
-              <div className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${isLimitReached ? 'bg-red-50 text-red-600 border-red-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>
-                ADMINS: {adminUsed} / {adminLimit === -1 ? 'Unlimited' : adminLimit}
-              </div>
-            )}
             {canEdit && (
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => router.push("/admin-list/new")}
-                disabled={isLimitReached}
                 sx={{
                   bgcolor: "var(--primary)",
                   "&:hover": { bgcolor: "var(--primary)", filter: "brightness(0.9)" },

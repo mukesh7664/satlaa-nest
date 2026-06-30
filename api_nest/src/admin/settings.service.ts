@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GeneralSettings } from './entities/general-settings.entity';
 import { SeoSettings } from './entities/seo-settings.entity';
-import { Store } from '../stores/entities/store.entity';
 import { Page } from '../cms/entities/page.entity';
 
 @Injectable()
@@ -16,15 +15,11 @@ export class SettingsService {
         private seoSettingsRepository: Repository<SeoSettings>,
         @InjectRepository(Page)
         private pageRepository: Repository<Page>,
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
     ) { }
 
-    async getSeoSettings(storeId?: string) {
-        if (!storeId) return { seo: {}, customScripts: {} };
-
-        let settings = await this.seoSettingsRepository.findOne({ where: { storeId } });
-        const general = await this.getGeneralSettings(storeId);
+    async getSeoSettings() {
+        let settings = await this.seoSettingsRepository.findOne({ where: {} });
+        const general = await this.getGeneralSettings();
 
         const seoBase = {
             keywords: settings?.keywords || [],
@@ -46,9 +41,9 @@ export class SettingsService {
         };
     }
 
-    async getPublicSettings(storeId?: string) {
-        const general = await this.getGeneralSettings(storeId);
-        const seoData = await this.getSeoSettings(storeId);
+    async getPublicSettings() {
+        const general = await this.getGeneralSettings();
+        const seoData = await this.getSeoSettings();
 
         if (!general.id) {
             return {
@@ -79,21 +74,18 @@ export class SettingsService {
         };
     }
 
-    async getGeneralSettings(storeId?: string) {
-        if (!storeId) return {} as GeneralSettings;
-        let settings = await this.generalSettingsRepository.findOne({ where: { storeId } });
+    async getGeneralSettings() {
+        let settings = await this.generalSettingsRepository.findOne({ where: {} });
 
         // Migration check removed
         return settings || {} as GeneralSettings;
     }
 
-    async getSettings(storeId?: string) {
-        return this.getGeneralSettings(storeId);
+    async getSettings() {
+        return this.getGeneralSettings();
     }
 
-    async updateSettings(data: Partial<GeneralSettings> & { emailSettings?: any }, storeId?: string) {
-        if (!storeId) return null;
-
+    async updateSettings(data: Partial<GeneralSettings> & { emailSettings?: any }) {
         // 0. Ensure emailSettings is NOT saved here as it has its own table
         if (data.emailSettings) {
             delete data.emailSettings;
@@ -107,23 +99,18 @@ export class SettingsService {
             data.siteFavicon = getS3KeyFromUrl(typeof data.siteFavicon === 'string' ? data.siteFavicon : (data.siteFavicon as any).url || (data.siteFavicon as any).key);
         }
 
-        // 2. Sync showInMarketplace to Store entity if present
-        if (data.showInMarketplace !== undefined && storeId) {
-            await this.storeRepository.update(storeId, { showInMarketplace: data.showInMarketplace });
-        }
-
-        let existing = await this.generalSettingsRepository.findOne({ where: { storeId } });
+        let existing = await this.generalSettingsRepository.findOne({ where: {} });
         if (existing) {
             Object.assign(existing, data);
             return this.generalSettingsRepository.save(existing);
         }
 
-        const newSettings = this.generalSettingsRepository.create({ ...data, storeId });
+        const newSettings = this.generalSettingsRepository.create({ ...data });
         return this.generalSettingsRepository.save(newSettings);
     }
 
-    async updateSeoSettings(data: { seo?: any, customScripts?: any }, storeId: string) {
-        let settings = await this.seoSettingsRepository.findOne({ where: { storeId } });
+    async updateSeoSettings(data: { seo?: any, customScripts?: any }) {
+        let settings = await this.seoSettingsRepository.findOne({ where: {} });
 
         const seoData = data.seo || {};
         const updateData = {
@@ -140,7 +127,7 @@ export class SettingsService {
             return this.seoSettingsRepository.save(settings);
         }
 
-        const newSettings = this.seoSettingsRepository.create({ ...updateData, storeId });
+        const newSettings = this.seoSettingsRepository.create({ ...updateData });
         return this.seoSettingsRepository.save(newSettings);
     }
 }

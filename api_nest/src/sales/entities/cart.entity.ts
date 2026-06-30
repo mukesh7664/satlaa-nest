@@ -1,6 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, Index, OneToMany, Relation, DeleteDateColumn } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
-import { Store } from '../../stores/entities/store.entity';
 import { CartItem } from './cart-item.entity';
 
 
@@ -17,20 +16,11 @@ export enum CartType {
 }
 
 @Entity('carts')
-@Index(['storeId', 'customerId', 'status'])
-@Index(['storeId', 'sessionId', 'status'])
-@Index(['storeId'])
+@Index(['customerId', 'status'])
+@Index(['sessionId', 'status'])
 export class Cart {
     @PrimaryGeneratedColumn('uuid')
     id: string;
-
-    // Store Association
-    @ManyToOne(() => Store, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    storeId: string;
 
     // Customer Association
     @ManyToOne(() => Customer, { nullable: true, onDelete: 'CASCADE' })

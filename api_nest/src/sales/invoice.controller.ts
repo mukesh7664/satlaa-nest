@@ -2,7 +2,6 @@ import { Controller, Get, Param, UseGuards, Request, Post, Put, Delete, Body, Qu
 import { InvoiceService } from './invoice.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import { BadRequestException } from '@nestjs/common';
 
 @ApiTags('sales')
@@ -15,9 +14,8 @@ export class InvoiceController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('invoice')
-    async getMyInvoices(@Request() req, @Query() query: any, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant required');
-        return this.invoiceService.findAllInvoices(req.user.userId, storeId, query);
+    async getMyInvoices(@Request() req, @Query() query: any) {
+        return this.invoiceService.findAllInvoices(req.user.userId, query);
     }
 
     @ApiOperation({ summary: 'Get details of specific invoice' })
@@ -27,9 +25,8 @@ export class InvoiceController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('invoice/:id')
-    async getInvoice(@Param('id') id: string, @Request() req, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant required');
-        return this.invoiceService.findOneInvoice(id, req.user.userId, storeId);
+    async getInvoice(@Param('id') id: string, @Request() req) {
+        return this.invoiceService.findOneInvoice(id, req.user.userId);
     }
 
     // ── Admin ───────────────────────────────────────────────────────────
@@ -38,9 +35,7 @@ export class InvoiceController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/invoices')
     async createInvoice(@Body() body: any, @Request() req: any) {
-        const storeId = req.user.storeId;
-        if (!storeId) throw new BadRequestException('Tenant required');
-        return this.invoiceService.createInvoice({ ...body, storeId, createdById: req.user.userId });
+        return this.invoiceService.createInvoice({ ...body, createdById: req.user.userId });
     }
 
     @ApiOperation({ summary: 'Admin: Generate invoice from order' })
@@ -48,9 +43,7 @@ export class InvoiceController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/invoices/generate/:orderId')
     async generateFromOrder(@Param('orderId') orderId: string, @Request() req: any) {
-        const storeId = req.user.storeId;
-        if (!storeId) throw new BadRequestException('Tenant required');
-        return this.invoiceService.createInvoiceFromOrder(orderId, storeId, req.user.userId);
+        return this.invoiceService.createInvoiceFromOrder(orderId, req.user.userId);
     }
 
     @ApiOperation({ summary: 'Admin: Get all invoices' })
@@ -58,9 +51,7 @@ export class InvoiceController {
     @UseGuards(JwtAuthGuard)
     @Get('admin/invoices')
     async getAllInvoices(@Query() query: any, @Request() req: any) {
-        const storeId = req.user.storeId;
-        if (!storeId) throw new BadRequestException('Tenant required');
-        return this.invoiceService.findAllInvoices(undefined, storeId, query);
+        return this.invoiceService.findAllInvoices(undefined, query);
     }
 
     @ApiOperation({ summary: 'Admin: Get invoice by ID' })
@@ -68,9 +59,7 @@ export class InvoiceController {
     @UseGuards(JwtAuthGuard)
     @Get('admin/invoices/:id')
     async getInvoiceById(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user.storeId;
-        if (!storeId) throw new BadRequestException('Tenant required');
-        const invoice = await this.invoiceService.findOneInvoice(id, undefined, storeId);
+        const invoice = await this.invoiceService.findOneInvoice(id, undefined);
         return { data: invoice };
     }
 
@@ -79,9 +68,7 @@ export class InvoiceController {
     @UseGuards(JwtAuthGuard)
     @Put('admin/invoices/:id')
     async updateInvoice(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user.storeId;
-        if (!storeId) throw new BadRequestException('Tenant required');
-        const updated = await this.invoiceService.updateInvoice(id, body, storeId);
+        const updated = await this.invoiceService.updateInvoice(id, body);
         return { success: true, message: 'Invoice updated', data: { ...updated, _id: updated.id } };
     }
 
@@ -90,9 +77,7 @@ export class InvoiceController {
     @UseGuards(JwtAuthGuard)
     @Delete('admin/invoices/:id')
     async deleteInvoice(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user.storeId;
-        if (!storeId) throw new BadRequestException('Tenant required');
-        await this.invoiceService.deleteInvoice(id, storeId);
+        await this.invoiceService.deleteInvoice(id);
         return { success: true, message: 'Invoice deleted' };
     }
 
@@ -101,9 +86,7 @@ export class InvoiceController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/invoices/:id/generate-pdf')
     async generatePDF(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user.storeId;
-        if (!storeId) throw new BadRequestException('Tenant required');
-        const url = await this.invoiceService.generateAndStorePdf(id, storeId);
+        const url = await this.invoiceService.generateAndStorePdf(id);
         return { success: true, message: 'PDF generated and stored', data: { pdfUrl: url } };
     }
 
@@ -112,9 +95,7 @@ export class InvoiceController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/invoices/:id/send')
     async sendInvoice(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user.storeId;
-        if (!storeId) throw new BadRequestException('Tenant required');
-        return this.invoiceService.sendInvoice(id, storeId);
+        return this.invoiceService.sendInvoice(id);
     }
 
     @ApiOperation({ summary: 'Admin: Add payment' })
@@ -122,8 +103,6 @@ export class InvoiceController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/invoices/:id/payments')
     async addPayment(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user.storeId;
-        if (!storeId) throw new BadRequestException('Tenant required');
         // This would call service to add payment
         return { success: true, message: 'Payment added', transactionId: 'TXN-MOCK' };
     }

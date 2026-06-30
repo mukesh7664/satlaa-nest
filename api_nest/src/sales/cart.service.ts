@@ -50,8 +50,8 @@ export class CartService implements OnModuleInit {
      * Merges a guest cart (identified by sessionId) into a user's cart (identified by customerId).
      * Follows Path A (Promotion) or Path B (Item Merge) logic.
      */
-    async mergeCarts(storeId: string, customerId: string, sessionId: string) {
-        if (!sessionId) return this.findOrCreateCart(storeId, customerId);
+    async mergeCarts(customerId: string, sessionId: string) {
+        if (!sessionId) return this.findOrCreateCart(customerId);
 
         return await this.dataSource.transaction(async (manager) => {
             const cartRepo = manager.getRepository(Cart);
@@ -59,20 +59,20 @@ export class CartService implements OnModuleInit {
 
             // 1. Find the guest cart
             const guestCart = await cartRepo.findOne({
-                where: { storeId, sessionId, status: CartStatus.ACTIVE },
+                where: { sessionId, status: CartStatus.ACTIVE },
                 relations: ['items'],
             });
 
             // If no guest cart or it's empty, just find/create user cart
             if (!guestCart || guestCart.items.length === 0) {
-                const userCart = await this.findOrCreateCart(storeId, customerId);
+                const userCart = await this.findOrCreateCart(customerId);
                 if (guestCart) await cartRepo.remove(guestCart);
                 return userCart;
             }
 
             // 2. Find the user cart
             const userCart = await cartRepo.findOne({
-                where: { storeId, customerId, status: CartStatus.ACTIVE },
+                where: { customerId, status: CartStatus.ACTIVE },
                 relations: ['items'],
             });
 
@@ -122,9 +122,9 @@ export class CartService implements OnModuleInit {
      * Finds an existing active cart or creates a new one.
      * Strictly separates customerId and sessionId.
      */
-    async findOrCreateCart(storeId: string, customerId?: string, sessionId?: string, manager?: EntityManager): Promise<Cart> {
+    async findOrCreateCart(customerId?: string, sessionId?: string, manager?: EntityManager): Promise<Cart> {
         const cartRepo = manager ? manager.getRepository(Cart) : this.cartRepository;
-        const whereCondition: any = { storeId, status: CartStatus.ACTIVE };
+        const whereCondition: any = { status: CartStatus.ACTIVE };
         if (customerId) {
             whereCondition.customerId = customerId;
         } else {
@@ -160,11 +160,10 @@ export class CartService implements OnModuleInit {
             }
         }
         if (!cart) {
-            const settings = await this.settingsRepository.findOne({ where: { storeId } });
+            const settings = await this.settingsRepository.findOne({ where: {} });
             const defaultCurrency = settings?.defaultCurrency || 'INR';
 
             cart = cartRepo.create({
-                storeId,
                 customerId,
                 sessionId: customerId ? null : sessionId,
                 items: [],
@@ -188,9 +187,9 @@ export class CartService implements OnModuleInit {
         }
         return cart;
     }
-    async addToCart(storeId: string, customerId: string | undefined, sessionId: string | undefined, itemDto: AddCartItemDto) {
+    async addToCart(customerId: string | undefined, sessionId: string | undefined, itemDto: AddCartItemDto) {
         return await this.dataSource.transaction(async (manager) => {
-            const cart = await this.findOrCreateCart(storeId, customerId, sessionId, manager);
+            const cart = await this.findOrCreateCart(customerId, sessionId, manager);
 
             let cartItem = cart.items.find(
                 item => 
@@ -223,9 +222,9 @@ export class CartService implements OnModuleInit {
         });
     }
 
-    async removeItem(storeId: string, customerId: string | undefined, sessionId: string | undefined, cartItemId: string) {
+    async removeItem(customerId: string | undefined, sessionId: string | undefined, cartItemId: string) {
         return await this.dataSource.transaction(async (manager) => {
-            const cart = await this.findOrCreateCart(storeId, customerId, sessionId, manager);
+            const cart = await this.findOrCreateCart(customerId, sessionId, manager);
 
             const itemToRemove = cart.items.find(item => item.id === cartItemId);
             if (itemToRemove) {
@@ -237,15 +236,15 @@ export class CartService implements OnModuleInit {
         });
     }
 
-    async updateItemQuantity(storeId: string, customerId: string | undefined, sessionId: string | undefined, cartItemId: string, quantity: number) {
+    async updateItemQuantity(customerId: string | undefined, sessionId: string | undefined, cartItemId: string, quantity: number) {
         return await this.dataSource.transaction(async (manager) => {
-            const cart = await this.findOrCreateCart(storeId, customerId, sessionId, manager);
+            const cart = await this.findOrCreateCart(customerId, sessionId, manager);
 
             const item = cart.items.find(i => i.id === cartItemId);
             if (!item) throw new Error('Item not found in cart');
 
             if (quantity <= 0) {
-                return this.removeItem(storeId, customerId, sessionId, cartItemId);
+                return this.removeItem(customerId, sessionId, cartItemId);
             }
 
             item.quantity = quantity;
@@ -256,15 +255,15 @@ export class CartService implements OnModuleInit {
         });
     }
 
-    async clearCart(storeId: string, customerId: string | undefined, sessionId: string | undefined) {
-        const cart = await this.findOrCreateCart(storeId, customerId, sessionId);
-        
+    async clearCart(customerId: string | undefined, sessionId: string | undefined) {
+        const cart = await this.findOrCreateCart(customerId, sessionId);
+
         if (cart.items.length > 0) {
             await this.cartItemRepository.remove(cart.items);
             cart.items = [];
         }
 
-        const settings = await this.settingsRepository.findOne({ where: { storeId } });
+        const settings = await this.settingsRepository.findOne({ where: {} });
         const defaultCurrency = settings?.defaultCurrency || 'INR';
 
         cart.totals = {
@@ -279,18 +278,18 @@ export class CartService implements OnModuleInit {
         return this.cartRepository.save(cart);
     }
 
-    async applyDiscount(storeId: string, customerId: string | undefined, sessionId: string | undefined, code: string) {
-        const cart = await this.findOrCreateCart(storeId, customerId, sessionId);
+    async applyDiscount(customerId: string | undefined, sessionId: string | undefined, code: string) {
+        const cart = await this.findOrCreateCart(customerId, sessionId);
         const subtotal = cart.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
-        
-        await this.discountService.validateDiscount(code, customerId, subtotal, storeId);
+
+        await this.discountService.validateDiscount(code, customerId, subtotal);
 
         cart.discountCode = code;
         return this.recalculateCart(cart);
     }
 
-    async removeDiscount(storeId: string, customerId: string | undefined, sessionId: string | undefined) {
-        const cart = await this.findOrCreateCart(storeId, customerId, sessionId);
+    async removeDiscount(customerId: string | undefined, sessionId: string | undefined) {
+        const cart = await this.findOrCreateCart(customerId, sessionId);
         cart.discountCode = null;
         cart.appliedDiscountId = null;
         return this.recalculateCart(cart);
@@ -327,7 +326,6 @@ export class CartService implements OnModuleInit {
                 cart.discountCode,
                 cart.customerId,
                 cart.totals.subtotal,
-                cart.storeId,
                 { items: cart.items }
             );
 

@@ -35,15 +35,13 @@ export class ReportsController {
     @Request() req: any,
     @Res() res: Response,
   ) {
-    const storeId = req.user?.storeId;
     const { columns, format, startDate, endDate } = body;
-    
+
     return this.reportsService.exportReport(
       type,
       format,
       columns,
       { startDate, endDate },
-      storeId,
       res,
     );
   }

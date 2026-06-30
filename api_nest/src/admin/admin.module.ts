@@ -27,7 +27,6 @@ import { Invoice } from '../sales/entities/invoice.entity';
 import { Product } from '../catalog/entities/product.entity';
 import { Collection } from '../catalog/entities/collection.entity';
 import { Inquiry } from '../communication/entities/inquiry.entity';
-import { Store } from '../stores/entities/store.entity';
 import { Section } from '../cms/entities/section.entity';
 import { Page } from '../cms/entities/page.entity';
 import { Address } from '../customers/entities/address.entity';
@@ -60,7 +59,6 @@ import { AuditLogService } from './audit-log.service';
             Collection,
             ProductFlag,
             Estimate,
-            Store,
             Section,
             Page,
             Inquiry,

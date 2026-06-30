@@ -55,9 +55,6 @@ export class Admin {
     passwordResetAttempts: number;
 
     @Column({ nullable: true })
-    storeId: string;
-
-    @Column({ nullable: true })
     @Index()
     parentId: string;
 

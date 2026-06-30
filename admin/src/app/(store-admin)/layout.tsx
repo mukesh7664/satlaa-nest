@@ -8,77 +8,8 @@ import AuthGuard from "@/components/AuthGuard";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { loginSuccess, logout } from "@/store/slices/authSlice";
 import { apiService } from "@/services/api";
-import { CircularProgress, Box, Typography } from "@mui/material";
+import { CircularProgress, Box } from "@mui/material";
 import { isTokenExpired } from "@/utils/auth";
-
-const ROUTE_PERMISSIONS = [
-  { key: "dashboard", routes: ["/dashboard"], label: "Dashboard" },
-  { key: "reports", routes: ["/reports"], label: "Reports & Analytics" },
-  { key: "orders", routes: ["/orders", "/payments"], label: "Orders Management" },
-  { key: "estimates", routes: ["/estimates"], label: "Estimates" },
-  { key: "invoices", routes: ["/invoices", "/invoice"], label: "Invoices" },
-  { key: "customers", routes: ["/customers"], label: "Customers Directory" },
-  { key: "inquiries", routes: ["/inquiries"], label: "Inquiries & Leads" },
-  { key: "manage-products/product-list", routes: ["/manage-products/product-list"], label: "Products List" },
-  { key: "manage-products", routes: ["/manage-products", "/discounts"], label: "Product Catalog" },
-  { key: "tags-flags", routes: ["/manage-products/tags", "/manage-products/flags"], label: "Product Tags & Flags" },
-  { key: "pages", routes: ["/pages"], label: "Pages Builder" },
-  { key: "sections", routes: ["/sections"], label: "Sections Library" },
-  { key: "themes", routes: ["/themes"], label: "Themes Customization" },
-  { key: "media", routes: ["/media"], label: "Media Manager" },
-  { key: "admin-list", routes: ["/admin-list"], label: "Store Admins & Team" },
-  { key: "settings/general-settings", routes: ["/settings/general-settings"], label: "General Settings" },
-  { key: "settings/theme-settings", routes: ["/settings/theme-settings"], label: "Theme Settings" },
-  { key: "settings/payment-settings", routes: ["/settings/payment-settings"], label: "Payment Settings" },
-  { key: "settings/shipping-settings", routes: ["/settings/shipping-settings"], label: "Shipping Settings" },
-  { key: "settings/seo-settings", routes: ["/settings/seo-settings"], label: "SEO Settings" },
-  { key: "settings/advertisement", routes: ["/settings/promo-popups"], label: "Promo Popups" },
-  { key: "settings/email-config/settings", routes: ["/settings/email-config/settings"], label: "Email Settings" },
-  { key: "settings/email-config/template", routes: ["/settings/email-config/template"], label: "Email Template" },
-  { key: "settings/audit-logs", routes: ["/settings/audit-logs"], label: "Audit Logs" },
-];
-
-const checkRouteAccess = (pathname: string, admin: any) => {
-  // Single-store: no plan-based page gating. All authenticated admins have full access.
-  return { hasAccess: true, label: "" };
-};
-
-const UpgradeRequiredView = ({ moduleName }: { moduleName: string }) => {
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '80vh',
-        p: 4,
-        textAlign: 'center',
-      }}
-    >
-      <Box
-        sx={{
-          bgcolor: '#fef2f2',
-          color: '#ef4444',
-          p: 3,
-          borderRadius: '50%',
-          mb: 3,
-          boxShadow: '0 4px 14px rgba(239, 68, 68, 0.15)',
-        }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '48px', height: '48px' }}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-        </svg>
-      </Box>
-      <Typography variant="h5" fontWeight="bold" gutterBottom sx={{ color: '#1e293b' }}>
-        Access Restricted
-      </Typography>
-      <Typography variant="body1" sx={{ color: '#64748b', maxWidth: 480, mb: 4 }}>
-        The <strong>{moduleName}</strong> module is not included in your current subscription plan. Please contact your store administrator to upgrade and unlock this feature.
-      </Typography>
-    </Box>
-  );
-};
 
 export default function StoreAdminLayout({
   children,
@@ -89,7 +20,7 @@ export default function StoreAdminLayout({
   const router = useRouter();
   const isCollapsedPage = (pathname.startsWith("/pages/") && pathname !== "/pages") || pathname.startsWith("/settings");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(isCollapsedPage);
-  const { admin, isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -140,8 +71,6 @@ export default function StoreAdminLayout({
     );
   }
 
-  const { hasAccess, label } = checkRouteAccess(pathname, admin);
-
   return (
     <AuthGuard>
       <div className="flex h-screen overflow-hidden">
@@ -154,11 +83,7 @@ export default function StoreAdminLayout({
             }`}
         >
           <Header />
-          {!hasAccess ? (
-            <div className="flex-1 overflow-y-auto">
-              <UpgradeRequiredView moduleName={label} />
-            </div>
-          ) : pathname.startsWith("/pages/") && pathname !== "/pages" ? (
+          {pathname.startsWith("/pages/") && pathname !== "/pages" ? (
             children
           ) : (
             <div className="flex-1 overflow-y-auto">

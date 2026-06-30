@@ -32,7 +32,6 @@ export interface LoginResponse {
     name: string;
     email: string;
     role: string;
-    storeId?: string;
     permissions: string[];
   };
 }
@@ -149,12 +148,11 @@ class ApiService {
     return response.json();
   }
 
-  async getPlans(activeOnly?: boolean, category?: string): Promise<Plan[]> {
+  async getPlans(activeOnly?: boolean): Promise<Plan[]> {
     let url = `${this.baseUrl}/plans`;
     const params = new URLSearchParams();
     if (activeOnly) params.append('isActive', 'true');
-    if (category) params.append('category', category);
-    
+
     const queryString = params.toString();
     if (queryString) {
       url += `?${queryString}`;
@@ -220,137 +218,6 @@ class ApiService {
     if (!response.ok) {
       const error: ApiError = await response.json();
       throw new Error(error.message || "Password reset failed");
-    }
-
-    return response.json();
-  }
-
-  async createSubscriptionOrder(data: { planId: string, storeName: string, storeSlug: string, billingCycle: string }, token?: string): Promise<{ order: any, attemptId: string, razorpayKey: string }> {
-    const activeToken = token || localStorage.getItem('token');
-    const response = await fetch(`${this.baseUrl}/subscriptions/create-order`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${activeToken}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "Failed to create payment order");
-    }
-
-    return response.json();
-  }
-
-  async createRegistrationSubscriptionOrder(data: {
-    planId: string,
-    storeName: string,
-    storeSlug: string,
-    billingCycle: string,
-    registrationData: RegisterData,
-    couponCode?: string,
-  }): Promise<{ isFree: boolean, order?: any, attemptId: string, razorpayKey?: string, amount?: number }> {
-    const response = await fetch(`${this.baseUrl}/subscriptions/register-order`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "Failed to create registration order");
-    }
-
-    return response.json();
-  }
-
-  async validateSubscriptionCoupon(code: string, planId: string, originalAmount: number): Promise<{
-    valid: boolean;
-    reason?: string;
-    discountedAmount?: number;
-    discountAmount?: number;
-    discountLabel?: string;
-    isFree?: boolean;
-  }> {
-    const response = await fetch(`${this.baseUrl}/subscription-coupons/validate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, planId, originalAmount }),
-    });
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "Coupon validation failed");
-    }
-    return response.json();
-  }
-
-  async getSubscriptionCoupons(token: string): Promise<any[]> {
-    const response = await fetch(`${this.baseUrl}/subscription-coupons`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) throw new Error("Failed to fetch coupons");
-    return response.json();
-  }
-
-  async createSubscriptionCoupon(data: any, token: string): Promise<any> {
-    const response = await fetch(`${this.baseUrl}/subscription-coupons`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "Failed to create coupon");
-    }
-    return response.json();
-  }
-
-  async updateSubscriptionCoupon(id: string, data: any, token: string): Promise<any> {
-    const response = await fetch(`${this.baseUrl}/subscription-coupons/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "Failed to update coupon");
-    }
-    return response.json();
-  }
-
-  async deleteSubscriptionCoupon(id: string, token: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/subscription-coupons/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) throw new Error("Failed to delete coupon");
-  }
-
-  async verifySubscriptionPayment(data: any, token?: string): Promise<any> {
-    const activeToken = token || localStorage.getItem('token');
-    const response = await fetch(`${this.baseUrl}/subscriptions/verify-payment`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${activeToken}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = "Payment verification failed";
-      try {
-        if (errorText) {
-          const error: ApiError = JSON.parse(errorText);
-          errorMessage = error.message || errorMessage;
-        }
-      } catch (e) {}
-      throw new Error(errorMessage);
     }
 
     return response.json();

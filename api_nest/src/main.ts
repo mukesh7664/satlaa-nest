@@ -17,17 +17,14 @@ Sentry.init({
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
-import { TenantService } from './tenant/tenant.service';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
-    const tenantService = app.get(TenantService);
-
     app.enableCors({
-        origin: async (origin, callback) => {
+        origin: (origin, callback) => {
             // Allow requests with no origin (like mobile apps or curl requests)
             if (!origin) {
                 return callback(null, true);
@@ -56,7 +53,7 @@ async function bootstrap() {
                 'http://epxweb.nirdesham.com',
             ];
 
-            // 1. Check static whitelist or localhost subdomains
+            // Allow static whitelist or localhost subdomains
             if (
                 allowedStaticOrigins.includes(origin) ||
                 origin.match(/^https?:\/\/.*\.localhost(:\d+)?$/)
@@ -64,20 +61,7 @@ async function bootstrap() {
                 return callback(null, true);
             }
 
-            // 2. Dynamic check from Database
-            try {
-                // Remove protocol (http:// or https://) for lookup
-                const host = origin.replace(/^https?:\/\//, '');
-                const store = await tenantService.getStoreByHost(host);
-
-                if (store) {
-                    return callback(null, true);
-                }
-            } catch (error) {
-                // Tenant not found or error querying DB
-            }
-
-            // 3. Reject
+            // Reject
             console.error(`CORS Error: Origin not allowed -> ${origin}`);
             callback(new Error('Not allowed by CORS'), false);
         },

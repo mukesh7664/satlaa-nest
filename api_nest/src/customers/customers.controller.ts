@@ -2,7 +2,6 @@ import { Controller, Get, Post, Body, Param, Request, UseGuards } from '@nestjs/
 import { CustomersService } from './customers.service';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 
 @ApiTags('customers')
 @Controller('customers')
@@ -13,16 +12,16 @@ export class CustomersController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('me')
-    async getProfile(@Request() req, @CurrentTenant('id') storeId: string) {
+    async getProfile(@Request() req) {
         // Here req.user will contain the customer's jwt payload
-        return this.customersService.findOneById(req.user.sub ?? req.user.userId, storeId);
+        return this.customersService.findOneById(req.user.sub ?? req.user.userId);
     }
 
     @ApiOperation({ summary: 'Get all customers for the store (Store Admin)' })
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get()
-    async getStoreCustomers(@CurrentTenant('id') storeId: string) {
-        return this.customersService.findAllForStore(storeId);
+    async getStoreCustomers() {
+        return this.customersService.findAllForStore();
     }
 }

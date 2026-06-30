@@ -10,28 +10,28 @@ export class WishlistService {
         private wishlistRepository: Repository<Wishlist>,
     ) { }
 
-    async getWishlist(storeId: string, userId: string) {
+    async getWishlist(userId: string) {
         return this.wishlistRepository.find({
-            where: { storeId, userId },
+            where: { userId },
             relations: ['product', 'product.media', 'product.category', 'product.children'],
             order: { createdAt: 'DESC' },
         });
     }
 
-    async addToWishlist(storeId: string, userId: string, productId: string) {
+    async addToWishlist(userId: string, productId: string) {
         const existing = await this.wishlistRepository.findOne({
-            where: { storeId, userId, productId },
+            where: { userId, productId },
         });
         if (existing) {
             throw new ConflictException('Product already in wishlist');
         }
-        const item = this.wishlistRepository.create({ storeId, userId, productId });
+        const item = this.wishlistRepository.create({ userId, productId });
         return this.wishlistRepository.save(item);
     }
 
-    async removeFromWishlist(storeId: string, userId: string, productId: string) {
+    async removeFromWishlist(userId: string, productId: string) {
         const item = await this.wishlistRepository.findOne({
-            where: { storeId, userId, productId },
+            where: { userId, productId },
         });
         if (!item) {
             throw new NotFoundException('Product not in wishlist');

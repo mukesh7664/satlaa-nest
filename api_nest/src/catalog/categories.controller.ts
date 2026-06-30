@@ -13,19 +13,18 @@ export class CategoriesController {
     @ApiOperation({ summary: 'Get all categories' })
     @Get()
     findAll(@Request() req: any) {
-        return this.categoriesService.findAll(req.user.storeId, false);
+        return this.categoriesService.findAll();
     }
 
     @ApiOperation({ summary: 'Get category by ID' })
     @Get(':id')
     findOne(@Param('id') id: string, @Request() req: any) {
-        return this.categoriesService.findOne(id, req.user.storeId, false);
+        return this.categoriesService.findOne(id);
     }
 
     @ApiOperation({ summary: 'Create category' })
     @Post()
     create(@Body() data: any, @Request() req: any) {
-        // Now allowed for all authenticated admins, service handles storeId
         return this.categoriesService.create(data, req.user);
     }
 

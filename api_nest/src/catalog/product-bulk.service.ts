@@ -52,9 +52,9 @@ export class ProductBulkService {
         return hierarchy;
     }
 
-    private async getOrCreateCategoryPath(pathOrHierarchy: string | any[], terminalFieldsConfig: any, storeId: string): Promise<string | null> {
+    private async getOrCreateCategoryPath(pathOrHierarchy: string | any[], terminalFieldsConfig: any): Promise<string | null> {
         if (!pathOrHierarchy) return null;
-        
+
         let hierarchy: any[] = [];
         if (typeof pathOrHierarchy === 'string') {
             const parts = pathOrHierarchy.split(' / ').map(p => p.trim()).filter(p => !!p);
@@ -75,22 +75,19 @@ export class ProductBulkService {
             const { name, fieldsConfig } = level;
             const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-            // Try to find matching category at this level (Local or Global)
+            // Try to find matching category at this level
             let category = await this.categoryRepository.findOne({
                 where: [
-                    { name, storeId, parentId: lastParentId ? lastParentId : IsNull() },
-                    { slug, storeId, parentId: lastParentId ? lastParentId : IsNull() },
-                    { name, storeId: IsNull(), parentId: lastParentId ? lastParentId : IsNull() },
-                    { slug, storeId: IsNull(), parentId: lastParentId ? lastParentId : IsNull() }
+                    { name, parentId: lastParentId ? lastParentId : IsNull() },
+                    { slug, parentId: lastParentId ? lastParentId : IsNull() }
                 ]
             });
 
             if (!category) {
-                // Auto-create as private category for this store
+                // Auto-create category
                 category = await this.categoryRepository.save(this.categoryRepository.create({
                     name,
                     slug: lastParentId ? `${slug}-${uuidv4().slice(0, 4)}` : slug, // Prevent global slug conflicts at root
-                    storeId,
                     parentId: lastParentId,
                     fieldsConfig: fieldsConfig || null
                 }));
@@ -109,9 +106,9 @@ export class ProductBulkService {
         return lastCategory ? lastCategory.id : null;
     }
 
-    async exportStoreProducts(storeId: string): Promise<string> {
+    async exportStoreProducts(): Promise<string> {
         const products = await this.productRepository.find({
-            where: { storeId, parentId: IsNull() },
+            where: { parentId: IsNull() },
             relations: ['media', 'children', 'children.media', 'category', 'bundleItems', 'bundleItems.product'],
         });
 
@@ -155,16 +152,16 @@ export class ProductBulkService {
         return Papa.unparse(flatProducts);
     }
 
-    async exportStoreProductsJson(storeId: string): Promise<any[]> {
+    async exportStoreProductsJson(): Promise<any[]> {
         const products = await this.productRepository.find({
-            where: { storeId, parentId: IsNull() },
+            where: { parentId: IsNull() },
             relations: ['media', 'children', 'children.media', 'category', 'bundleItems', 'bundleItems.product'],
         });
 
-        // 1. Fetch all store tags and flags for hydration
+        // 1. Fetch all tags and flags for hydration
         const [allTags, allFlags] = await Promise.all([
-            this.tagRepo.find({ where: { storeId } }),
-            this.flagRepo.find({ where: { storeId } })
+            this.tagRepo.find(),
+            this.flagRepo.find()
         ]);
 
         const tagMap = new Map(allTags.map(t => [t.id, t]));
@@ -240,7 +237,7 @@ export class ProductBulkService {
         })));
     }
 
-    async importStoreProducts(storeId: string, csvData: string): Promise<{ success: number; created: number; updated: number; failed: number; errors: string[] }> {
+    async importStoreProducts(csvData: string): Promise<{ success: number; created: number; updated: number; failed: number; errors: string[] }> {
         const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true });
         const rows = parsed.data as any[];
         let created = 0;
@@ -275,20 +272,20 @@ export class ProductBulkService {
                             this.logger.warn(`Failed to parse terminal fieldsConfig: ${e.message}`);
                         }
                     }
-                    categoryId = await this.getOrCreateCategoryPath(hierarchyData, terminalFieldsConfig, storeId);
+                    categoryId = await this.getOrCreateCategoryPath(hierarchyData, terminalFieldsConfig);
                 }
 
                 // 2. Resolve Tags & Flags BEFORE saving product (to store their NEW IDs)
                 const resolvedTagIds: string[] = [];
                 const resolvedFlagIds: string[] = [];
-                
+
                 const rawTags = row.tags ? row.tags.split(',').map(t => t.trim()).filter(t => !!t) : [];
                 const rawFlags = row.flags ? row.flags.split(',').map(f => f.trim()).filter(f => !!f) : [];
 
                 for (const tName of rawTags) {
-                    let tag = await this.tagRepo.findOne({ where: { name: tName, storeId } });
+                    let tag = await this.tagRepo.findOne({ where: { name: tName } });
                     if (!tag) {
-                        tag = await this.tagRepo.save(this.tagRepo.create({ name: tName, storeId, usageCount: 1 }));
+                        tag = await this.tagRepo.save(this.tagRepo.create({ name: tName, usageCount: 1 }));
                     } else {
                         tag.usageCount = (tag.usageCount || 0) + 1;
                         await this.tagRepo.save(tag);
@@ -297,13 +294,12 @@ export class ProductBulkService {
                 }
 
                 for (const fName of rawFlags) {
-                    let flag = await this.flagRepo.findOne({ where: { name: fName, storeId } });
+                    let flag = await this.flagRepo.findOne({ where: { name: fName } });
                     if (!flag) {
-                        flag = await this.flagRepo.save(this.flagRepo.create({ 
-                            name: fName, 
-                            storeId, 
+                        flag = await this.flagRepo.save(this.flagRepo.create({
+                            name: fName,
                             slug: fName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                            usageCount: 1 
+                            usageCount: 1
                         }));
                     } else {
                         flag.usageCount = (flag.usageCount || 0) + 1;
@@ -314,7 +310,6 @@ export class ProductBulkService {
 
                 // 3. Prepare Product Data
                 const productData: Partial<Product> = {
-                    storeId,
                     title: row.title,
                     sku: row.sku || null,
                     description: row.description,
@@ -336,8 +331,8 @@ export class ProductBulkService {
                 let product: Product;
                 let isUpdate = false;
                 if (productData.sku) {
-                    const existing = await this.productRepository.findOne({ 
-                        where: { sku: productData.sku, storeId } 
+                    const existing = await this.productRepository.findOne({
+                        where: { sku: productData.sku }
                     });
                     if (existing) {
                         product = Object.assign(existing, productData);
@@ -360,13 +355,12 @@ export class ProductBulkService {
                     for (const t of product.tags) {
                         const tName = typeof t === 'string' ? t.trim() : (t as any).name;
                         if (!tName) continue;
-                        const existing = await this.tagRepo.findOne({ where: { name: tName, storeId } });
+                        const existing = await this.tagRepo.findOne({ where: { name: tName } });
                         if (!existing) {
-                            await this.tagRepo.save(this.tagRepo.create({ 
-                                name: tName, 
-                                storeId, 
+                            await this.tagRepo.save(this.tagRepo.create({
+                                name: tName,
                                 slug: (t as any).slug || tName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                                usageCount: 1 
+                                usageCount: 1
                             }));
                         } else {
                             existing.usageCount = (existing.usageCount || 0) + 1;
@@ -378,14 +372,13 @@ export class ProductBulkService {
                     for (const f of product.flags) {
                         const fName = typeof f === 'string' ? f.trim() : (f as any).name;
                         if (!fName) continue;
-                        const existing = await this.flagRepo.findOne({ where: { name: fName, storeId } });
+                        const existing = await this.flagRepo.findOne({ where: { name: fName } });
                         if (!existing) {
-                            await this.flagRepo.save(this.flagRepo.create({ 
-                                name: fName, 
-                                storeId, 
+                            await this.flagRepo.save(this.flagRepo.create({
+                                name: fName,
                                 color: (f as any).color || '#667eea',
                                 slug: (f as any).slug || fName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, ''),
-                                usageCount: 1 
+                                usageCount: 1
                             }));
                         } else {
                             existing.usageCount = (existing.usageCount || 0) + 1;
@@ -411,7 +404,7 @@ export class ProductBulkService {
                             const response = await axios.get(url, { responseType: 'arraybuffer' });
                             const contentType = (response.headers['content-type'] as string) || 'image/png';
                             const extension = contentType.split('/')[1] || 'png';
-                            const key = `stores/${storeId}/products/${uuidv4()}.${extension}`;
+                            const key = `products/${uuidv4()}.${extension}`;
                             const uploadedUrl = await this.s3Service.uploadBuffer(Buffer.from(response.data), key, contentType);
                             let finalUrlForDb = uploadedUrl;
                             
@@ -432,7 +425,6 @@ export class ProductBulkService {
                                     type: 'image',
                                     mimeType: 'image/png', // Fallback
                                     size: 0, // Fallback
-                                    storeId,
                                     folder: 'products',
                                     usageType: 'product_image',
                                 }).catch(e => this.logger.error(`Failed to register in library: ${e.message}`));
@@ -469,7 +461,6 @@ export class ProductBulkService {
                     if (Array.isArray(variants)) {
                         for (const v of variants) {
                             const variantData: any = {
-                                storeId,
                                 parentId: product.id,
                                 title: v.title,
                                 sku: v.sku || null,
@@ -482,8 +473,8 @@ export class ProductBulkService {
 
                             let variant: Product;
                             if (variantData.sku) {
-                                variant = await this.productRepository.findOne({ 
-                                    where: { sku: variantData.sku, storeId } 
+                                variant = await this.productRepository.findOne({
+                                    where: { sku: variantData.sku }
                                 });
                             }
 
@@ -506,7 +497,7 @@ export class ProductBulkService {
                                         // Forced Deep Copy for variants
                                         const response = await axios.get(vUrl, { responseType: 'arraybuffer' });
                                         const contentType = (response.headers['content-type'] as string) || 'image/png';
-                                        const key = `stores/${storeId}/products/variants/${uuidv4()}.${contentType.split('/')[1] || 'png'}`;
+                                        const key = `products/variants/${uuidv4()}.${contentType.split('/')[1] || 'png'}`;
                                         const uploadedVUrl = await this.s3Service.uploadBuffer(Buffer.from(response.data), key, contentType);
                                         const finalVUrlForDb = uploadedVUrl;
                                         
@@ -528,7 +519,6 @@ export class ProductBulkService {
                                                 type: 'image',
                                                 mimeType: 'image/png',
                                                 size: 0,
-                                                storeId,
                                                 folder: 'products/variants',
                                                 usageType: 'product_image',
                                             }).catch(e => this.logger.error(`Failed variant lib register: ${e.message}`));
@@ -578,13 +568,13 @@ export class ProductBulkService {
 
         // Second Pass: Link Bundles - Resolve SKU based relationships
         if (bundleDataMap.size > 0) {
-            await this.syncBundleRelationships(bundleDataMap, storeId);
+            await this.syncBundleRelationships(bundleDataMap);
         }
 
         return { success: created + updated, created, updated, failed, errors };
     }
 
-    async importStoreProductsJson(storeId: string, data: any[]): Promise<{ success: number; created: number; updated: number; failed: number; errors: string[] }> {
+    async importStoreProductsJson(data: any[]): Promise<{ success: number; created: number; updated: number; failed: number; errors: string[] }> {
         let created = 0;
         let updated = 0;
         let failed = 0;
@@ -599,9 +589,8 @@ export class ProductBulkService {
                 
                 if (catHierarchy) {
                     categoryId = await this.getOrCreateCategoryPath(
-                        catHierarchy, 
-                        row.categoryFieldsConfig || null, 
-                        storeId
+                        catHierarchy,
+                        row.categoryFieldsConfig || null
                     );
                 }
 
@@ -615,13 +604,12 @@ export class ProductBulkService {
                 for (const t of rawTags) {
                     const tName = typeof t === 'string' ? t.trim() : t.name;
                     if (!tName) continue;
-                    let tag = await this.tagRepo.findOne({ where: { name: tName, storeId } });
+                    let tag = await this.tagRepo.findOne({ where: { name: tName } });
                     if (!tag) {
-                        tag = await this.tagRepo.save(this.tagRepo.create({ 
-                            name: tName, 
-                            storeId, 
+                        tag = await this.tagRepo.save(this.tagRepo.create({
+                            name: tName,
                             slug: (typeof t === 'object' && t.slug) ? t.slug : tName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                            usageCount: 1 
+                            usageCount: 1
                         }));
                     } else {
                         tag.usageCount = (tag.usageCount || 0) + 1;
@@ -633,14 +621,13 @@ export class ProductBulkService {
                 for (const f of rawFlags) {
                     const fName = typeof f === 'string' ? f.trim() : f.name;
                     if (!fName) continue;
-                    let flag = await this.flagRepo.findOne({ where: { name: fName, storeId } });
+                    let flag = await this.flagRepo.findOne({ where: { name: fName } });
                     if (!flag) {
-                        flag = await this.flagRepo.save(this.flagRepo.create({ 
-                            name: fName, 
-                            storeId, 
+                        flag = await this.flagRepo.save(this.flagRepo.create({
+                            name: fName,
                             color: typeof f === 'object' ? f.color : '#667eea',
                             slug: (typeof f === 'object' && f.slug) ? f.slug : fName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                            usageCount: 1 
+                            usageCount: 1
                         }));
                     } else {
                         flag.usageCount = (flag.usageCount || 0) + 1;
@@ -651,7 +638,6 @@ export class ProductBulkService {
 
                 // 3. Prepare Product Data
                 const productData: Partial<Product> = {
-                    storeId,
                     title: row.title,
                     sku: row.sku || null,
                     hsn_code: row.hsn_code || null,
@@ -675,8 +661,8 @@ export class ProductBulkService {
                 let isUpdate = false;
                 
                 if (productData.sku) {
-                    const existingBySku = await this.productRepository.findOne({ 
-                        where: { sku: productData.sku, storeId } 
+                    const existingBySku = await this.productRepository.findOne({
+                        where: { sku: productData.sku }
                     });
                     if (existingBySku) {
                         product = Object.assign(existingBySku, productData);
@@ -687,7 +673,7 @@ export class ProductBulkService {
                 if (!product) {
                     // Try by slug if SKU didn't match
                     const existingBySlug = await this.productRepository.findOne({
-                        where: { slug: row.slug || productData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), storeId }
+                        where: { slug: row.slug || productData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') }
                     });
                     
                     if (existingBySlug) {
@@ -730,7 +716,7 @@ export class ProductBulkService {
                                 // Refine media type if possible
                                 mediaType = img.media_type || (contentType.startsWith('video/') ? 'video' : 'image');
                             
-                            const keyPrefix = mediaType === 'video' ? `stores/${storeId}/products/videos` : `stores/${storeId}/products`;
+                            const keyPrefix = mediaType === 'video' ? `products/videos` : `products`;
                             const key = `${keyPrefix}/${uuidv4()}.${extension}`;
                             const finalUrl = await this.s3Service.uploadBuffer(Buffer.from(response.data), key, contentType);
                             
@@ -753,7 +739,6 @@ export class ProductBulkService {
                                     type: mediaType,
                                     mimeType: (response.headers['content-type'] as string) || (mediaType === 'video' ? 'video/mp4' : 'image/png'),
                                     size: parseInt((response.headers['content-length'] as string) || '0'),
-                                    storeId,
                                     folder: 'products',
                                     usageType: mediaType === 'video' ? 'product_video' : 'product_image',
                                 }).catch(e => this.logger.error(`Library reg failed: ${e.message}`));
@@ -784,7 +769,6 @@ export class ProductBulkService {
                 if (row.variants && Array.isArray(row.variants)) {
                     for (const v of row.variants) {
                         const variantData: any = {
-                            storeId,
                             parentId: product.id,
                             title: v.title,
                             sku: v.sku || null,
@@ -805,13 +789,12 @@ export class ProductBulkService {
                         for (const t of vTags) {
                             const tName = typeof t === 'string' ? t.trim() : t.name;
                             if (!tName) continue;
-                            let tag = await this.tagRepo.findOne({ where: { name: tName, storeId } });
+                            let tag = await this.tagRepo.findOne({ where: { name: tName } });
                             if (!tag) {
-                                tag = await this.tagRepo.save(this.tagRepo.create({ 
-                                    name: tName, 
-                                    storeId, 
+                                tag = await this.tagRepo.save(this.tagRepo.create({
+                                    name: tName,
                                     slug: (typeof t === 'object' && t.slug) ? t.slug : tName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                                    usageCount: 1 
+                                    usageCount: 1
                                 }));
                             }
                             resolvedVTagIds.push(tag.id);
@@ -819,14 +802,13 @@ export class ProductBulkService {
                         for (const f of vFlags) {
                             const fName = typeof f === 'string' ? f.trim() : f.name;
                             if (!fName) continue;
-                            let flag = await this.flagRepo.findOne({ where: { name: fName, storeId } });
+                            let flag = await this.flagRepo.findOne({ where: { name: fName } });
                             if (!flag) {
-                                flag = await this.flagRepo.save(this.flagRepo.create({ 
-                                    name: fName, 
-                                    storeId, 
+                                flag = await this.flagRepo.save(this.flagRepo.create({
+                                    name: fName,
                                     color: typeof f === 'object' ? f.color : '#667eea',
                                     slug: (typeof f === 'object' && f.slug) ? f.slug : fName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-                                    usageCount: 1 
+                                    usageCount: 1
                                 }));
                             }
                             resolvedVFlagIds.push(flag.id);
@@ -837,8 +819,8 @@ export class ProductBulkService {
 
                         let variant: Product;
                         if (variantData.sku) {
-                            variant = await this.productRepository.findOne({ 
-                                where: { sku: variantData.sku, storeId } 
+                            variant = await this.productRepository.findOne({
+                                where: { sku: variantData.sku }
                             });
                         }
 
@@ -869,7 +851,7 @@ export class ProductBulkService {
                                     const extension = contentType.split('/')[1] || 'png';
                                     
                                     vMediaType = vImg.media_type || (contentType.startsWith('video/') ? 'video' : 'image');
-                                    const vKeyPrefix = vMediaType === 'video' ? `stores/${storeId}/products/variants/videos` : `stores/${storeId}/products/variants`;
+                                    const vKeyPrefix = vMediaType === 'video' ? `products/variants/videos` : `products/variants`;
                                     
                                     const key = `${vKeyPrefix}/${uuidv4()}.${extension}`;
                                     const finalVUrl = await this.s3Service.uploadBuffer(Buffer.from(response.data), key, contentType);
@@ -894,7 +876,6 @@ export class ProductBulkService {
                                             type: vMediaType,
                                             mimeType: (response.headers['content-type'] as string) || (vMediaType === 'video' ? 'video/mp4' : 'image/png'),
                                             size: parseInt((response.headers['content-length'] as string) || '0'),
-                                            storeId,
                                             folder: 'products/variants',
                                             usageType: vMediaType === 'video' ? 'product_video' : 'product_image',
                                         }).catch(e => this.logger.error(`Variant lib reg failed: ${e.message}`));
@@ -936,17 +917,17 @@ export class ProductBulkService {
 
         // Second Pass: Link Bundles
         if (bundleDataMap.size > 0) {
-            await this.syncBundleRelationships(bundleDataMap, storeId);
+            await this.syncBundleRelationships(bundleDataMap);
         }
 
         return { success: created + updated, created, updated, failed, errors };
     }
 
-    private async syncBundleRelationships(bundleDataMap: Map<string, any[]>, storeId: string) {
+    private async syncBundleRelationships(bundleDataMap: Map<string, any[]>) {
         for (const [bundleId, items] of bundleDataMap.entries()) {
             try {
-                const bundle = await this.productRepository.findOne({ 
-                    where: { id: bundleId, storeId },
+                const bundle = await this.productRepository.findOne({
+                    where: { id: bundleId },
                     relations: ['bundleItems']
                 });
                 if (!bundle) continue;
@@ -962,20 +943,20 @@ export class ProductBulkService {
                     // Try finding by SKU then Slug then Title
                     let childProduct: Product | null = null;
                     if (item.sku) {
-                        childProduct = await this.productRepository.findOne({ 
-                            where: { sku: item.sku, storeId } 
+                        childProduct = await this.productRepository.findOne({
+                            where: { sku: item.sku }
                         });
                     }
-                    
+
                     if (!childProduct && item.slug) {
-                        childProduct = await this.productRepository.findOne({ 
-                            where: { slug: item.slug, storeId } 
+                        childProduct = await this.productRepository.findOne({
+                            where: { slug: item.slug }
                         });
                     }
 
                     if (!childProduct && item.title) {
-                        childProduct = await this.productRepository.findOne({ 
-                            where: { title: item.title, storeId, parentId: IsNull() } 
+                        childProduct = await this.productRepository.findOne({
+                            where: { title: item.title, parentId: IsNull() }
                         });
                     }
 
@@ -983,8 +964,7 @@ export class ProductBulkService {
                         await this.bundleItemRepository.save(this.bundleItemRepository.create({
                             bundleId: bundle.id,
                             productId: childProduct.id,
-                            quantity: parseInt(item.quantity) || 1,
-                            storeId
+                            quantity: parseInt(item.quantity) || 1
                         }));
                     }
                 }

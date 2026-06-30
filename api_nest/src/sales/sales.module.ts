@@ -7,7 +7,6 @@ import { OrderItem } from './entities/order-item.entity';
 import { Discount } from './entities/discount.entity';
 import { Invoice } from './entities/invoice.entity';
 import { Estimate } from './entities/estimate.entity';
-import { Store } from '../stores/entities/store.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { Product } from '../catalog/entities/product.entity';
 import { CartService } from './cart.service';
@@ -50,7 +49,6 @@ import { CryptoService } from '../common/crypto.service';
             Discount,
             Invoice,
             Estimate,
-            Store,
             Customer,
             Shipment,
             GeneralSettings,

@@ -13,14 +13,14 @@ export class ShiprocketController {
   @UseGuards(JwtAuthGuard)
   @Get('config')
   async getConfig(@Request() req: any) {
-    return await this.shiprocketService.getShippingConfig(req.user.storeId);
+    return await this.shiprocketService.getShippingConfig();
   }
 
   @ApiOperation({ summary: 'Save Shiprocket config' })
   @UseGuards(JwtAuthGuard)
   @Post('config')
   async saveConfig(@Request() req: any, @Body() body: any) {
-    return await this.shiprocketService.saveShippingConfig(req.user.storeId, body);
+    return await this.shiprocketService.saveShippingConfig(body);
   }
 
   @ApiOperation({ summary: 'Test Shiprocket credentials validity' })
@@ -42,7 +42,7 @@ export class ShiprocketController {
   @UseGuards(JwtAuthGuard)
   @Get('pickup-locations')
   async getPickupLocations(@Request() req: any) {
-    return await this.shiprocketService.getPickupLocations(req.user.storeId);
+    return await this.shiprocketService.getPickupLocations();
   }
 
   @ApiOperation({ summary: 'Get suggested shipping details' })
@@ -56,14 +56,14 @@ export class ShiprocketController {
   @UseGuards(JwtAuthGuard)
   @Post('add-pickup-location')
   async addPickupLocation(@Request() req: any) {
-    return await this.shiprocketService.addPickupLocation(req.user.storeId, req.body);
+    return await this.shiprocketService.addPickupLocation(req.body);
   }
 
   @ApiOperation({ summary: 'Generate Shiprocket label' })
   @UseGuards(JwtAuthGuard)
   @Post('generate-label/:shipmentId')
   async generateLabel(@Param('shipmentId') shipmentId: string, @Request() req: any) {
-    return await this.shiprocketService.generateLabel(req.user.storeId, shipmentId);
+    return await this.shiprocketService.generateLabel(shipmentId);
   }
 
   @ApiOperation({ summary: 'Assign Courier/AWB (Ship Now)' })
@@ -71,14 +71,14 @@ export class ShiprocketController {
   @Post('assign-courier/:shipmentId')
   async assignAwb(@Param('shipmentId') shipmentId: string, @Request() req: any) {
     const { courier_id } = req.body;
-    return await this.shiprocketService.assignAwb(req.user.storeId, shipmentId, courier_id);
+    return await this.shiprocketService.assignAwb(shipmentId, courier_id);
   }
 
   @ApiOperation({ summary: 'Get Courier Serviceability' })
   @UseGuards(JwtAuthGuard)
   @Get('serviceability/:shiprocketOrderId')
   async getServiceability(@Param('shiprocketOrderId') shiprocketOrderId: string, @Request() req: any) {
-    return await this.shiprocketService.getServiceability(req.user.storeId, shiprocketOrderId);
+    return await this.shiprocketService.getServiceability(shiprocketOrderId);
   }
 
   @ApiOperation({ summary: 'Shiprocket Webhook (Public)' })

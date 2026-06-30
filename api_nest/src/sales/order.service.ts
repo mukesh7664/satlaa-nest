@@ -8,7 +8,6 @@ import { DiscountService } from './discount.service';
 import { InvoiceService } from './invoice.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { EmailService } from '../notifications/email.service';
-import { Store } from '../stores/entities/store.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PaymentService } from './payment.service';
 
@@ -26,8 +25,6 @@ export class OrderService {
         private invoiceService: InvoiceService,
         private catalogService: CatalogService,
         private emailService: EmailService,
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
         @Inject(forwardRef(() => PaymentService))
         private paymentService: PaymentService,
     ) { }
@@ -89,9 +86,9 @@ export class OrderService {
         };
     }
 
-    async createOrderFromCart(customerId: string, orderData: CreateOrderDto, storeId: string) {
+    async createOrderFromCart(customerId: string, orderData: CreateOrderDto) {
         // 1. Get Cart
-        const cart = await this.cartService.findOrCreateCart(storeId, customerId);
+        const cart = await this.cartService.findOrCreateCart(customerId);
         if (!cart.items || !cart.items.length) {
             throw new Error('Cart is empty');
         }
@@ -99,7 +96,6 @@ export class OrderService {
         const order = await this.createOrderWithItems(
             customerId,
             orderData,
-            storeId,
             cart.items,
             cart.totals,
             cart.discountCode,
@@ -107,19 +103,19 @@ export class OrderService {
         );
 
         // Clear the cart after order is successfully created
-        await this.cartService.clearCart(storeId, customerId, undefined);
+        await this.cartService.clearCart(customerId, undefined);
 
         return order;
     }
 
-    async createOrderDirectly(customerId: string, orderData: CreateOrderDto, storeId: string) {
+    async createOrderDirectly(customerId: string, orderData: CreateOrderDto) {
         if (!orderData.items || !orderData.items.length) {
             throw new Error('No items provided for direct order');
         }
 
         // Fetch products to get accurate tax rates
         const productIds = orderData.items.map(item => item.productId);
-        const products = await this.catalogService.findProductsByIds(productIds, storeId);
+        const products = await this.catalogService.findProductsByIds(productIds);
 
         // Map items with accurate tax info
         const itemsWithTax = orderData.items.map(item => {
@@ -153,7 +149,6 @@ export class OrderService {
         return this.createOrderWithItems(
             customerId,
             orderData,
-            storeId,
             itemsWithTax,
             totals
         );
@@ -162,7 +157,6 @@ export class OrderService {
     private async createOrderWithItems(
         customerId: string,
         orderData: CreateOrderDto,
-        storeId: string,
         items: any[],
         totals: any,
         discountCode?: string,
@@ -171,7 +165,7 @@ export class OrderService {
         // 1. Validate Inventory (Check stock for all items before starting)
         for (const item of items) {
             const targetId = item.variantId || item.productId;
-            await this.catalogService.validateStock(targetId, item.quantity, storeId, item.bundleSelections);
+            await this.catalogService.validateStock(targetId, item.quantity, item.bundleSelections);
         }
 
         // 2. Create Order
@@ -183,7 +177,6 @@ export class OrderService {
             paymentMethod: orderData.paymentMethod || 'Razorpay',
             currency: (orderData as any).currency || 'INR',
             exchangeRate: (orderData as any).exchangeRate || 1,
-            storeId,
             totalAmount: totals.total,
             subtotal: totals.subtotal,
             taxAmount: totals.tax,
@@ -210,7 +203,7 @@ export class OrderService {
         const variantIds = items.map(item => item.variantId).filter(id => id);
         const allQueryIds = Array.from(new Set([...productIds, ...variantIds]));
         const dbProducts = allQueryIds.length > 0
-            ? await this.catalogService.findProductsByIds(allQueryIds, storeId)
+            ? await this.catalogService.findProductsByIds(allQueryIds)
             : [];
         const productsMap = new Map(dbProducts.map(p => [p.id, p]));
 
@@ -252,7 +245,7 @@ export class OrderService {
         // 4. Update Inventory (Decrement Stock)
         for (const item of items) {
             const targetId = item.variantId || item.productId;
-            await this.catalogService.decrementStock(targetId, item.quantity, storeId, item.bundleSelections);
+            await this.catalogService.decrementStock(targetId, item.quantity, item.bundleSelections);
         }
 
         // 5. Increment Discount Usage
@@ -260,34 +253,34 @@ export class OrderService {
             await this.discountService.incrementUsage(appliedDiscountId);
         }
 
-        const fullOrder = await this.findOneOrder(savedOrder.id, customerId, storeId);
+        const fullOrder = await this.findOneOrder(savedOrder.id, customerId);
         return fullOrder;
     }
 
-    async findAllOrders(customerId: string, storeId: string) {
+    async findAllOrders(customerId: string) {
         const orders = await this.orderRepository.find({
-            where: { customerId, storeId },
+            where: { customerId },
             relations: ['items', 'returnRequests'],
             order: { createdAt: 'DESC' }
         });
         const mappedOrders = orders.map(order => this.mapOrderForResponse(order));
-        return this.enrichOrdersWithMetadata(mappedOrders, storeId);
+        return this.enrichOrdersWithMetadata(mappedOrders);
     }
 
-    async findOneOrder(id: string, customerId: string, storeId: string) {
+    async findOneOrder(id: string, customerId: string) {
         const order = await this.orderRepository.findOne({
-            where: { id, customerId, storeId },
+            where: { id, customerId },
             relations: ['items', 'returnRequests']
         });
-        
+
         if (!order) return null;
 
         const mappedOrder = this.mapOrderForResponse(order);
-        const enriched = await this.enrichOrdersWithMetadata([mappedOrder], storeId);
+        const enriched = await this.enrichOrdersWithMetadata([mappedOrder]);
         return enriched[0];
     }
 
-    private async enrichOrdersWithMetadata(orders: any[], storeId: string) {
+    private async enrichOrdersWithMetadata(orders: any[]) {
         if (!orders || orders.length === 0) return orders;
 
         // 1. Collect all unique product IDs
@@ -301,7 +294,7 @@ export class OrderService {
         if (productIds.size === 0) return orders;
 
         // 2. Fetch products in bulk to minimize DB roundtrips
-        const productsList = await this.catalogService.findProductsByIds(Array.from(productIds), storeId);
+        const productsList = await this.catalogService.findProductsByIds(Array.from(productIds));
         
         // 3. Transform products (images, brands, titles)
         const transformedProductsMap = new Map<string, any>();
@@ -358,9 +351,9 @@ export class OrderService {
         return orders;
     }
 
-    async updateStatus(id: string, status: OrderStatus, paymentInfo?: any, storeId?: string) {
-        const order = await this.orderRepository.findOne({ 
-            where: storeId ? { id, storeId } : { id },
+    async updateStatus(id: string, status: OrderStatus, paymentInfo?: any) {
+        const order = await this.orderRepository.findOne({
+            where: { id },
             relations: ['items']
         });
         if (!order) {
@@ -377,7 +370,7 @@ export class OrderService {
         if (isNewRestoration) {
             try {
                 for (const item of order.items) {
-                    await this.catalogService.incrementStock(item.productId, item.quantity, order.storeId, item.bundleSelections);
+                    await this.catalogService.incrementStock(item.productId, item.quantity, item.bundleSelections);
                 }
             } catch (err) {
                 this.logger.error(`Stock restoration failed for order ${order.id}: ${err.message}`);
@@ -396,15 +389,15 @@ export class OrderService {
 
         // Generate Invoice if confirmed or paid
         if (status === OrderStatus.CONFIRMED || status === OrderStatus.PROCESSING || status === OrderStatus.SHIPPED || status === OrderStatus.DELIVERED) {
-            await this.invoiceService.createInvoiceFromOrder(savedOrder.id, storeId);
+            await this.invoiceService.createInvoiceFromOrder(savedOrder.id);
         }
 
         return this.mapOrderForResponse(savedOrder);
     }
 
-    async cancelOrder(id: string, reason: string, customerId: string, storeId: string) {
+    async cancelOrder(id: string, reason: string, customerId: string) {
         const order = await this.orderRepository.findOne({
-            where: { id, customerId, storeId },
+            where: { id, customerId },
             relations: ['items']
         });
 
@@ -422,7 +415,7 @@ export class OrderService {
         if (order.paymentStatus === PaymentStatus.PAID) {
             try {
                 // Determine gateay if possible, but initiateRefund handles generic
-                await this.paymentService.initiateRefund(order.id, storeId, undefined, reason);
+                await this.paymentService.initiateRefund(order.id, undefined, reason);
                 this.logger.log(`Refund initiated for cancelled order: ${order.orderNumber}`);
             } catch (err) {
                 this.logger.error(`Automatic refund failed for order ${order.id}: ${err.message}`);
@@ -438,6 +431,6 @@ export class OrderService {
         await this.orderRepository.save(order);
         
         // We use the existing updateStatus to handle the complex state transitions and stock logic
-        return this.updateStatus(id, OrderStatus.CANCELLED, undefined, storeId);
+        return this.updateStatus(id, OrderStatus.CANCELLED, undefined);
     }
 }

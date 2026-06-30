@@ -5,7 +5,6 @@ import { Repository } from 'typeorm';
 import * as nodemailer from 'nodemailer';
 import { EmailTemplate } from '../admin/entities/email-template.entity';
 import { EmailSettings } from '../admin/entities/email-settings.entity';
-import { Store } from '../stores/entities/store.entity';
 import { CryptoService } from '../common/crypto.service';
 import { getFullS3Url } from '../common/utils/s3-url.util';
 
@@ -25,8 +24,6 @@ export class EmailService {
     private emailTemplateRepository: Repository<EmailTemplate>,
     @InjectRepository(EmailSettings)
     private emailSettingsRepository: Repository<EmailSettings>,
-    @InjectRepository(Store)
-    private storeRepository: Repository<Store>,
     private cryptoService: CryptoService,
   ) {
     this.globalFromName = this.configService.get<string>('EMAIL_FROM_NAME') || 'EPxWEB';
@@ -51,31 +48,27 @@ export class EmailService {
     }
   }
 
-  /** Get a per-store transporter using EmailSettings, or fallback to global */
-  private async getTransporterForStore(storeId: string): Promise<{
+  /** Get a transporter using the single EmailSettings row, or fallback to global */
+  private async getTransporter(): Promise<{
     transporter: nodemailer.Transporter | null;
     from: string;
     configured: boolean;
   }> {
-    if (storeId) {
-      const settings = await this.emailSettingsRepository.findOne({ where: { storeId } });
-      if (settings?.smtpHost && settings?.smtpUser && settings?.smtpPassword) {
-        const port = settings.smtpPort || 587;
-        const pass = this.cryptoService.decrypt(settings.smtpPassword);
-        const transporter = nodemailer.createTransport({
-          host: settings.smtpHost,
-          port,
-          secure: port === 465,
-          auth: { user: settings.smtpUser, pass },
-        });
-        const fromName = settings.fromName || 'Store';
-        const fromEmail = settings.fromEmail || settings.smtpUser;
-        return { transporter, from: `"${fromName}" <${fromEmail}>`, configured: true };
-      }
-      // If storeId is provided but no settings, don't fallback to global
-      return { transporter: null, from: "", configured: false };
+    const settings = await this.emailSettingsRepository.findOne({ where: {} });
+    if (settings?.smtpHost && settings?.smtpUser && settings?.smtpPassword) {
+      const port = settings.smtpPort || 587;
+      const pass = this.cryptoService.decrypt(settings.smtpPassword);
+      const transporter = nodemailer.createTransport({
+        host: settings.smtpHost,
+        port,
+        secure: port === 465,
+        auth: { user: settings.smtpUser, pass },
+      });
+      const fromName = settings.fromName || 'Store';
+      const fromEmail = settings.fromEmail || settings.smtpUser;
+      return { transporter, from: `"${fromName}" <${fromEmail}>`, configured: true };
     }
-    // Fallback to global only if no storeId provided (System/Platform level)
+    // Fallback to global env transporter
     return {
       transporter: this.globalTransporter,
       from: `"${this.globalFromName}" <${this.globalFromEmail}>`,
@@ -83,14 +76,12 @@ export class EmailService {
     };
   }
 
-  /** Resolve a template by key for a specific store */
+  /** Resolve a template by key */
   private async resolveTemplate(
-    storeId: string,
     templateKey: string,
   ): Promise<EmailTemplate | null> {
-    if (!storeId) return null;
     return this.emailTemplateRepository.findOne({
-      where: { storeId, key: templateKey, isActive: true },
+      where: { key: templateKey, isActive: true },
     });
   }
 
@@ -100,16 +91,15 @@ export class EmailService {
   }
 
   /**
-   * Low-level send with store-specific SMTP + fallback to global.
+   * Low-level send using configured SMTP + fallback to global.
    */
   async sendMail(
     to: string,
     subject: string,
     html: string,
-    storeId?: string,
     attachments?: any[],
   ): Promise<void> {
-    const { transporter, from, configured } = await this.getTransporterForStore(storeId);
+    const { transporter, from, configured } = await this.getTransporter();
 
     if (configured && transporter) {
       try {
@@ -118,8 +108,6 @@ export class EmailService {
       } catch (err) {
         this.logger.error(`Failed to send email to ${to}`, err);
       }
-    } else if (storeId) {
-      this.logger.warn(`[SKIP EMAIL] Store ${storeId} has no SMTP configured. Email to ${to} ("${subject}") not sent.`);
     } else {
       // Direct global SMTP send fallback in case configured is false but global transporter exists
       if (this.globalTransporter && this.globalConfigured) {
@@ -186,17 +174,16 @@ export class EmailService {
       contentType: 'application/pdf',
     }] : [];
 
-    await this.sendMail(toEmail, subject, html, undefined, attachments);
+    await this.sendMail(toEmail, subject, html, attachments);
   }
 
   // ─── Pre-built email methods ────────────────────────────────────────
 
-  async sendWelcomeEmail(email: string, firstName: string, store?: any) {
-    const storeId = store?.id;
+  async sendWelcomeEmail(email: string, firstName: string) {
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
-    const storeName = store?.name || 'EPxWEB';
+    const storeName = this.globalFromName || 'our store';
 
-    const template = await this.resolveTemplate(storeId, 'welcome');
+    const template = await this.resolveTemplate('welcome');
     let subject: string;
     let html: string;
 
@@ -205,9 +192,9 @@ export class EmailService {
         fullName: firstName,
         email,
         shopLink: clientUrl,
-        supportEmail: store?.supportEmail || this.globalFromEmail,
+        supportEmail: this.globalFromEmail,
         siteName: storeName,
-        siteUrl: store?.domain || clientUrl,
+        siteUrl: clientUrl,
         currentYear: new Date().getFullYear().toString(),
       };
       subject = this.interpolate(template.subject, vars);
@@ -221,11 +208,10 @@ export class EmailService {
       </div>`;
     }
 
-    await this.sendMail(email, subject, html, storeId);
+    await this.sendMail(email, subject, html);
   }
 
   async sendOrderConfirmationEmail(order: any, store?: any) {
-    const storeId = store?.id;
     const email = order.billingAddress?.email || order.shippingAddress?.email;
     const storeName = store?.name || 'EPxWEB';
     if (!email) {
@@ -234,7 +220,7 @@ export class EmailService {
     }
 
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
-    const template = await this.resolveTemplate(storeId, 'order_confirmation');
+    const template = await this.resolveTemplate('order_confirmation');
     let subject: string;
     let html: string;
 
@@ -275,16 +261,15 @@ export class EmailService {
       </div>`;
     }
 
-    await this.sendMail(email, subject, html, storeId);
+    await this.sendMail(email, subject, html);
   }
 
   async sendPasswordResetEmail(email: string, resetToken: string, store?: any) {
-    const storeId = store?.id;
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
     const storeName = store?.name || 'EPxWEB';
     const resetUrl = `${clientUrl}/auth/reset-password?token=${resetToken}`;
 
-    const template = await this.resolveTemplate(storeId, 'reset_password');
+    const template = await this.resolveTemplate('reset_password');
     let subject: string;
     let html: string;
 
@@ -308,11 +293,11 @@ export class EmailService {
       </div>`;
     }
 
-    await this.sendMail(email, subject, html, storeId);
+    await this.sendMail(email, subject, html);
   }
 
   /**
-   * Send OTP email for admin forgot password (uses global SMTP, no storeId).
+   * Send OTP email for admin forgot password (uses global/configured SMTP).
    */
   async sendOtpEmail(email: string, otp: string, name?: string): Promise<void> {
     const displayName = name || 'Admin';
@@ -342,12 +327,11 @@ export class EmailService {
   }
 
   async sendPasswordChangedEmail(email: string, firstName: string, store?: any) {
-    const storeId = store?.id;
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
     const storeName = store?.name || 'EPxWEB';
     const now = new Date();
 
-    const template = await this.resolveTemplate(storeId, 'password_changed');
+    const template = await this.resolveTemplate('password_changed');
     let subject: string;
     let html: string;
 
@@ -373,16 +357,15 @@ export class EmailService {
       </div>`;
     }
 
-    await this.sendMail(email, subject, html, storeId);
+    await this.sendMail(email, subject, html);
   }
 
   async sendVerificationEmail(email: string, verificationToken: string, store?: any) {
-    const storeId = store?.id;
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
     const storeName = store?.name || 'EPxWEB';
     const verificationUrl = `${clientUrl}/auth/verify-email?token=${verificationToken}`;
 
-    const template = await this.resolveTemplate(storeId, 'verify_email');
+    const template = await this.resolveTemplate('verify_email');
     let subject: string;
     let html: string;
 
@@ -405,11 +388,10 @@ export class EmailService {
       </div>`;
     }
 
-    await this.sendMail(email, subject, html, storeId);
+    await this.sendMail(email, subject, html);
   }
 
   async sendEstimateEmail(estimate: any, store?: any) {
-    const storeId = store?.id;
     const email = estimate.customer?.email;
     const storeName = store?.name || 'EPxWEB';
     if (!email) {
@@ -419,7 +401,7 @@ export class EmailService {
 
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
     const estimateUrl = `${clientUrl}/estimates/${estimate.id}`;
-    const template = await this.resolveTemplate(storeId, 'estimate_sent');
+    const template = await this.resolveTemplate('estimate_sent');
     let subject: string;
     let html: string;
 
@@ -453,11 +435,10 @@ export class EmailService {
       </div>`;
     }
 
-    await this.sendMail(email, subject, html, storeId);
+    await this.sendMail(email, subject, html);
   }
 
   async sendInvoiceEmail(invoice: any, store?: any) {
-    const storeId = store?.id;
     const email = invoice.customer?.email || invoice.billingAddress?.email;
     const storeName = store?.name || 'EPxWEB';
     if (!email) {
@@ -467,7 +448,7 @@ export class EmailService {
 
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
     const invoiceUrl = `${clientUrl}/invoices/${invoice.id}`;
-    const template = await this.resolveTemplate(storeId, 'invoice_sent');
+    const template = await this.resolveTemplate('invoice_sent');
     let subject: string;
     let html: string;
 
@@ -503,7 +484,7 @@ export class EmailService {
       </div>`;
     }
 
-    await this.sendMail(email, subject, html, storeId);
+    await this.sendMail(email, subject, html);
   }
 
   /**
@@ -548,19 +529,13 @@ export class EmailService {
   /**
    * Send a test email using a specific template.
    */
-  async sendTemplateTestEmail(templateId: string, targetEmail: string, storeId?: string): Promise<void> {
-    const template = await this.emailTemplateRepository.findOne({ where: { id: templateId, storeId } });
+  async sendTemplateTestEmail(templateId: string, targetEmail: string): Promise<void> {
+    const template = await this.emailTemplateRepository.findOne({ where: { id: templateId } });
     if (!template) {
       throw new Error('Template not found');
     }
 
-    let siteName = 'EPxWEB Test';
-    if (storeId) {
-      const store = await this.storeRepository.findOne({ where: { id: storeId } });
-      if (store) {
-        siteName = store.name;
-      }
-    }
+    const siteName = this.globalFromName || 'EPxWEB Test';
 
     // Use dummy variables for test
     const vars: Record<string, string> = {
@@ -575,6 +550,6 @@ export class EmailService {
     const subject = this.interpolate(template.subject, vars);
     const html = this.interpolate(template.htmlContent, vars);
 
-    await this.sendMail(targetEmail, subject, html, storeId);
+    await this.sendMail(targetEmail, subject, html);
   }
 }

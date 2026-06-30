@@ -155,7 +155,6 @@ export default function SectionPicker({
               sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}
             >
               <Tab label="All Scopes" value="All" />
-              <Tab label="Page Builder" value="page-builder" />
               <Tab label="E-commerce" value="ecommerce" />
             </Tabs>
           )}

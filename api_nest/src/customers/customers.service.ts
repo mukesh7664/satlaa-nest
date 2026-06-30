@@ -12,11 +12,11 @@ export class CustomersService {
     ) { }
 
     async create(data: Partial<Customer>): Promise<Customer> {
-        const { email, storeId, password } = data;
+        const { email, password } = data;
 
-        const existing = await this.customersRepository.findOne({ where: { email, storeId } });
+        const existing = await this.customersRepository.findOne({ where: { email } });
         if (existing) {
-            throw new BadRequestException('Customer with this email already exists in this store');
+            throw new BadRequestException('Customer with this email already exists');
         }
 
         const newCustomer = this.customersRepository.create(data);
@@ -29,23 +29,22 @@ export class CustomersService {
         return this.customersRepository.save(newCustomer);
     }
 
-    async findOneByEmail(email: string, storeId: string): Promise<Customer | undefined> {
-        return this.customersRepository.findOne({ where: { email, storeId } });
+    async findOneByEmail(email: string): Promise<Customer | undefined> {
+        return this.customersRepository.findOne({ where: { email } });
     }
 
-    async findOneById(id: string, storeId: string): Promise<Customer | undefined> {
-        return this.customersRepository.findOne({ where: { id, storeId } });
+    async findOneById(id: string): Promise<Customer | undefined> {
+        return this.customersRepository.findOne({ where: { id } });
     }
 
-    async findAllForStore(storeId: string): Promise<Customer[]> {
+    async findAllForStore(): Promise<Customer[]> {
         return this.customersRepository.find({
-            where: { storeId },
             order: { createdAt: 'DESC' }
         });
     }
-    
-    async update(id: string, storeId: string, data: Partial<Customer>): Promise<Customer> {
-        const customer = await this.findOneById(id, storeId);
+
+    async update(id: string, data: Partial<Customer>): Promise<Customer> {
+        const customer = await this.findOneById(id);
         if (!customer) {
             throw new NotFoundException('Customer not found');
         }

@@ -51,7 +51,7 @@ export class AnalyticsService {
   }
 
   // --- SALES ANALYTICS ---
-  async getSalesAnalytics(storeId: string, startDateStr?: string, endDateStr?: string) {
+  async getSalesAnalytics(startDateStr?: string, endDateStr?: string) {
     const { start, end, prevStart, prevEnd } = this.parseDates(startDateStr, endDateStr);
 
     // Current period metrics
@@ -59,23 +59,20 @@ export class AnalyticsService {
       .select('SUM(CASE WHEN order.paymentStatus = :paid THEN order.totalAmount ELSE 0 END)', 'revenue')
       .addSelect('COUNT(order.id)', 'orders')
       .addSelect('SUM(CASE WHEN order.status = :cancelled THEN 1 ELSE 0 END)', 'cancelledOrders')
-      .where('order.storeId = :storeId', { storeId, paid: 'paid', cancelled: 'cancelled' })
-      .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
+      .where('order.createdAt BETWEEN :start AND :end', { start, end, paid: 'paid', cancelled: 'cancelled' })
       .getRawOne();
 
     // Previous period metrics for growth calculation
     const prevMetrics = await this.orderRepository.createQueryBuilder('order')
       .select('SUM(CASE WHEN order.paymentStatus = :paid THEN order.totalAmount ELSE 0 END)', 'revenue')
       .addSelect('COUNT(order.id)', 'orders')
-      .where('order.storeId = :storeId', { storeId, paid: 'paid' })
-      .andWhere('order.createdAt BETWEEN :start AND :end', { start: prevStart, end: prevEnd })
+      .where('order.createdAt BETWEEN :start AND :end', { start: prevStart, end: prevEnd, paid: 'paid' })
       .getRawOne();
 
     // Refund calculation
     const refundData = await this.returnRequestRepository.createQueryBuilder('rr')
       .select('SUM(rr.refundAmount)', 'refundAmount')
-      .where('rr.storeId = :storeId', { storeId })
-      .andWhere('rr.status = :completed', { completed: 'COMPLETED' })
+      .where('rr.status = :completed', { completed: 'COMPLETED' })
       .andWhere('rr.createdAt BETWEEN :start AND :end', { start, end })
       .getRawOne();
 
@@ -94,8 +91,7 @@ export class AnalyticsService {
       .select("TO_CHAR(order.createdAt, 'YYYY-MM-DD')", 'date')
       .addSelect('SUM(CASE WHEN order.paymentStatus = :paid THEN order.totalAmount ELSE 0 END)', 'revenue')
       .addSelect('COUNT(order.id)', 'orders')
-      .where('order.storeId = :storeId', { storeId, paid: 'paid' })
-      .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
+      .where('order.createdAt BETWEEN :start AND :end', { start, end, paid: 'paid' })
       .groupBy("TO_CHAR(order.createdAt, 'YYYY-MM-DD')")
       .orderBy('date', 'ASC')
       .getRawMany();
@@ -105,8 +101,7 @@ export class AnalyticsService {
       .select('order.status', 'status')
       .addSelect('COUNT(order.id)', 'count')
       .addSelect('SUM(order.totalAmount)', 'value')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
+      .where('order.createdAt BETWEEN :start AND :end', { start, end })
       .groupBy('order.status')
       .getRawMany();
 
@@ -115,8 +110,7 @@ export class AnalyticsService {
       .select('order.paymentMethod', 'method')
       .addSelect('COUNT(order.id)', 'count')
       .addSelect('SUM(order.totalAmount)', 'value')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
+      .where('order.createdAt BETWEEN :start AND :end', { start, end })
       .groupBy('order.paymentMethod')
       .getRawMany();
 
@@ -125,8 +119,7 @@ export class AnalyticsService {
       .select('EXTRACT(ISODOW FROM order.createdAt)', 'day')
       .addSelect('EXTRACT(HOUR FROM order.createdAt)', 'hour')
       .addSelect('COUNT(order.id)', 'count')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
+      .where('order.createdAt BETWEEN :start AND :end', { start, end })
       .groupBy('day, hour')
       .getRawMany();
 
@@ -167,22 +160,19 @@ export class AnalyticsService {
   }
 
   // --- PRODUCT ANALYTICS ---
-  async getProductAnalytics(storeId: string, startDateStr?: string, endDateStr?: string) {
+  async getProductAnalytics(startDateStr?: string, endDateStr?: string) {
     const { start, end } = this.parseDates(startDateStr, endDateStr);
 
     // Dynamic product KPIs
     const outOfStock = await this.productRepository.createQueryBuilder('product')
-      .where('product.storeId = :storeId', { storeId })
-      .andWhere('product.stock <= 0')
+      .where('product.stock <= 0')
       .getCount();
 
     const lowStock = await this.productRepository.createQueryBuilder('product')
-      .where('product.storeId = :storeId', { storeId })
-      .andWhere('product.stock > 0 AND product.stock <= 10')
+      .where('product.stock > 0 AND product.stock <= 10')
       .getCount();
 
     const totalSKUs = await this.productRepository.createQueryBuilder('product')
-      .where('product.storeId = :storeId', { storeId })
       .getCount();
 
     // Top Products by Revenue and Quantity
@@ -193,8 +183,7 @@ export class AnalyticsService {
       .addSelect('SUM(item.quantity)', 'unitsSold')
       .addSelect('SUM(item.totalPrice)', 'revenue')
       .innerJoin('item.order', 'order')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.paymentStatus = :status', { status: 'paid' })
+      .where('order.paymentStatus = :status', { status: 'paid' })
       .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
       .groupBy('item.productId, item.productName, item.sku')
       .orderBy('revenue', 'DESC')
@@ -209,8 +198,7 @@ export class AnalyticsService {
       .innerJoin('item.order', 'order')
       .innerJoin('products', 'product', 'product.id = item.productId')
       .innerJoin('categories', 'category', 'category.id = product.categoryId')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.paymentStatus = :status', { status: 'paid' })
+      .where('order.paymentStatus = :status', { status: 'paid' })
       .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
       .groupBy('category.name')
       .getRawMany();
@@ -219,16 +207,16 @@ export class AnalyticsService {
     const deadStockQuery = `
       SELECT p.id, p.title, p.sku, p.stock, p.price
       FROM products p
-      WHERE p."storeId" = $1 AND p."isActive" = true AND p.stock > 0
+      WHERE p."isActive" = true AND p.stock > 0
         AND p.id NOT IN (
           SELECT DISTINCT oi."productId"
           FROM order_items oi
           INNER JOIN orders o ON o.id = oi."orderId"
-          WHERE o."storeId" = $1 AND o."createdAt" BETWEEN $2 AND $3
+          WHERE o."createdAt" BETWEEN $1 AND $2
         )
       LIMIT 10
     `;
-    const deadStock = await this.productRepository.query(deadStockQuery, [storeId, start, end]);
+    const deadStock = await this.productRepository.query(deadStockQuery, [start, end]);
 
     return {
       kpis: {
@@ -261,16 +249,14 @@ export class AnalyticsService {
   }
 
   // --- CUSTOMER ANALYTICS ---
-  async getCustomerAnalytics(storeId: string, startDateStr?: string, endDateStr?: string) {
+  async getCustomerAnalytics(startDateStr?: string, endDateStr?: string) {
     const { start, end } = this.parseDates(startDateStr, endDateStr);
 
     const totalCustomers = await this.customerRepository.createQueryBuilder('customer')
-      .where('customer.storeId = :storeId', { storeId })
       .getCount();
 
     const newCustomers = await this.customerRepository.createQueryBuilder('customer')
-      .where('customer.storeId = :storeId', { storeId })
-      .andWhere('customer.createdAt BETWEEN :start AND :end', { start, end })
+      .where('customer.createdAt BETWEEN :start AND :end', { start, end })
       .getCount();
 
     // Top Customers table
@@ -281,8 +267,7 @@ export class AnalyticsService {
       .addSelect('COUNT(order.id)', 'ordersCount')
       .addSelect('SUM(order.totalAmount)', 'totalspent')
       .innerJoin('order.customer', 'customer')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.paymentStatus = :status', { status: 'paid' })
+      .where('order.paymentStatus = :status', { status: 'paid' })
       .groupBy('customer.id, customer.name, customer.email')
       .orderBy('totalspent', 'DESC')
       .limit(10)
@@ -291,7 +276,6 @@ export class AnalyticsService {
     // Returning Customers count (customers with 2+ orders total)
     const returningSubquery = await this.orderRepository.createQueryBuilder('order')
       .select('order.customerId')
-      .where('order.storeId = :storeId', { storeId })
       .groupBy('order.customerId')
       .having('COUNT(order.id) > 1')
       .getRawMany();
@@ -300,7 +284,7 @@ export class AnalyticsService {
     const activeCustomers = totalCustomers;
     const avgLtv = activeCustomers > 0 ? (await this.orderRepository.createQueryBuilder('order')
       .select('SUM(order.totalAmount)', 'sum')
-      .where('order.storeId = :storeId AND order.paymentStatus = :paid', { storeId, paid: 'paid' })
+      .where('order.paymentStatus = :paid', { paid: 'paid' })
       .getRawOne()).sum / activeCustomers : 0;
 
     // Geographic State-wise breakdown
@@ -308,8 +292,7 @@ export class AnalyticsService {
       .select('("order"."shippingAddress"->>\'state\')', 'state')
       .addSelect('COUNT(order.id)', 'ordersCount')
       .addSelect('SUM(order.totalAmount)', 'revenue')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('"order"."shippingAddress"->>\'state\' IS NOT NULL')
+      .where('"order"."shippingAddress"->>\'state\' IS NOT NULL')
       .groupBy('("order"."shippingAddress"->>\'state\')')
       .orderBy('revenue', 'DESC')
       .getRawMany();
@@ -323,8 +306,7 @@ export class AnalyticsService {
     const customerLastOrderDates = await this.orderRepository.createQueryBuilder('order')
       .select('order.customerId', 'customerId')
       .addSelect('MAX(order.createdAt)', 'lastOrder')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.customerId IS NOT NULL')
+      .where('order.customerId IS NOT NULL')
       .groupBy('order.customerId')
       .getRawMany();
 
@@ -368,7 +350,7 @@ export class AnalyticsService {
   }
 
   // --- FINANCIAL REPORTS ---
-  async getFinancialReports(storeId: string, startDateStr?: string, endDateStr?: string) {
+  async getFinancialReports(startDateStr?: string, endDateStr?: string) {
     const { start, end } = this.parseDates(startDateStr, endDateStr);
 
     // Revenue breakdowns
@@ -378,15 +360,13 @@ export class AnalyticsService {
       .addSelect('SUM(order.shippingCost)', 'shipping')
       .addSelect('SUM(order.discountAmount)', 'discount')
       .addSelect('SUM(order.totalAmount)', 'total')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.paymentStatus = :status', { status: 'paid' })
+      .where('order.paymentStatus = :status', { status: 'paid' })
       .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
       .getRawOne();
 
     const refundSums = await this.returnRequestRepository.createQueryBuilder('rr')
       .select('SUM(rr.refundAmount)', 'refund')
-      .where('rr.storeId = :storeId', { storeId })
-      .andWhere('rr.status = :status', { status: 'COMPLETED' })
+      .where('rr.status = :status', { status: 'COMPLETED' })
       .andWhere('rr.createdAt BETWEEN :start AND :end', { start, end })
       .getRawOne();
 
@@ -402,8 +382,7 @@ export class AnalyticsService {
       .select("TO_CHAR(order.createdAt, 'YYYY-MM')", 'month')
       .addSelect('SUM(order.taxAmount)', 'tax')
       .addSelect('SUM(order.subtotal)', 'taxableValue')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.paymentStatus = :status', { status: 'paid' })
+      .where('order.paymentStatus = :status', { status: 'paid' })
       .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
       .groupBy("TO_CHAR(order.createdAt, 'YYYY-MM')")
       .orderBy('month', 'ASC')
@@ -441,14 +420,13 @@ export class AnalyticsService {
   }
 
   // --- MARKETING & DISCOUNT ANALYTICS ---
-  async getMarketingAnalytics(storeId: string, startDateStr?: string, endDateStr?: string) {
+  async getMarketingAnalytics(startDateStr?: string, endDateStr?: string) {
     const { start, end } = this.parseDates(startDateStr, endDateStr);
 
     const discountSummary = await this.orderRepository.createQueryBuilder('order')
       .select('SUM(order.discountAmount)', 'totalDiscount')
       .addSelect('COUNT(order.id)', 'totalUses')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.discountCode IS NOT NULL')
+      .where('order.discountCode IS NOT NULL')
       .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
       .getRawOne();
 
@@ -458,8 +436,7 @@ export class AnalyticsService {
       .addSelect('COUNT(order.id)', 'uses')
       .addSelect('SUM(order.discountAmount)', 'discountGiven')
       .addSelect('SUM(order.totalAmount)', 'revenue')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.discountCode IS NOT NULL')
+      .where('order.discountCode IS NOT NULL')
       .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
       .groupBy('order.discountCode')
       .orderBy('uses', 'DESC')
@@ -470,8 +447,7 @@ export class AnalyticsService {
       .select('CASE WHEN order.discountCode IS NOT NULL THEN true ELSE false END', 'hasDiscount')
       .addSelect('COUNT(order.id)', 'count')
       .addSelect('SUM(order.totalAmount)', 'revenue')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
+      .where('order.createdAt BETWEEN :start AND :end', { start, end })
       .groupBy('CASE WHEN order.discountCode IS NOT NULL THEN true ELSE false END')
       .getRawMany();
 
@@ -508,31 +484,27 @@ export class AnalyticsService {
   }
 
   // --- OPERATIONS & FULFILLMENT ---
-  async getOperationsAnalytics(storeId: string, startDateStr?: string, endDateStr?: string) {
+  async getOperationsAnalytics(startDateStr?: string, endDateStr?: string) {
     const { start, end } = this.parseDates(startDateStr, endDateStr);
 
     // Count pending return requests, average times
     const returnReasons = await this.returnRequestRepository.createQueryBuilder('rr')
       .select('rr.reason', 'reason')
       .addSelect('COUNT(rr.id)', 'count')
-      .where('rr.storeId = :storeId', { storeId })
       .groupBy('rr.reason')
       .orderBy('count', 'DESC')
       .getRawMany();
 
     const totalOrdersCount = await this.orderRepository.createQueryBuilder('order')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.createdAt BETWEEN :start AND :end', { start, end })
+      .where('order.createdAt BETWEEN :start AND :end', { start, end })
       .getCount();
 
     const returnRequestsCount = await this.returnRequestRepository.createQueryBuilder('rr')
-      .where('rr.storeId = :storeId', { storeId })
-      .andWhere('rr.createdAt BETWEEN :start AND :end', { start, end })
+      .where('rr.createdAt BETWEEN :start AND :end', { start, end })
       .getCount();
 
     const pendingShipments = await this.orderRepository.createQueryBuilder('order')
-      .where('order.storeId = :storeId', { storeId })
-      .andWhere('order.status IN (:...statuses)', { statuses: ['pending', 'confirmed', 'processing'] })
+      .where('order.status IN (:...statuses)', { statuses: ['pending', 'confirmed', 'processing'] })
       .getCount();
 
     return {
@@ -550,13 +522,12 @@ export class AnalyticsService {
   }
 
   // --- INVENTORY SNAPSHOT ---
-  async getInventorySnapshot(storeId: string) {
+  async getInventorySnapshot() {
     const stockSummary = await this.productRepository.createQueryBuilder('product')
       .select('SUM(product.stock * product.price)', 'totalValuation')
       .addSelect('COUNT(product.id)', 'skuCount')
       .addSelect('SUM(CASE WHEN product.stock <= 0 THEN 1 ELSE 0 END)', 'outOfStock')
       .addSelect('SUM(CASE WHEN product.stock > 0 AND product.stock <= 10 THEN 1 ELSE 0 END)', 'lowStock')
-      .where('product.storeId = :storeId', { storeId })
       .getRawOne();
 
     const lowStockAlerts = await this.productRepository.createQueryBuilder('product')
@@ -565,8 +536,7 @@ export class AnalyticsService {
       .addSelect('product.sku', 'sku')
       .addSelect('product.stock', 'stock')
       .addSelect('product.price', 'price')
-      .where('product.storeId = :storeId', { storeId })
-      .andWhere('product.stock <= 10')
+      .where('product.stock <= 10')
       .orderBy('product.stock', 'ASC')
       .limit(20)
       .getRawMany();

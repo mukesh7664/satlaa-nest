@@ -9,9 +9,8 @@ export class ThemeController {
     constructor(private readonly themeService: ThemeService) {}
 
     @Get()
-    async getThemes(@Query('all') all?: string, @Request() req?: any) {
-        const storeId = req?.user?.storeId;
-        return this.themeService.findAll(all === 'true', storeId);
+    async getThemes(@Query('all') all?: string) {
+        return this.themeService.findAll(all === 'true');
     }
 
     @Get(':id')
@@ -38,8 +37,7 @@ export class ThemeController {
     }
 
     @Post(':id/install')
-    async installTheme(@Param('id') id: string, @Request() req) {
-        const storeId = req.user.storeId;
-        return this.themeService.applyTheme(storeId, id);
+    async installTheme(@Param('id') id: string) {
+        return this.themeService.applyTheme(id);
     }
 }

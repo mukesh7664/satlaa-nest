@@ -28,7 +28,7 @@ export class ThemeService {
         private footerSectionRepository: Repository<FooterSection>,
     ) {}
 
-    async findAll(includeInactive = false, storeId?: string) {
+    async findAll(includeInactive = false) {
         const whereClause: any = {};
         if (!includeInactive) {
             whereClause.isActive = true;
@@ -55,17 +55,16 @@ export class ThemeService {
         return { success: true };
     }
 
-    async applyTheme(storeId: string, themeId: string) {
+    async applyTheme(themeId: string) {
         const theme = await this.findOne(themeId);
 
         // 1. Process Homepage (Legacy or direct)
-        let homePage = await this.pageRepository.findOne({ 
-            where: { storeId, is_homepage: true } 
+        let homePage = await this.pageRepository.findOne({
+            where: { is_homepage: true }
         });
 
         if (!homePage) {
             homePage = this.pageRepository.create({
-                storeId,
                 title: 'Home',
                 slug: 'home',
                 is_homepage: true,
@@ -84,8 +83,8 @@ export class ThemeService {
         if (pagesToClone.length > 0) {
             for (const pageData of pagesToClone) {
                 // 1. Try to find an existing page with this slug
-                let targetPage = await this.pageRepository.findOne({ 
-                    where: { storeId, slug: pageData.slug } 
+                let targetPage = await this.pageRepository.findOne({
+                    where: { slug: pageData.slug }
                 });
 
                 if (pageData.is_homepage) {
@@ -107,7 +106,6 @@ export class ThemeService {
                     // Non-homepage: create if not found
                     if (!targetPage) {
                         targetPage = this.pageRepository.create({
-                            storeId,
                             title: pageData.title,
                             slug: pageData.slug,
                             isPublished: true,
@@ -164,12 +162,11 @@ export class ThemeService {
 
         // 4. Update Header/Footer if provided
         if (theme.content.header) {
-            await this.headerSectionRepository.delete({ storeId });
+            await this.headerSectionRepository.createQueryBuilder().delete().execute();
             const headers = Array.isArray(theme.content.header) ? theme.content.header : [theme.content.header];
             for (let i = 0; i < headers.length; i++) {
                 const s = headers[i];
                 const newHeader = this.headerSectionRepository.create({
-                    storeId,
                     type: s.type,
                     position: i,
                     contentJson: s.settings || s.data || s.contentJson || s,
@@ -179,12 +176,11 @@ export class ThemeService {
         }
 
         if (theme.content.footer) {
-            await this.footerSectionRepository.delete({ storeId });
+            await this.footerSectionRepository.createQueryBuilder().delete().execute();
             const footers = Array.isArray(theme.content.footer) ? theme.content.footer : [theme.content.footer];
             for (let i = 0; i < footers.length; i++) {
                 const s = footers[i];
                 const newFooter = this.footerSectionRepository.create({
-                    storeId,
                     type: s.type,
                     position: i,
                     contentJson: s.settings || s.data || s.contentJson || s,
@@ -195,7 +191,7 @@ export class ThemeService {
 
         // 5. Update Theme Settings (Colors, etc.)
         if (theme.content.settings) {
-            let settings = await this.generalSettingsRepository.findOne({ where: { storeId } });
+            let settings = (await this.generalSettingsRepository.find({ take: 1 }))[0];
             if (settings) {
                 if (theme.content.settings.themeColors) {
                     settings.themeColors = theme.content.settings.themeColors;
@@ -207,14 +203,14 @@ export class ThemeService {
         return { success: true, message: `Theme "${theme.name}" applied successfully` };
     }
 
-    async applyDefaultThemeForCategory(storeId: string, category: 'page_builder' | 'ecommerce') {
+    async applyDefaultThemeForCategory(category: 'page_builder' | 'ecommerce') {
         const theme = await this.themeRepository.findOne({
             where: { category, isActive: true },
             order: { createdAt: 'ASC' }
         });
         if (theme) {
-            await this.applyTheme(storeId, theme.id);
-            console.log(`Successfully applied default theme "${theme.name}" for category "${category}" to store ${storeId}`);
+            await this.applyTheme(theme.id);
+            console.log(`Successfully applied default theme "${theme.name}" for category "${category}"`);
         } else {
             console.warn(`No active default theme found for category: ${category}`);
         }

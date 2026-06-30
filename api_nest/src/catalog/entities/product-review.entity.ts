@@ -1,9 +1,8 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 import { Product } from './product.entity';
-import { Store } from '../../stores/entities/store.entity';
 
 @Entity('product_reviews')
-@Index(['storeId', 'productId'])
+@Index(['productId'])
 export class ProductReview {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -29,13 +28,6 @@ export class ProductReview {
 
     @Column()
     productId: string;
-
-    @ManyToOne(() => Store, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column()
-    storeId: string;
 
     @CreateDateColumn()
     createdAt: Date;

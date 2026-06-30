@@ -77,10 +77,6 @@ export async function getPublicSettings(): Promise<PublicSettingsResponse> {
     "Content-Type": "application/json",
   };
 
-  if (typeof window !== "undefined") {
-    headers["x-tenant-domain"] = window.location.host.split(":")[0];
-  }
-
   const response = await fetch(url, {
     method: "GET",
     headers: headers,

@@ -1,9 +1,8 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, Unique, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from 'typeorm';
 import { PageSection } from './page-section.entity';
 
 @Entity('pages')
-@Unique(['slug', 'storeId'])
+@Index(['slug'], { unique: true })
 export class Page {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -12,7 +11,6 @@ export class Page {
     title: string;
 
     @Column()
-    @Index()
     slug: string;
 
     @Column('text', { nullable: true })
@@ -56,14 +54,6 @@ export class Page {
 
     @Column('jsonb', { nullable: true })
     legacyStaticSections: any;
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    storeId: string;
 
     @CreateDateColumn()
     createdAt: Date;

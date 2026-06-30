@@ -32,8 +32,4 @@ export class CreateInquiryDto {
     @IsOptional()
     @IsEnum(InquiryStatus)
     status?: InquiryStatus;
-
-    @IsOptional()
-    @IsString()
-    storeId?: string;
 }

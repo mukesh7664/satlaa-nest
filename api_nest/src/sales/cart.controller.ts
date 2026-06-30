@@ -14,10 +14,9 @@ export class CartController {
     @ApiQuery({ name: 'sessionId', required: true })
     @Post('/merge')
     async mergeCart(@Query('sessionId') sessionId: string, @Request() req) {
-        const storeId = req.tenant.id;
         const customerId = req.user?.customerId || req.user?.userId;
         if (!customerId) return { message: 'User not logged in' };
-        return this.cartService.mergeCarts(storeId, customerId, sessionId);
+        return this.cartService.mergeCarts(customerId, sessionId);
     }
 
     @ApiOperation({ summary: 'Get current cart (by user or session)' })
@@ -25,9 +24,8 @@ export class CartController {
     @ApiResponse({ status: 200, description: 'Return cart details.' })
     @Get()
     async getCart(@Query('sessionId') sessionId: string, @Request() req) {
-        const storeId = req.tenant.id;
         const customerId = req.user?.customerId || req.user?.userId;
-        return this.cartService.findOrCreateCart(storeId, customerId, sessionId);
+        return this.cartService.findOrCreateCart(customerId, sessionId);
     }
 
     @ApiOperation({ summary: 'Clear cart' })
@@ -35,9 +33,8 @@ export class CartController {
     @ApiResponse({ status: 200, description: 'Cart cleared.' })
     @Delete()
     async clearCart(@Query('sessionId') sessionId: string, @Request() req) {
-        const storeId = req.tenant.id;
         const customerId = req.user?.customerId || req.user?.userId;
-        return this.cartService.clearCart(storeId, customerId, sessionId);
+        return this.cartService.clearCart(customerId, sessionId);
     }
 
     @ApiOperation({ summary: 'Add item to cart' })
@@ -45,9 +42,8 @@ export class CartController {
     @ApiResponse({ status: 201, description: 'Item added.' })
     @Post('/items')
     async addItem(@Body() body: AddCartItemDto, @Query('sessionId') sessionId: string, @Request() req) {
-        const storeId = req.tenant.id;
         const customerId = req.user?.customerId || req.user?.userId;
-        return this.cartService.addToCart(storeId, customerId, sessionId, body);
+        return this.cartService.addToCart(customerId, sessionId, body);
     }
 
     @ApiOperation({ summary: 'Remove item from cart' })
@@ -55,9 +51,8 @@ export class CartController {
     @ApiResponse({ status: 200, description: 'Item removed.' })
     @Delete('/items/:id')
     async removeItem(@Param('id') id: string, @Query('sessionId') sessionId: string, @Request() req) {
-        const storeId = req.tenant.id;
         const customerId = req.user?.customerId || req.user?.userId;
-        return this.cartService.removeItem(storeId, customerId, sessionId, id);
+        return this.cartService.removeItem(customerId, sessionId, id);
     }
 
     @ApiOperation({ summary: 'Update item quantity' })
@@ -66,9 +61,8 @@ export class CartController {
     @ApiResponse({ status: 200, description: 'Quantity updated.' })
     @Post('/items/:id') // Use POST or PATCH. User might prefer POST for simplicity or if they follow a pattern.
     async updateItem(@Param('id') id: string, @Body('quantity') quantity: number, @Query('sessionId') sessionId: string, @Request() req) {
-        const storeId = req.tenant.id;
         const customerId = req.user?.customerId || req.user?.userId;
-        return this.cartService.updateItemQuantity(storeId, customerId, sessionId, id, quantity);
+        return this.cartService.updateItemQuantity(customerId, sessionId, id, quantity);
     }
 
     @ApiOperation({ summary: 'Apply discount code' })
@@ -78,9 +72,8 @@ export class CartController {
     @ApiResponse({ status: 400, description: 'Invalid discount.' })
     @Post('/discount')
     async applyDiscount(@Body('code') code: string, @Query('sessionId') sessionId: string, @Request() req) {
-        const storeId = req.tenant.id;
         const customerId = req.user?.customerId || req.user?.userId;
-        return this.cartService.applyDiscount(storeId, customerId, sessionId, code);
+        return this.cartService.applyDiscount(customerId, sessionId, code);
     }
 
     @ApiOperation({ summary: 'Remove applied discount' })
@@ -88,9 +81,8 @@ export class CartController {
     @ApiResponse({ status: 200, description: 'Discount removed.' })
     @Delete('/discount')
     async removeDiscount(@Query('sessionId') sessionId: string, @Request() req) {
-        const storeId = req.tenant.id;
         const customerId = req.user?.customerId || req.user?.userId;
-        return this.cartService.removeDiscount(storeId, customerId, sessionId);
+        return this.cartService.removeDiscount(customerId, sessionId);
     }
 }
 

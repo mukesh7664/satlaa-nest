@@ -22,11 +22,6 @@ export class SupportTicket {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @ApiProperty({ description: 'The store/tenant ID' })
-    @Column({ nullable: true })
-    @Index()
-    storeId: string;
-
     @ApiProperty({ description: 'The admin ID who created the ticket' })
     @Column()
     adminId: string;

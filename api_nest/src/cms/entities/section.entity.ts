@@ -1,6 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn, AfterLoad } from 'typeorm';
 import { getFullS3Url } from '../../common/utils/s3-url.util';
-import { Store } from '../../stores/entities/store.entity';
 
 @Entity('sections')
 @Index(['type'], { unique: true })

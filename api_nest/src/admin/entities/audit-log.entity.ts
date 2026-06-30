@@ -1,6 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { Admin } from './admin.entity';
-import { Store } from '../../stores/entities/store.entity';
 
 @Entity('audit_logs')
 export class AuditLog {
@@ -17,14 +16,6 @@ export class AuditLog {
     
     @Column({ nullable: true })
     adminName: string;
-
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    @Index()
-    storeId: string;
 
     @Column()
     @Index()

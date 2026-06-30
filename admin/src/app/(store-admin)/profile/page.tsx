@@ -45,7 +45,7 @@ export default function ProfilePage() {
             <div>
               <h2 className="text-xl font-bold text-slate-800">{admin.name}</h2>
               <p className="text-gray-500 text-sm">
-                {admin.role?.replace("_", " ").toUpperCase()} {admin.storeName ? `| ${admin.storeName}` : ""}
+                {admin.role?.replace("_", " ").toUpperCase()}
               </p>
             </div>
           </div>

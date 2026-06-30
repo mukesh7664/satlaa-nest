@@ -4,7 +4,6 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 // CreateUserDto removed as it belonged to legacy users module
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -15,8 +14,8 @@ export class AuthController {
     @ApiResponse({ status: 201, description: 'User successfully registered.' })
     @ApiResponse({ status: 409, description: 'User already exists.' })
     @Post('register')
-    async register(@Body() createCustomerDto: any, @CurrentTenant('id') storeId: string) {
-        return this.authService.register(createCustomerDto, storeId);
+    async register(@Body() createCustomerDto: any) {
+        return this.authService.register(createCustomerDto);
     }
 
     @ApiOperation({ summary: 'Login with email and password' })
@@ -44,8 +43,7 @@ export class AuthController {
     @Put('profile')
     async updateProfile(@Request() req, @Body() body: any) {
         const userId = req.user.customerId || req.user.sub;
-        const storeId = req.user.storeId;
-        return this.authService.updateProfile(userId, storeId, body);
+        return this.authService.updateProfile(userId, body);
     }
 
     @ApiBearerAuth()
@@ -54,7 +52,6 @@ export class AuthController {
     @Post('change-password')
     async changePassword(@Request() req, @Body() body: any) {
         const userId = req.user.customerId || req.user.sub;
-        const storeId = req.user.storeId;
-        return this.authService.changePassword(userId, storeId, body.currentPassword, body.newPassword);
+        return this.authService.changePassword(userId, body.currentPassword, body.newPassword);
     }
 }

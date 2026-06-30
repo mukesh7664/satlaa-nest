@@ -1,5 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 @Entity('email_templates')
 export class EmailTemplate {
@@ -33,12 +32,4 @@ export class EmailTemplate {
 
     @UpdateDateColumn({ name: 'updated_at' })
     updatedAt: Date;
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'store_id' })
-    store: Store;
-
-    @Column({ name: 'store_id', nullable: true })
-    storeId: string;
 }

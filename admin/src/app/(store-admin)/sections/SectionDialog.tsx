@@ -127,7 +127,7 @@ export default function SectionDialog({
         name: "",
         type: "",
         category: "section",
-        scope: "both",
+        scope: "ecommerce",
         data: '{\n  "title": "Enter Title",\n  "subtitle": "Enter Subtitle",\n  "image": "/images/placeholder.jpg",\n  "collection": "generic"\n}',
         tags: "",
         isActive: true,
@@ -224,7 +224,6 @@ export default function SectionDialog({
               }
             >
               <MenuItem value="both">Both (Universal)</MenuItem>
-              <MenuItem value="page-builder">Page Builder Only</MenuItem>
               <MenuItem value="ecommerce">E-commerce Only</MenuItem>
             </Select>
           </FormControl>

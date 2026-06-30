@@ -1,5 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 @Entity('product_flags')
 export class ProductFlag {
@@ -24,12 +23,4 @@ export class ProductFlag {
 
     @UpdateDateColumn()
     updatedAt: Date;
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    storeId: string;
 }

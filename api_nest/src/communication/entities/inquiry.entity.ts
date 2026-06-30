@@ -1,5 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 export enum InquiryType {
     LEAD = 'lead',
@@ -58,15 +57,6 @@ export class Inquiry {
     })
     @Index()
     status: InquiryStatus;
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    @Index()
-    storeId: string;
 
     @CreateDateColumn()
     @Index()

@@ -2,8 +2,7 @@ import { BlogPost } from "@/types/blog";
 import { ApiPost, transformPost } from "./blog-core";
 
 // Client-side blog service for "use client" components. Fetches the public API
-// directly from the browser; TenantMiddleware resolves the store from the
-// Origin/Referer header the browser sends automatically.
+// directly from the browser.
 // Re-export the shared date helper for client-side callers.
 export { formatBlogDate } from "./blog-core";
 

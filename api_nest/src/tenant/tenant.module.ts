@@ -2,7 +2,6 @@ import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TenantService } from './tenant.service';
-import { Store } from '../stores/entities/store.entity';
 import { GeneralSettings } from '../admin/entities/general-settings.entity';
 import { SeoSettings } from '../admin/entities/seo-settings.entity';
 import { EmailTemplate } from '../admin/entities/email-template.entity';
@@ -15,7 +14,6 @@ import { Section } from '../cms/entities/section.entity';
 @Module({
     imports: [
         TypeOrmModule.forFeature([
-            Store,
             GeneralSettings,
             SeoSettings,
             EmailTemplate,

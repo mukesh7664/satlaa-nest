@@ -30,10 +30,6 @@ export class Media {
     @Column('simple-array', { nullable: true })
     tags: string[]; // Using simple-array for now, can be changed to relation with Tag entity later
 
-    @Column({ nullable: true })
-    @Index()
-    storeId: string;
-
     @Column({ default: false })
     @Index()
     isGlobal: boolean;

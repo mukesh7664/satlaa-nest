@@ -19,14 +19,10 @@ export function usePageSections(slug: string) {
       try {
         setLoading(true);
         const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5004/api/v1";
-        
-        // Use clean host for tenant identification as per lib/api/server-fetch.ts
-        const host = typeof window !== "undefined" ? window.location.host.split(":")[0] : "";
 
         const response = await fetch(`${API_URL}/pages/slug/${slug}`, {
           headers: {
             "Content-Type": "application/json",
-            "x-tenant-domain": host,
           },
         });
 

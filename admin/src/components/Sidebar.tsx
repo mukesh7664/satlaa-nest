@@ -40,7 +40,6 @@ import {
   Help as HelpIcon,
 } from "@mui/icons-material";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateAdmin } from "@/store/slices/authSlice";
@@ -57,7 +56,6 @@ const menu = [
         icon: <DashboardIcon />,
         key: "dashboard",
         permission: "dashboard.view",
-        access: ["ecommerce"],
       },
     ],
   },
@@ -69,7 +67,6 @@ const menu = [
         icon: <OrdersIcon />,
         key: "orders",
         permission: "orders.view",
-        access: ["ecommerce"],
         children: [
           { label: "Orders", key: "all-orders", href: "/orders" },
           { label: "Return & Replace", key: "return-requests", href: "/orders/return-requests" },
@@ -81,28 +78,24 @@ const menu = [
         icon: <EstimateIcon />,
         key: "estimates",
         permission: "estimates.view",
-        access: ["ecommerce"],
       },
       {
         label: "Invoices",
         icon: <InvoiceIcon />,
         key: "invoices",
         permission: "invoices.view",
-        access: ["ecommerce"],
       },
       {
         label: "Inquiries",
         icon: <InquiriesIcon />,
         key: "inquiries",
         permission: "inquiries.view",
-        access: ["page_builder", "ecommerce"],
       },
       {
         label: "Reports",
         icon: <ReportsIcon />,
         key: "reports",
         permission: "reports.view",
-        access: ["ecommerce"],
       },
     ],
   },
@@ -114,14 +107,12 @@ const menu = [
         icon: <CustomersIcon />,
         key: "customers",
         permission: "customers.view",
-        access: ["ecommerce"],
       },
       {
         label: "Admin List",
         icon: <AdminListIcon />,
         key: "admin-list",
         permission: "admins.view",
-        access: ["page_builder", "ecommerce"],
       },
     ],
   },
@@ -134,7 +125,6 @@ const menu = [
         key: "manage-products/product-list",
         href: "/manage-products/product-list",
         permission: "products.view",
-        access: ["ecommerce"],
       },
 
       {
@@ -142,7 +132,6 @@ const menu = [
         icon: <GridIcon />,
         key: "manage-products",
         permission: "products.manage",
-        access: ["ecommerce"],
         children: [
           { label: "Categories", key: "categories", href: "/manage-products/categories" },
           { label: "Collections", key: "collections" },
@@ -155,7 +144,6 @@ const menu = [
         icon: <TagIcon />,
         key: "tags-flags",
         permission: "tags.manage",
-        access: ["ecommerce"],
         children: [
           { label: "Product Tags", key: "tags", href: "/manage-products/tags" },
           {
@@ -176,7 +164,6 @@ const menu = [
         key: "sections",
         href: "/sections",
         permission: "sections.view",
-        access: ["page_builder", "ecommerce"],
       },
       {
         label: "Pages",
@@ -184,14 +171,12 @@ const menu = [
         key: "pages",
         href: "/",
         permission: "pages.view",
-        access: ["page_builder", "ecommerce"],
       },
       {
         label: "Blog",
         icon: <ArticleIcon />,
         key: "blog",
         permission: "pages.view",
-        access: ["page_builder", "ecommerce"],
         children: [
           { label: "All Posts", key: "blog-post-list", href: "/blog/post-list" },
           { label: "Create Post", key: "blog-create-post", href: "/blog/create-post" },
@@ -204,7 +189,6 @@ const menu = [
         key: "themes",
         href: "/themes",
         permission: "pages.view", // Reusing pages.view for now or we can add a new one
-        access: ["page_builder", "ecommerce"],
       },
       {
         label: "Media",
@@ -212,7 +196,6 @@ const menu = [
         key: "media",
         href: "/media",
         permission: "media.view",
-        access: ["page_builder", "ecommerce"],
       },
     ],
   },
@@ -224,7 +207,6 @@ const menu = [
         icon: <SettingsIcon />,
         key: "settings",
         permission: "settings.general",
-        access: ["page_builder", "ecommerce"],
       },
     ],
   },
@@ -406,25 +388,15 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
           {!collapsed ? (
             <>
               <div className="relative w-32 h-10 flex items-center">
-                {admin?.storeLogo ? (
-                  <Image
-                    src={admin.storeLogo}
-                    alt={`${admin.storeName} Logo`}
-                    fill
-                    className="object-contain object-left"
-                    priority
-                  />
-                ) : (
-                  <span className="text-xl font-bold text-[#408dfb] truncate">
-                    {admin?.storeName || "Inospire"}
-                  </span>
-                )}
+                <span className="text-xl font-bold text-[#408dfb] truncate">
+                  Inospire
+                </span>
               </div>
             </>
           ) : (
             <div className="relative group">
               <span className="w-8 h-8 rounded-lg bg-[#408dfb]  text-white flex items-center justify-center text-lg font-bold shadow-sm group-hover:scale-105 transition-transform">
-                {admin?.storeName?.charAt(0).toUpperCase() || "I"}
+                I
               </span>
             </div>
           )}

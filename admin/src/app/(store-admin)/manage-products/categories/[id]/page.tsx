@@ -219,7 +219,7 @@ export default function EditCategoryPage() {
             </IconButton>
             <h1 className="text-2xl font-bold text-slate-800">Edit Category: {category?.name}</h1>
           </div>
-          {(isSuperAdmin || (category?.storeId && category.storeId === admin?.storeId)) && (
+          {(isSuperAdmin || !!category?.storeId) && (
             <Button
               variant="contained"
               startIcon={<SaveIcon />}
@@ -268,7 +268,7 @@ export default function EditCategoryPage() {
           <Paper className="p-6 border border-slate-200 rounded-xl shadow-sm space-y-4">
             <div className="flex justify-between items-center">
               <Typography variant="h6" className="font-bold text-slate-700">Category Attributes</Typography>
-              {(isSuperAdmin || (category?.storeId && category.storeId === admin?.storeId)) && (
+              {(isSuperAdmin || !!category?.storeId) && (
                 <Button
                   size="small"
                   variant="outlined"
@@ -288,7 +288,7 @@ export default function EditCategoryPage() {
                     <TableCell className="font-semibold text-slate-600">Name</TableCell>
                     <TableCell className="font-semibold text-slate-600">Type</TableCell>
                     <TableCell className="font-semibold text-slate-600">Options</TableCell>
-                    {(isSuperAdmin || (category?.storeId && category.storeId === admin?.storeId)) && <TableCell align="right" className="font-semibold text-slate-600">Actions</TableCell>}
+                    {(isSuperAdmin || !!category?.storeId) && <TableCell align="right" className="font-semibold text-slate-600">Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -312,7 +312,7 @@ export default function EditCategoryPage() {
                             </div>
                           ) : "-"}
                         </TableCell>
-                        {(isSuperAdmin || (category?.storeId && category.storeId === admin?.storeId)) && (
+                        {(isSuperAdmin || !!category?.storeId) && (
                           <TableCell align="right">
                             <IconButton size="small" color="primary" onClick={() => handleOpenAttrDialog(attr, index)}>
                               <EditIcon fontSize="small" />

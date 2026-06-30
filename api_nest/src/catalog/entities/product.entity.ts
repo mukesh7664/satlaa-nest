@@ -5,11 +5,10 @@ import { Collection } from './collection.entity';
 import { ProductMedia } from './product-media.entity';
 import { ProductBundleItem } from './product-bundle-item.entity';
 import { ColumnNumericTransformer } from '../../common/transformers/numeric.transformer';
-import { Store } from '../../stores/entities/store.entity';
 
 @Entity('products')
-@Index(['storeId', 'slug'], { unique: true })
-@Index(['storeId', 'sku'], { unique: true, where: '"sku" IS NOT NULL' })
+@Index(['slug'], { unique: true })
+@Index(['sku'], { unique: true, where: '"sku" IS NOT NULL' })
 export class Product {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -38,14 +37,6 @@ export class Product {
 
     @Column('decimal', { precision: 5, scale: 2, default: 0, transformer: new ColumnNumericTransformer() })
     tax_rate: number;
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    storeId: string;
 
     // Collections (Junction Table)
     @OneToMany(() => CollectionProduct, (cp) => cp.product)

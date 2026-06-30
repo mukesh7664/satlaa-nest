@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { Invoice } from './entities/invoice.entity';
 import { Order, OrderStatus } from './entities/order.entity';
 import { EmailService } from '../notifications/email.service';
-import { Store } from '../stores/entities/store.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { PdfService } from './pdf.service';
 import { S3Service } from '../cms/s3.service';
@@ -18,8 +17,6 @@ export class InvoiceService {
         private invoiceRepository: Repository<Invoice>,
         @InjectRepository(Order)
         private orderRepository: Repository<Order>,
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
         @InjectRepository(Customer)
         private customerRepository: Repository<Customer>,
         @InjectRepository(GeneralSettings)
@@ -40,13 +37,13 @@ export class InvoiceService {
         });
         const savedInvoice = (await this.invoiceRepository.save(invoice)) as any;
         // Generate and store PDF
-        await this.generateAndStorePdf(savedInvoice.id, savedInvoice.storeId);
+        await this.generateAndStorePdf(savedInvoice.id);
         return savedInvoice;
     }
 
-    async createInvoiceFromOrder(orderId: string, storeId?: string, adminId?: string): Promise<Invoice> {
-        const order = await this.orderRepository.findOne({ 
-            where: storeId ? { id: orderId, storeId } : { id: orderId },
+    async createInvoiceFromOrder(orderId: string, adminId?: string): Promise<Invoice> {
+        const order = await this.orderRepository.findOne({
+            where: { id: orderId },
             relations: ['items']
         });
         if (!order) {
@@ -64,7 +61,6 @@ export class InvoiceService {
         const invoice = this.invoiceRepository.create({
             invoiceNumber,
             orderId: order.id,
-            storeId: storeId || order.storeId, 
             customerId: order.customerId,
             createdById: adminId,
             customer: order.billingAddress || order.shippingAddress || {}, // Use billing or fallback to shipping
@@ -130,8 +126,8 @@ export class InvoiceService {
         if (!invoice.customerId) {
             const email = order.billingAddress?.email || order.shippingAddress?.email;
             if (email) {
-                const customer = await this.customerRepository.findOne({ 
-                    where: { email, storeId: invoice.storeId } 
+                const customer = await this.customerRepository.findOne({
+                    where: { email }
                 });
                 if (customer) {
                     invoice.customerId = customer.id;
@@ -141,11 +137,11 @@ export class InvoiceService {
 
         const savedInvoice = (await this.invoiceRepository.save(invoice)) as any;
         // Generate and store PDF
-        await this.generateAndStorePdf(savedInvoice.id, savedInvoice.storeId);
+        await this.generateAndStorePdf(savedInvoice.id);
         return savedInvoice;
     }
 
-    async findAllInvoices(customerId?: string, storeId?: string, query: any = {}) {
+    async findAllInvoices(customerId?: string, query: any = {}) {
         const page = parseInt(query.page) || 1;
         const limit = parseInt(query.limit) || 10;
         const skip = (page - 1) * limit;
@@ -154,9 +150,6 @@ export class InvoiceService {
 
         if (customerId) {
             qb.andWhere('invoice.customerId = :customerId', { customerId });
-        }
-        if (storeId) {
-            qb.andWhere('invoice.storeId = :storeId', { storeId });
         }
         if (query.status && query.status !== 'all') {
             qb.andWhere('invoice.status = :status', { status: query.status });
@@ -202,19 +195,16 @@ export class InvoiceService {
         };
     }
 
-    async findOneInvoice(id: string, customerId?: string, storeId?: string) {
+    async findOneInvoice(id: string, customerId?: string) {
         const where: any = { id };
         if (customerId) {
             where.customerId = customerId;
         }
-        if (storeId) {
-            where.storeId = storeId;
-        }
         return this.invoiceRepository.findOne({ where });
     }
 
-    async updateInvoice(id: string, body: any, storeId?: string): Promise<Invoice> {
-        const invoice = await this.invoiceRepository.findOne({ where: storeId ? { id, storeId } : { id } });
+    async updateInvoice(id: string, body: any): Promise<Invoice> {
+        const invoice = await this.invoiceRepository.findOne({ where: { id } });
         if (!invoice) {
             throw new NotFoundException(`Invoice with ID ${id} not found`);
         }
@@ -253,26 +243,25 @@ export class InvoiceService {
         return this.invoiceRepository.save(invoice);
     }
 
-    async deleteInvoice(id: string, storeId?: string): Promise<void> {
-        const invoice = await this.invoiceRepository.findOne({ where: storeId ? { id, storeId } : { id } });
+    async deleteInvoice(id: string): Promise<void> {
+        const invoice = await this.invoiceRepository.findOne({ where: { id } });
         if (!invoice) {
             throw new NotFoundException(`Invoice with ID ${id} not found`);
         }
         await this.invoiceRepository.remove(invoice);
     }
 
-    async sendInvoice(id: string, storeId?: string): Promise<{ success: boolean; message: string }> {
-        const invoice = await this.invoiceRepository.findOne({ where: storeId ? { id, storeId } : { id } });
+    async sendInvoice(id: string): Promise<{ success: boolean; message: string }> {
+        const invoice = await this.invoiceRepository.findOne({ where: { id } });
         if (!invoice) throw new NotFoundException(`Invoice ${id} not found`);
-        const store = storeId ? await this.storeRepository.findOne({ where: { id: storeId } }) : null;
 
         // Ensure PDF is generated before sending email
         if (!invoice.pdfUrl) {
-            await this.generateAndStorePdf(id, storeId);
+            await this.generateAndStorePdf(id);
             const updated = await this.invoiceRepository.findOne({ where: { id } });
-            await this.emailService.sendInvoiceEmail(updated, store);
+            await this.emailService.sendInvoiceEmail(updated);
         } else {
-            await this.emailService.sendInvoiceEmail(invoice, store);
+            await this.emailService.sendInvoiceEmail(invoice);
         }
 
         // Mark as sent if still draft
@@ -283,14 +272,14 @@ export class InvoiceService {
         return { success: true, message: 'Invoice sent to customer' };
     }
 
-    async generateAndStorePdf(id: string, storeId?: string): Promise<string> {
+    async generateAndStorePdf(id: string): Promise<string> {
         const invoice = await this.invoiceRepository.findOne({ where: { id } });
         if (!invoice) throw new NotFoundException('Invoice not found');
 
-        const settings = await this.settingsRepository.findOne({ where: { storeId: invoice.storeId } });
+        const settings = await this.settingsRepository.findOne({ where: {} });
         const pdfBuffer = await this.pdfService.generateInvoicePdf(invoice, settings);
 
-        const key = `stores/${invoice.storeId}/invoice/${invoice.id}.pdf`;
+        const key = `invoice/${invoice.id}.pdf`;
         await this.s3Service.uploadBuffer(pdfBuffer, key, 'application/pdf');
 
         invoice.pdfUrl = key;

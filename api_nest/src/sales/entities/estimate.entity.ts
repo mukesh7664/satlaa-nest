@@ -3,7 +3,6 @@ import { getFullS3Url } from '../../common/utils/s3-url.util';
 import { Admin } from '../../admin/entities/admin.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 import { Order } from './order.entity';
-import { Store } from '../../stores/entities/store.entity';
 
 @Entity('estimates')
 export class Estimate {
@@ -102,13 +101,4 @@ export class Estimate {
 
     @UpdateDateColumn()
     updatedAt: Date;
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    @Index()
-    storeId: string;
 }

@@ -37,9 +37,7 @@ export class DashboardService {
         private dataSource: DataSource,
     ) { }
 
-    async getDashboardSummary(storeId?: string) {
-        const filter = storeId ? { storeId } : {};
-
+    async getDashboardSummary() {
         // Basic counts
         const [
             totalCustomers,
@@ -51,36 +49,36 @@ export class DashboardService {
             newInquiryCount,
             paidOrdersCount,
         ] = await Promise.all([
-            this.customerRepository.count({ where: filter }),
-            this.productRepository.count({ where: filter }),
-            this.productRepository.count({ where: { ...filter, isActive: true } }),
-            this.collectionRepository.count({ where: filter }),
-            this.orderRepository.count({ where: filter }),
-            this.invoiceRepository.count({ where: [{ ...filter, status: 'sent' }, { ...filter, status: 'overdue' }, { ...filter, status: 'partially_paid' }] }),
-            this.inquiryRepository.count({ where: { ...filter, status: InquiryStatus.PENDING } }),
-            this.orderRepository.count({ where: { ...filter, paymentStatus: PaymentStatus.PAID } }),
+            this.customerRepository.count(),
+            this.productRepository.count(),
+            this.productRepository.count({ where: { isActive: true } }),
+            this.collectionRepository.count(),
+            this.orderRepository.count(),
+            this.invoiceRepository.count({ where: [{ status: 'sent' }, { status: 'overdue' }, { status: 'partially_paid' }] }),
+            this.inquiryRepository.count({ where: { status: InquiryStatus.PENDING } }),
+            this.orderRepository.count({ where: { paymentStatus: PaymentStatus.PAID } }),
         ]);
 
         // Order Statistics
-        const orderStats = await this.getOrderStats(storeId);
+        const orderStats = await this.getOrderStats();
 
         // Revenue Logic
-        const { totalRevenue, monthlyRevenue } = await this.getRevenueStats(storeId);
+        const { totalRevenue, monthlyRevenue } = await this.getRevenueStats();
 
         // Monthly Sales Graph (Last 12 months)
-        const yearlyData = await this.getMonthlySales(storeId);
+        const yearlyData = await this.getMonthlySales();
 
         // Top Lists
-        const topCategories = await this.getTopCategories(storeId);
-        const topProducts = await this.getTopProducts(storeId);
-        const topCustomers = await this.getTopCustomers(storeId);
-        const paymentDistribution = await this.getPaymentDistribution(storeId);
+        const topCategories = await this.getTopCategories();
+        const topProducts = await this.getTopProducts();
+        const topCustomers = await this.getTopCustomers();
+        const paymentDistribution = await this.getPaymentDistribution();
 
         // Helper for "Active Categories" (using Collection as category)
         const totalCategories = totalCollections;
 
         // Dynamic Trend Calculations
-        const trends = await this.getTrendStats(storeId, monthlyRevenue, totalCustomers);
+        const trends = await this.getTrendStats(monthlyRevenue, totalCustomers);
 
         return {
             summary: {
@@ -107,7 +105,7 @@ export class DashboardService {
                 averageRating: 4.92, // Static as per legacy or unimplemented logic
                 totalOrders: totalOrders,
             },
-            setupStatus: await this.getSetupStatus(storeId),
+            setupStatus: await this.getSetupStatus(),
             // Legacy compatibility fields if needed at root level
             totalOrders,
             totalUsers: totalCustomers,
@@ -117,24 +115,13 @@ export class DashboardService {
         };
     }
 
-    async getSetupStatus(storeId?: string) {
-        if (!storeId) {
-            return {
-                emailConfigured: true,
-                paymentConfigured: true,
-                shippingConfigured: true,
-                isComplete: true,
-                completionPercentage: 100,
-                steps: [],
-            };
-        }
-
+    async getSetupStatus() {
         const [emailSettings, paymentConfigs, shippingConfig, generalSettings, productCount] = await Promise.all([
-            this.emailSettingsRepository.findOne({ where: { storeId } }),
-            this.storePaymentConfigService.findByStore(storeId),
-            this.dataSource.getRepository(ShippingConfig).findOne({ where: { storeId, provider: 'shiprocket' } }),
-            this.generalSettingsRepository.findOne({ where: { storeId } }),
-            this.productRepository.count({ where: { storeId } }),
+            this.emailSettingsRepository.findOne({ where: {} }),
+            this.storePaymentConfigService.findByStore(),
+            this.dataSource.getRepository(ShippingConfig).findOne({ where: { provider: 'shiprocket' } }),
+            this.generalSettingsRepository.findOne({ where: {} }),
+            this.productRepository.count(),
         ]);
 
         const emailConfigured = !!(emailSettings && emailSettings.smtpHost && emailSettings.smtpUser && emailSettings.smtpPassword);
@@ -199,24 +186,20 @@ export class DashboardService {
         };
     }
 
-    async getRecentOrders(storeId?: string) {
+    async getRecentOrders() {
         return this.orderRepository.find({
-            where: storeId ? { storeId } : {},
+            where: {},
             take: 5,
             order: { createdAt: 'DESC' },
             relations: ['customer'],
         });
     }
 
-    private async getOrderStats(storeId?: string) {
+    private async getOrderStats() {
         const query = this.orderRepository
             .createQueryBuilder('order')
             .select('order.status', 'status')
             .addSelect('COUNT(order.id)', 'count');
-
-        if (storeId) {
-            query.where('order.storeId = :storeId', { storeId });
-        }
 
         const stats = await query
             .groupBy('order.status')
@@ -277,16 +260,12 @@ export class DashboardService {
         return result;
     }
 
-    private async getRevenueStats(storeId?: string) {
+    private async getRevenueStats() {
         const totalQuery = this.orderRepository
             .createQueryBuilder('order')
             .select('SUM(order.totalAmount)', 'total')
             .where('order.status != :status', { status: OrderStatus.CANCELLED })
             .andWhere('order.status != :refundedStatus', { refundedStatus: OrderStatus.REFUNDED });
-
-        if (storeId) {
-            totalQuery.andWhere('order.storeId = :storeId', { storeId });
-        }
 
         const totalRevenueResult = await totalQuery.getRawOne();
 
@@ -301,10 +280,6 @@ export class DashboardService {
             .andWhere('order.status != :status', { status: OrderStatus.CANCELLED })
             .andWhere('order.status != :refundedStatus', { refundedStatus: OrderStatus.REFUNDED });
 
-        if (storeId) {
-            monthlyQuery.andWhere('order.storeId = :storeId', { storeId });
-        }
-
         const monthlyRevenueResult = await monthlyQuery.getRawOne();
 
         return {
@@ -313,7 +288,7 @@ export class DashboardService {
         };
     }
 
-    private async getTrendStats(storeId?: string, monthlyRevenue = 0, totalCustomers = 0) {
+    private async getTrendStats(monthlyRevenue = 0, totalCustomers = 0) {
         const now = new Date();
         const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -328,9 +303,6 @@ export class DashboardService {
             .andWhere('order.status != :status', { status: OrderStatus.CANCELLED })
             .andWhere('order.status != :refundedStatus', { refundedStatus: OrderStatus.REFUNDED });
 
-        if (storeId) {
-            previousMonthQuery.andWhere('order.storeId = :storeId', { storeId });
-        }
         const previousMonthResult = await previousMonthQuery.getRawOne();
         const previousMonthRevenue = parseFloat(previousMonthResult?.total || '0');
 
@@ -345,9 +317,6 @@ export class DashboardService {
         const newCustomersQuery = this.customerRepository
             .createQueryBuilder('customer')
             .where('customer.createdAt >= :startOfCurrentMonth', { startOfCurrentMonth });
-        if (storeId) {
-            newCustomersQuery.andWhere('customer.storeId = :storeId', { storeId });
-        }
         const newCustomersThisMonth = await newCustomersQuery.getCount();
         const previousCustomers = totalCustomers - newCustomersThisMonth;
         let customersTrend = 0;
@@ -362,9 +331,6 @@ export class DashboardService {
             .createQueryBuilder('order')
             .where('order.paymentStatus = :status', { status: PaymentStatus.PAID })
             .andWhere('order.createdAt >= :startOfCurrentMonth', { startOfCurrentMonth });
-        if (storeId) {
-            currentMonthPaidQuery.andWhere('order.storeId = :storeId', { storeId });
-        }
         const currentMonthPaid = await currentMonthPaidQuery.getCount();
 
         const previousMonthPaidQuery = this.orderRepository
@@ -372,9 +338,6 @@ export class DashboardService {
             .where('order.paymentStatus = :status', { status: PaymentStatus.PAID })
             .andWhere('order.createdAt >= :startOfPreviousMonth', { startOfPreviousMonth })
             .andWhere('order.createdAt <= :endOfPreviousMonth', { endOfPreviousMonth });
-        if (storeId) {
-            previousMonthPaidQuery.andWhere('order.storeId = :storeId', { storeId });
-        }
         const previousMonthPaid = await previousMonthPaidQuery.getCount();
 
         let deliveredTrend = 0;
@@ -392,7 +355,7 @@ export class DashboardService {
         };
     }
 
-    private async getMonthlySales(storeId?: string) {
+    private async getMonthlySales() {
         const twelveMonthsAgo = new Date();
         twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
@@ -404,10 +367,6 @@ export class DashboardService {
             .addSelect('SUM(order.totalAmount)', 'sales')
             .where('order.createdAt >= :date', { date: twelveMonthsAgo })
             .andWhere('order.status != :status', { status: OrderStatus.CANCELLED });
-
-        if (storeId) {
-            query.andWhere('order.storeId = :storeId', { storeId });
-        }
 
         const sales = await query
             .groupBy("TO_CHAR(order.createdAt, 'Mon')")
@@ -423,11 +382,11 @@ export class DashboardService {
         }));
     }
 
-    private async getTopCategories(storeId?: string) {
+    private async getTopCategories() {
         // Fetch top categories based on quantities in order items
         try {
             const result = await this.orderRepository.query(`
-                SELECT 
+                SELECT
                     c.id as "categoryId",
                     c.name as name,
                     SUM(oi.quantity) as count,
@@ -436,17 +395,15 @@ export class DashboardService {
                 INNER JOIN orders o ON o.id = oi."orderId"
                 INNER JOIN products p ON p.id = oi."productId"::uuid
                 INNER JOIN categories c ON c.id = p."categoryId"
-                ${storeId ? 'WHERE o."storeId" = $1' : ''}
                 GROUP BY c.id, c.name
                 ORDER BY revenue DESC
                 LIMIT 5
-            `, storeId ? [storeId] : []);
+            `, []);
 
             const enrichedResult = await Promise.all(result.map(async (r) => {
                 const productsCount = await this.productRepository.count({
-                    where: { 
+                    where: {
                         categoryId: r.categoryId,
-                        ...(storeId ? { storeId } : {})
                     }
                 });
                 return {
@@ -465,10 +422,10 @@ export class DashboardService {
     }
 
 
-    private async getTopProducts(storeId?: string) {
+    private async getTopProducts() {
         try {
             const result = await this.orderRepository.query(`
-                SELECT 
+                SELECT
                     oi."productName" as name,
                     COALESCE(pm.key, '') as image,
                     SUM(oi.quantity) as quantity,
@@ -479,11 +436,10 @@ export class DashboardService {
                 INNER JOIN orders o ON o.id = oi."orderId"
                 LEFT JOIN products p ON p.id = oi."productId"::uuid
                 LEFT JOIN product_media pm ON pm."productId" = p.id AND pm.is_main = true
-                ${storeId ? 'WHERE o."storeId" = $1' : ''}
                 GROUP BY oi."productName", pm.key, p."isActive", p.stock
                 ORDER BY price DESC
                 LIMIT 4
-            `, storeId ? [storeId] : []);
+            `, []);
 
             return result.map(r => ({
                 name: r.name,
@@ -497,7 +453,7 @@ export class DashboardService {
             console.error('Error in getTopProducts:', error);
             // Fallback to basic aggregation if join fails (e.g. invalid UUIDs in productId)
             const result = await this.orderRepository.query(`
-                SELECT 
+                SELECT
                     oi."productName" as name,
                     '' as image,
                     SUM(oi.quantity) as quantity,
@@ -507,11 +463,10 @@ export class DashboardService {
                 FROM order_items oi
                 INNER JOIN orders o ON o.id = oi."orderId"
                 LEFT JOIN products p ON p.id = oi."productId"::uuid
-                ${storeId ? 'WHERE o."storeId" = $1' : ''}
                 GROUP BY oi."productName", p."isActive", p.stock
                 ORDER BY price DESC
                 LIMIT 4
-            `, storeId ? [storeId] : []);
+            `, []);
 
             return result.map(r => ({
                 name: r.name,
@@ -524,7 +479,7 @@ export class DashboardService {
         }
     }
 
-    private async getTopCustomers(storeId?: string) {
+    private async getTopCustomers() {
         const query = this.orderRepository
             .createQueryBuilder('order')
             .select('order.customerId', 'customerId')
@@ -533,10 +488,6 @@ export class DashboardService {
             .innerJoin('order.customer', 'customer')
             .addSelect('customer.name', 'name')
             .addSelect('customer.email', 'email');
-
-        if (storeId) {
-            query.where('order.storeId = :storeId', { storeId });
-        }
 
         const topCustomers = await query
             .groupBy('order.customerId')
@@ -553,16 +504,15 @@ export class DashboardService {
         }));
     }
 
-    private async getPaymentDistribution(storeId?: string) {
+    private async getPaymentDistribution() {
         // paymentInfo is jsonb
         const result = await this.orderRepository.query(`
-        SELECT 
+        SELECT
             "paymentInfo"->>'method' as method,
             COUNT(*) as count
         FROM orders
-        ${storeId ? 'WHERE "storeId" = $1' : ''}
         GROUP BY "paymentInfo"->>'method'
-      `, storeId ? [storeId] : []);
+      `, []);
 
         const distribution = {
             cash_on_delivery: 0,

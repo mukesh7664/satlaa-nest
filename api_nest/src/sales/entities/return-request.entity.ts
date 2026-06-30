@@ -2,7 +2,6 @@ import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDa
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { Customer } from '../../customers/entities/customer.entity';
-import { Store } from '../../stores/entities/store.entity';
 import { ColumnNumericTransformer } from '../../common/transformers/numeric.transformer';
 
 export enum ReturnRequestType {
@@ -44,13 +43,6 @@ export class ReturnRequest {
 
     @Column()
     customerId: string;
-
-    @ManyToOne(() => Store)
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column()
-    storeId: string;
 
     @Column({
         type: 'enum',

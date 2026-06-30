@@ -6,7 +6,6 @@ import { PriceDisplay } from "@/components/common/PriceDisplay";
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Star, ShoppingCart, Eye, ArrowRight, ChevronRight } from "lucide-react";
-import { usePreview } from "@/contexts/PreviewContext";
 
 interface Product {
   id: string;
@@ -72,7 +71,6 @@ export default function DentalTopPicks({ data, sectionIndex }: DentalTopPicksPro
     sidebarPromoText = ""
   } = data || {};
 
-  const { isPreview, pageData } = usePreview();
 
   const [dynamicTabs, setDynamicTabs] = useState<TabData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,13 +104,6 @@ export default function DentalTopPicks({ data, sectionIndex }: DentalTopPicksPro
           queryParams.append("limit", String(tab.limitFilter || 8));
 
           const headers: Record<string, string> = { "Content-Type": "application/json" };
-          if (isPreview && pageData?.storeId) {
-            headers["x-tenant-domain"] = pageData.storeId;
-          } else if (typeof window !== "undefined") {
-            const host = window.location.host;
-            const cleanHost = host.split(":")[0];
-            headers["x-tenant-domain"] = cleanHost;
-          }
 
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5004/api/v1";
           const res = await fetch(`${apiUrl}/products?${queryParams.toString()}`, { headers });
@@ -166,7 +157,7 @@ export default function DentalTopPicks({ data, sectionIndex }: DentalTopPicksPro
     };
 
     fetchDynamicProducts();
-  }, [productsSource, data.tabs, isPreview, pageData?.storeId]);
+  }, [productsSource, data.tabs]);
 
   const activeTabsList = productsSource === "dynamic" ? dynamicTabs : (tabs || []);
 

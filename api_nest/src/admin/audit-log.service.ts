@@ -24,7 +24,6 @@ export class AuditLogService {
     status?: string;
     ipAddress?: string;
     userAgent?: string;
-    storeId?: string;
   }) {
     const {
       admin,
@@ -37,7 +36,6 @@ export class AuditLogService {
       status = 'success',
       ipAddress,
       userAgent,
-      storeId,
     } = params;
 
     const changes = getChanges(before, after);
@@ -69,7 +67,6 @@ export class AuditLogService {
     const auditLog = this.auditLogRepository.create({
       adminId: admin?.id || admin?.userId,
       adminName: actorName,
-      storeId,
       action,
       resourceType,
       resourceId: resourceId?.toString(),

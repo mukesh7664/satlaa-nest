@@ -2,7 +2,6 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 import { getFullS3Url } from '../../common/utils/s3-url.util';
 import { CollectionProduct } from './collection-product.entity';
 import { Product } from './product.entity';
-import { Store } from '../../stores/entities/store.entity';
 
 export enum CollectionType {
     MANUAL = 'manual',
@@ -15,7 +14,7 @@ export enum CollectionCondition {
 }
 
 @Entity('collections')
-@Index(['storeId', 'slug'], { unique: true })
+@Index(['slug'], { unique: true })
 export class Collection {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -26,14 +25,6 @@ export class Collection {
     @Column()
     @Index()
     slug: string;
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    storeId: string;
 
     @Column({ length: 500, nullable: true })
     description: string;

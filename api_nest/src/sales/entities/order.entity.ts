@@ -1,6 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, OneToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
-import { Store } from '../../stores/entities/store.entity';
 import { ColumnNumericTransformer } from '../../common/transformers/numeric.transformer';
 import { OrderItem } from './order-item.entity';
 import { Shipment } from './shipment.entity';
@@ -121,14 +120,6 @@ export class Order {
 
     @Column('jsonb', { nullable: true })
     metadata: Record<string, any>;
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    storeId: string;
 
     @Column({ nullable: true })
     orderType: string;

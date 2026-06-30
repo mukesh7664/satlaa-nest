@@ -1,5 +1,4 @@
-import React, { useEffect } from "react";
-import { useAppSelector } from "@/store/hooks";
+import React from "react";
 import {
   FormControlLabel,
   Checkbox,
@@ -160,59 +159,13 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
   onChange,
   disabled = false,
   variant = "default",
-  planCategory = "ecommerce",
   allowedPages: propAllowedPages,
 }) => {
-  const { admin } = useAppSelector((state) => state.auth);
-  
-  // Use prop allowedPages if provided, otherwise fall back to admin's allowedPages
-  const allowedPages = propAllowedPages !== undefined ? propAllowedPages : admin?.allowedPages;
+  // Use prop allowedPages if provided; otherwise no restriction (single-store ecommerce).
+  const allowedPages = propAllowedPages;
 
   const filteredGroups = React.useMemo(() => {
-    let groups = PERMISSION_GROUPS;
-    if (planCategory === "page_builder") {
-      // Re-map into exactly A, B, C, D structure
-      groups = [
-        {
-          label: "CONTENT & WEBSITE",
-          items: [
-            { label: "View Pages", key: "pages.view" },
-            { label: "Manage Pages", key: "pages.edit" },
-            { label: "View Sections Library", key: "sections.view" },
-            { label: "Manage Sections Library", key: "sections.edit" },
-            { label: "View Media", key: "media.view" },
-            { label: "Manage Media", key: "media.edit" },
-          ],
-        },
-        {
-          label: "PEOPLE",
-          items: [
-            { label: "View Inquiries", key: "inquiries.view" },
-            { label: "Manage Inquiries", key: "inquiries.edit" },
-          ],
-        },
-        {
-          label: "SETTINGS & CONFIG",
-          items: [
-            { label: "General Settings (Site Name/Logo)", key: "settings.general" },
-            { label: "Domain Management", key: "settings.domain" },
-            { label: "Theme Settings (Colors/Fonts)", key: "settings.theme" },
-            { label: "SEO Settings (Meta Tags/Tracking)", key: "settings.seo" },
-            { label: "Email Configuration (Newsletter/Contact)", key: "settings.email" },
-          ],
-        },
-        {
-          label: "ADMINISTRATION",
-          items: [
-            { label: "View Admins (Staff)", key: "admins.view" },
-            { label: "Manage Admins (Staff)", key: "admins.edit" },
-            { label: "View Audit Logs", key: "audit_logs.view" },
-          ],
-        },
-      ];
-    }
-
-    return groups
+    return PERMISSION_GROUPS
       .map((group) => {
         const allowedItems = group.items.filter((item) => {
           if (!allowedPages) return true;
@@ -229,7 +182,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
         };
       })
       .filter((group) => group.items.length > 0);
-  }, [planCategory, allowedPages]);
+  }, [allowedPages]);
 
   const handleToggle = (key: string) => {
     if (selectedPermissions.includes(key)) {

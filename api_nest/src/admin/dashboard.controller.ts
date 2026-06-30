@@ -11,17 +11,17 @@ export class DashboardController {
     @Get('summary')
     // @UseGuards(AdminAuthGuard) // Will uncomment after verifying guard
     async getDashboardSummary(@Req() req: any) {
-        return this.dashboardService.getDashboardSummary(req.user?.storeId);
+        return this.dashboardService.getDashboardSummary();
     }
 
     @Get('dashboard-summary')
     async getDashboardSummaryLegacy(@Req() req: any) {
-        return this.dashboardService.getDashboardSummary(req.user?.storeId);
+        return this.dashboardService.getDashboardSummary();
     }
 
     @Get('recent-orders')
     // @UseGuards(AdminAuthGuard)
     async getRecentOrders(@Req() req: any) {
-        return this.dashboardService.getRecentOrders(req.user?.storeId);
+        return this.dashboardService.getRecentOrders();
     }
 }

@@ -21,10 +21,8 @@ export class ProductFlagController {
     @ApiQuery({ name: 'q', required: false })
     @Get('search')
     async searchFlags(@Query('q') q: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = {};
-        if (storeId) whereCond.storeId = storeId;
-        
+
         if (!q) {
             const items = await this.flagRepository.find({ where: whereCond });
             return { flags: items, count: items.length, success: true };
@@ -37,10 +35,8 @@ export class ProductFlagController {
     @ApiOperation({ summary: 'Get all product flags' })
     @Get()
     async getAllFlags(@Query() query: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = {};
-        if (storeId) whereCond.storeId = storeId;
-        
+
         const items = await this.flagRepository.find({ where: whereCond, order: { name: 'ASC' } });
         return { flags: items, count: items.length, success: true };
     }
@@ -49,23 +45,19 @@ export class ProductFlagController {
     @ApiParam({ name: 'id' })
     @Get(':id')
     async getFlagById(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
+
         return this.flagRepository.findOne({ where: whereCond });
     }
 
     @ApiOperation({ summary: 'Create product flag' })
     @Post()
     async createFlag(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const flagData = {
             ...body,
             slug: body.name.toLowerCase().replace(/ /g, '-'),
         };
-        if (storeId) flagData.storeId = storeId;
-        
+
         const flag = this.flagRepository.create(flagData);
         const saved = await this.flagRepository.save(flag);
         return { flag: saved, success: true, message: 'Flag created' };
@@ -75,10 +67,8 @@ export class ProductFlagController {
     @ApiParam({ name: 'id' })
     @Put(':id')
     async updateFlag(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
+
         const flag = await this.flagRepository.findOne({ where: whereCond });
         if (!flag) throw new NotFoundException('Flag not found');
 
@@ -94,10 +84,8 @@ export class ProductFlagController {
     @ApiParam({ name: 'id' })
     @Delete(':id')
     async deleteFlag(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
+
         const flag = await this.flagRepository.findOne({ where: whereCond });
         if (!flag) throw new NotFoundException('Flag not found');
 

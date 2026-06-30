@@ -23,13 +23,13 @@ export class CmsService {
     ) { }
 
     // ── Pages ───────────────────────────────────────────────────────────
-    async getAllPages(storeId?: string) {
-        return this.pageRepository.find({ where: storeId ? { storeId } : {}, order: { createdAt: 'DESC' } });
+    async getAllPages() {
+        return this.pageRepository.find({ order: { createdAt: 'DESC' } });
     }
 
-    async getPageById(id: string, storeId?: string) {
+    async getPageById(id: string) {
         const page = await this.pageRepository.findOne({
-            where: storeId ? { id, storeId } : { id },
+            where: { id },
             relations: ['pageSections', 'pageSections.section']
         });
         if (!page) throw new NotFoundException('Page not found');
@@ -50,18 +50,18 @@ export class CmsService {
         return { success: true, data: { ...page, sections: hydratedSections } };
     }
 
-    async getPageBySlug(slug: string, storeId?: string) {
+    async getPageBySlug(slug: string) {
         let page;
 
         // Special handling for the generic "homepage" slug override via is_homepage flag
         if (slug === 'homepage') {
             page = await this.pageRepository.findOne({
-                where: storeId ? { is_homepage: true, isPublished: true, storeId } : { is_homepage: true, isPublished: true },
+                where: { is_homepage: true, isPublished: true },
                 relations: ['pageSections', 'pageSections.section']
             });
         } else {
             page = await this.pageRepository.findOne({
-                where: storeId ? { slug, storeId } : { slug },
+                where: { slug },
                 relations: ['pageSections', 'pageSections.section']
             });
         }
@@ -74,7 +74,7 @@ export class CmsService {
                 ))
         ) {
             page = await this.pageRepository.findOne({
-                where: storeId ? { id: slug, isPublished: true, storeId } : { id: slug, isPublished: true },
+                where: { id: slug, isPublished: true },
                 relations: ['pageSections', 'pageSections.section']
             });
         }
@@ -97,21 +97,17 @@ export class CmsService {
         return { success: true, data: { ...page, sections: hydratedSections } };
     }
 
-    async createPage(data: any, storeId?: string) {
-        if (storeId) {
-            data.storeId = storeId;
-        }
-
+    async createPage(data: any) {
         // Handle is_homepage exclusivity
-        if (data.is_homepage && storeId) {
-            await this.pageRepository.update({ storeId, is_homepage: true }, { is_homepage: false });
+        if (data.is_homepage) {
+            await this.pageRepository.update({ is_homepage: true }, { is_homepage: false });
         }
 
-        // Check for duplicate slug in the same store
-        if (data.slug && storeId) {
-            const existing = await this.pageRepository.findOne({ where: { slug: data.slug, storeId } });
+        // Check for duplicate slug
+        if (data.slug) {
+            const existing = await this.pageRepository.findOne({ where: { slug: data.slug } });
             if (existing) {
-                throw new ConflictException(`A page with the slug "${data.slug}" already exists in this store.`);
+                throw new ConflictException(`A page with the slug "${data.slug}" already exists.`);
             }
         }
 
@@ -128,20 +124,20 @@ export class CmsService {
         return { success: true, data: savedPage };
     }
 
-    async updatePage(id: string, data: any, storeId?: string) {
-        const page = await this.pageRepository.findOne({ where: storeId ? { id, storeId } : { id } });
+    async updatePage(id: string, data: any) {
+        const page = await this.pageRepository.findOne({ where: { id } });
         if (!page) throw new NotFoundException('Page not found');
 
         // Handle is_homepage exclusivity
-        if (data.is_homepage && storeId) {
-            await this.pageRepository.update({ storeId, is_homepage: true }, { is_homepage: false });
+        if (data.is_homepage) {
+            await this.pageRepository.update({ is_homepage: true }, { is_homepage: false });
         }
 
         // Check for duplicate slug when updating
-        if (data.slug && data.slug !== page.slug && storeId) {
-            const existing = await this.pageRepository.findOne({ where: { slug: data.slug, storeId, id: Not(id) } });
+        if (data.slug && data.slug !== page.slug) {
+            const existing = await this.pageRepository.findOne({ where: { slug: data.slug, id: Not(id) } });
             if (existing) {
-                throw new ConflictException(`A page with the slug "${data.slug}" already exists in this store.`);
+                throw new ConflictException(`A page with the slug "${data.slug}" already exists.`);
             }
         }
 
@@ -210,8 +206,8 @@ export class CmsService {
         }
     }
 
-    async deletePage(id: string, storeId?: string) {
-        const page = await this.pageRepository.findOne({ where: storeId ? { id, storeId } : { id } });
+    async deletePage(id: string) {
+        const page = await this.pageRepository.findOne({ where: { id } });
         if (!page) throw new NotFoundException('Page not found');
         await this.pageRepository.remove(page);
         return { success: true, message: 'Page deleted' };
@@ -219,12 +215,11 @@ export class CmsService {
 
     // ── Global Sections (Header/Footer) ───────────────────────────────
 
-    async getGlobalHeaderSections(storeId: string) {
+    async getGlobalHeaderSections() {
         const sections = await this.headerSectionRepository.find({
-            where: { storeId },
             order: { position: 'ASC' }
         });
-        
+
         // Transform to match the frontend shape requirement
         return sections.map(s => ({
             id: s.id,
@@ -235,12 +230,10 @@ export class CmsService {
         }));
     }
 
-    async updateGlobalHeaderSections(storeId: string, sectionsData: any[]) {
-        if (!storeId) throw new NotFoundException('Store ID is required');
-        
+    async updateGlobalHeaderSections(sectionsData: any[]) {
         // simple strategy: delete and recreate
-        await this.headerSectionRepository.delete({ storeId });
-        
+        await this.headerSectionRepository.createQueryBuilder().delete().execute();
+
         const newSections = sectionsData.map((s, index) => {
             const type = s.type || s.section?.type || 'Unknown';
             const settings = {
@@ -249,7 +242,7 @@ export class CmsService {
                 ...(s.settings || {}),
                 ...s,
             };
-            
+
             // cleanup
             delete settings.id;
             delete settings.sectionId;
@@ -262,28 +255,26 @@ export class CmsService {
             delete settings.data;
             delete settings.settings;
             delete settings.group;
-            
+
             return this.headerSectionRepository.create({
-                storeId,
                 type,
                 position: index,
                 contentJson: settings
             });
         });
-        
+
         if (newSections.length > 0) {
             await this.headerSectionRepository.save(newSections);
         }
-        
+
         return { success: true, message: 'Header sections updated' };
     }
 
-    async getGlobalFooterSections(storeId: string) {
+    async getGlobalFooterSections() {
         const sections = await this.footerSectionRepository.find({
-            where: { storeId },
             order: { position: 'ASC' }
         });
-        
+
         return sections.map(s => ({
             id: s.id,
             type: s.type,
@@ -293,11 +284,9 @@ export class CmsService {
         }));
     }
 
-    async updateGlobalFooterSections(storeId: string, sectionsData: any[]) {
-        if (!storeId) throw new NotFoundException('Store ID is required');
-        
+    async updateGlobalFooterSections(sectionsData: any[]) {
         // simple strategy: delete and recreate
-        await this.footerSectionRepository.delete({ storeId });
+        await this.footerSectionRepository.createQueryBuilder().delete().execute();
         
         const newSections = sectionsData.map((s, index) => {
             const type = s.type || s.section?.type || 'Unknown';
@@ -322,7 +311,6 @@ export class CmsService {
             delete settings.group;
             
             return this.footerSectionRepository.create({
-                storeId,
                 type,
                 position: index,
                 contentJson: settings
@@ -339,7 +327,7 @@ export class CmsService {
     // ── Section Types (The Library) ────────────────────────────────────
 
     async getAllSectionTypes(query: any = {}) {
-        const { search, type, category, isActive, includeInactive, scope, exact, storeId, page = 1, limit = 20 } = query;
+        const { search, type, category, isActive, includeInactive, scope, exact, page = 1, limit = 20 } = query;
         const skip = (page - 1) * limit;
         const where: any = {};
 

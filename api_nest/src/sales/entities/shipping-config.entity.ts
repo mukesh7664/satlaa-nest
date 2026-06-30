@@ -20,9 +20,6 @@ export class ShippingConfig {
   @Column({ type: 'varchar', nullable: true })
   pickupPincode: string;
 
-  @Column({ type: 'varchar' })
-  storeId: string;
-
   @CreateDateColumn()
   createdAt: Date;
 

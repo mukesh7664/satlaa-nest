@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, BadRequestException, UnauthorizedExcepti
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin, AdminRole } from './entities/admin.entity';
-import { Store } from '../stores/entities/store.entity';
 import { JwtService } from '@nestjs/jwt';
 import { TenantService } from '../tenant/tenant.service';
 import * as bcrypt from 'bcryptjs';
@@ -14,8 +13,6 @@ export class AdminAuthService {
     constructor(
         @InjectRepository(Admin)
         private adminRepository: Repository<Admin>,
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
         private jwtService: JwtService,
         private tenantService: TenantService,
         private emailService: EmailService,
@@ -47,21 +44,15 @@ export class AdminAuthService {
 
         const savedAdmin = await this.adminRepository.save(admin);
 
-        // 2. Create and Save Store via TenantService (handles domains and settings)
-        let savedStore: Store | null = null;
+        // 2. Bootstrap default store settings/theme via TenantService
         if (data.storeName) {
-            savedStore = await this.tenantService.createStore(savedAdmin.id, data.storeName, data.planCategory);
-            
-            // 3. Update Admin with the new storeId
-            savedAdmin.storeId = savedStore.id;
-            await this.adminRepository.save(savedAdmin);
+            await this.tenantService.createStore(savedAdmin.id, data.storeName, data.planCategory);
         }
 
         const token = this.jwtService.sign({
             sub: savedAdmin.id,
             email: savedAdmin.email,
             role: savedAdmin.role,
-            storeId: savedAdmin.storeId
         });
 
         return {
@@ -72,8 +63,6 @@ export class AdminAuthService {
                 name: savedAdmin.name,
                 email: savedAdmin.email,
                 role: savedAdmin.role,
-                storeId: savedAdmin.storeId,
-                storeName: savedStore?.name || null,
                 permissions: savedAdmin.permissions,
                 adminType: savedAdmin.adminType || null,
             },
@@ -87,8 +76,6 @@ export class AdminAuthService {
         const isValid = await bcrypt.compare(password, admin.password);
         if (!isValid) throw new UnauthorizedException('Invalid credentials');
 
-        const store = admin.storeId ? await this.storeRepository.findOne({ where: { id: admin.storeId } }) : null;
-
         const planCategory = 'ecommerce';
         const allowedPages: string[] = [];
 
@@ -96,7 +83,6 @@ export class AdminAuthService {
             sub: admin.id,
             email: admin.email,
             role: admin.role,
-            storeId: admin.storeId
         });
 
         return {
@@ -107,8 +93,7 @@ export class AdminAuthService {
                 name: admin.name,
                 email: admin.email,
                 role: admin.role,
-                storeId: admin.storeId,
-                storeName: store?.name || null,
+                storeName: null,
                 permissions: admin.permissions,
                 adminType: admin.adminType || null,
                 planCategory,
@@ -213,7 +198,6 @@ export class AdminAuthService {
     async getMe(adminId: string) {
         const admin = await this.adminRepository.findOne({ where: { id: adminId } });
         if (!admin) throw new NotFoundException('Admin not found');
-        const store = admin.storeId ? await this.storeRepository.findOne({ where: { id: admin.storeId } }) : null;
 
         const planCategory = 'ecommerce';
         const allowedPages: string[] = [];
@@ -226,8 +210,7 @@ export class AdminAuthService {
                 role: admin.role,
                 phone: admin.phone,
                 avatar: admin.avatar,
-                storeId: admin.storeId,
-                storeName: store?.name || null,
+                storeName: null,
                 permissions: admin.permissions,
                 adminType: admin.adminType || null,
                 planCategory,
@@ -239,10 +222,9 @@ export class AdminAuthService {
     }
 
     // ── Admin User Management ────────────────────────────────────────
-    async getAllAdmins(storeId?: string, role?: any, page: number = 1, limit: number = 20) {
+    async getAllAdmins(role?: any, page: number = 1, limit: number = 20) {
         const skip = (page - 1) * limit;
         const where: any = {};
-        if (storeId) where.storeId = storeId;
         if (role) where.role = role;
 
         const [admins, total] = await this.adminRepository.findAndCount({
@@ -276,9 +258,8 @@ export class AdminAuthService {
         if (currentUser) {
             await this.validateUserCreation(currentUser, data.role as AdminRole);
 
-            // Set parentId and inherit the creator's store
+            // Set parentId
             data.parentId = currentUser.id;
-            data.storeId = currentUser.storeId;
         }
 
         const hashedPassword = await bcrypt.hash(data.password, 10);

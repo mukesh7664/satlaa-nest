@@ -30,39 +30,34 @@ export class SupportController {
     @ApiOperation({ summary: 'Create a new support ticket' })
     @Post('tickets')
     async createTicket(@Req() req: any, @Body() createTicketDto: CreateTicketDto) {
-        const storeId = req.user.storeId;
         const adminId = req.user.userId;
-        return this.supportService.createTicket(storeId, adminId, createTicketDto);
+        return this.supportService.createTicket(adminId, createTicketDto);
     }
 
     @ApiOperation({ summary: 'List all support tickets raised by this store' })
     @Get('tickets')
-    async getStoreTickets(@Req() req: any, @Query('status') status?: any) {
-        const storeId = req.user.storeId;
-        return this.supportService.findStoreTickets(storeId, status);
+    async getStoreTickets(@Query('status') status?: any) {
+        return this.supportService.findStoreTickets(status);
     }
 
     @ApiOperation({ summary: 'Get details of a specific ticket' })
     @Get('tickets/:id')
-    async getTicketDetails(@Req() req: any, @Param('id') id: string) {
-        const storeId = req.user.storeId;
-        return this.supportService.findTicketDetails(id, storeId);
+    async getTicketDetails(@Param('id') id: string) {
+        return this.supportService.findTicketDetails(id);
     }
 
     @ApiOperation({ summary: 'Close a ticket' })
     @Patch('tickets/:id/close')
-    async closeTicket(@Req() req: any, @Param('id') id: string) {
-        const storeId = req.user.storeId;
-        return this.supportService.closeTicket(id, storeId);
+    async closeTicket(@Param('id') id: string) {
+        return this.supportService.closeTicket(id);
     }
 
     // ---- Ticket Messages (Chat) ----
 
     @ApiOperation({ summary: 'Get all messages of a ticket' })
     @Get('tickets/:id/messages')
-    async getTicketMessages(@Req() req: any, @Param('id') id: string) {
-        const storeId = req.user.storeId;
-        return this.supportService.findTicketMessages(id, storeId);
+    async getTicketMessages(@Param('id') id: string) {
+        return this.supportService.findTicketMessages(id);
     }
 
     @ApiOperation({ summary: 'Send a reply message in the ticket chat thread' })
@@ -72,9 +67,8 @@ export class SupportController {
         @Param('id') id: string,
         @Body() createMessageDto: CreateMessageDto,
     ) {
-        const storeId = req.user.storeId;
         const senderId = req.user.userId;
         const senderRole = req.user.role; // e.g. 'store_admin'
-        return this.supportService.createMessage(id, senderId, senderRole, createMessageDto, storeId);
+        return this.supportService.createMessage(id, senderId, senderRole, createMessageDto);
     }
 }

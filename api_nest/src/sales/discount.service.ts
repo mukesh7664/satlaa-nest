@@ -10,48 +10,46 @@ export class DiscountService {
     private discountRepository: Repository<Discount>,
   ) {}
 
-  async findAll(storeId: string) {
+  async findAll() {
     return this.discountRepository.find({
-      where: { storeId },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findOne(id: string, storeId: string) {
+  async findOne(id: string) {
     return this.discountRepository.findOne({
-      where: { id, storeId },
+      where: { id },
     });
   }
 
-  async create(storeId: string, data: Partial<Discount>) {
+  async create(data: Partial<Discount>) {
     const discount = this.discountRepository.create({
       ...data,
-      storeId,
     });
     return this.discountRepository.save(discount);
   }
 
-  async update(id: string, storeId: string, data: Partial<Discount>) {
-    await this.discountRepository.update({ id, storeId }, data);
-    return this.findOne(id, storeId);
+  async update(id: string, data: Partial<Discount>) {
+    await this.discountRepository.update({ id }, data);
+    return this.findOne(id);
   }
 
-  async remove(id: string, storeId: string) {
-    return this.discountRepository.delete({ id, storeId });
+  async remove(id: string) {
+    return this.discountRepository.delete({ id });
   }
 
   // Logic for validation and calculation
-  async validateDiscount(code: string, customerId: string | undefined, subtotal: number, storeId: string, context: { 
-    items?: any[], 
-    gateway?: string, 
+  async validateDiscount(code: string, customerId: string | undefined, subtotal: number, context: {
+    items?: any[],
+    gateway?: string,
     orderCount?: number,
     tags?: string[],
-    isFirstOrder?: boolean 
+    isFirstOrder?: boolean
   } = {}) {
     const discount = await this.discountRepository.findOne({
       where: [
-        { code: code?.toUpperCase(), storeId, is_active: true },
-        { code: null, storeId, is_active: true } // Handle automatic discounts if code is not provided
+        { code: code?.toUpperCase(), is_active: true },
+        { code: null, is_active: true } // Handle automatic discounts if code is not provided
       ]
     });
 

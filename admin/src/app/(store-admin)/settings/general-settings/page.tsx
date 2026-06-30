@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { settingsApi } from "@/services/settings.api";
 import { currencyApi, Currency } from "@/services/currency.api";
 import ShopifyImagePicker from "@/components/ShopifyImagePicker";
-import { usePlanLimits } from "@/hooks/usePlanLimits";
 import {
   Save as SaveIcon,
   Add as AddIcon,
@@ -105,8 +104,6 @@ export default function GeneralSettingsPage() {
     phone: "",
     isDefault: false,
   });
-
-  const { limits, subscription, loading: limitsLoading } = usePlanLimits();
 
   useEffect(() => {
     fetchData();
@@ -612,8 +609,7 @@ export default function GeneralSettingsPage() {
               </div>
 
               {/* Currencies & Marketplace */}
-              {subscription?.plan?.category === 'ecommerce' && (
-                <div className="space-y-4 border-t border-slate-100 pt-3">
+              <div className="space-y-4 border-t border-slate-100 pt-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-slate-500">
@@ -692,7 +688,6 @@ export default function GeneralSettingsPage() {
                     />
                   </div>
                 </div>
-              )}
             </div>
           </div>
 

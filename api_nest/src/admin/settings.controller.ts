@@ -15,7 +15,7 @@ export class SettingsController {
     @UseGuards(JwtAuthGuard)
     @Get()
     async getSettings(@Request() req: any) {
-        return this.settingsService.getSettings(req.user?.storeId);
+        return this.settingsService.getSettings();
     }
 
     @ApiOperation({ summary: 'Admin: Get SEO settings' })
@@ -23,7 +23,7 @@ export class SettingsController {
     @UseGuards(JwtAuthGuard)
     @Get('seo')
     async getAdminSeoSettings(@Request() req: any) {
-        return this.settingsService.getSeoSettings(req.user?.storeId);
+        return this.settingsService.getSeoSettings();
     }
 
     @ApiOperation({ summary: 'Update SEO settings' })
@@ -31,7 +31,7 @@ export class SettingsController {
     @UseGuards(JwtAuthGuard)
     @Post('seo')
     async updateAdminSeoSettings(@Body() body: any, @Request() req: any) {
-        return this.settingsService.updateSeoSettings(body, req.user?.storeId);
+        return this.settingsService.updateSeoSettings(body);
     }
 
     @ApiOperation({ summary: 'Admin: Update settings' })
@@ -39,6 +39,6 @@ export class SettingsController {
     @UseGuards(JwtAuthGuard)
     @Put()
     async updateSettings(@Body() body: any, @Request() req: any) {
-        return this.settingsService.updateSettings(body, req.user?.storeId);
+        return this.settingsService.updateSettings(body);
     }
 }

@@ -10,7 +10,6 @@ export interface Wishlist {
   id: string;
   productId: string;
   userId: string;
-  storeId: string;
   createdAt: string;
   product?: Product;
 }

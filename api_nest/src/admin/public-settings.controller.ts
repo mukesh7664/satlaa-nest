@@ -1,6 +1,5 @@
 import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import { SettingsService } from './settings.service';
 import { AuditLogInterceptor } from './audit-log.interceptor';
 
@@ -13,16 +12,16 @@ export class PublicSettingsController {
     @ApiOperation({ summary: 'Get SEO settings (public)' })
     @ApiResponse({ status: 200, description: 'SEO settings.' })
     @Get('seo')
-    async getSeoSettings(@CurrentTenant('id') storeId: string) {
-        const settings = await this.settingsService.getSeoSettings(storeId);
+    async getSeoSettings() {
+        const settings = await this.settingsService.getSeoSettings();
         return { success: true, data: settings };
     }
 
     @ApiOperation({ summary: 'Get public settings (SEO, TopBar, Popup, etc.)' })
     @ApiResponse({ status: 200, description: 'Public settings.' })
     @Get('public')
-    async getPublicSettings(@CurrentTenant('id') storeId: string) {
-        const settings = await this.settingsService.getPublicSettings(storeId);
+    async getPublicSettings() {
+        const settings = await this.settingsService.getPublicSettings();
         return { success: true, data: settings };
     }
 }

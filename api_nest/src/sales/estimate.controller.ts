@@ -2,7 +2,6 @@ import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query, NotF
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EstimateService } from './estimate.service';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 
 @ApiTags('estimates')
 @Controller('')
@@ -29,8 +28,8 @@ export class EstimateController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('admin/estimates')
-    async findAll(@Query() query: any, @Req() req: any, @CurrentTenant('id') storeId: string) {
-        return this.estimateService.findAll({ ...query, storeId });
+    async findAll(@Query() query: any, @Req() req: any) {
+        return this.estimateService.findAll({ ...query });
     }
 
     @ApiOperation({ summary: 'Admin: Get estimate by ID' })
@@ -38,8 +37,8 @@ export class EstimateController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('admin/estimates/:id')
-    async findOne(@Param('id') id: string, @CurrentTenant('id') storeId: string) {
-        const estimate = await this.estimateService.findOneAdmin(id, storeId);
+    async findOne(@Param('id') id: string) {
+        const estimate = await this.estimateService.findOneAdmin(id);
         return { data: estimate };
     }
 
@@ -48,8 +47,7 @@ export class EstimateController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/estimates')
     async create(@Body() body: any, @Req() req: any) {
-        const storeId = req.user?.storeId;
-        return this.estimateService.create({ ...body, storeId });
+        return this.estimateService.create({ ...body });
     }
 
     @ApiOperation({ summary: 'Admin: Update estimate' })
@@ -58,8 +56,7 @@ export class EstimateController {
     @UseGuards(JwtAuthGuard)
     @Put('admin/estimates/:id')
     async update(@Param('id') id: string, @Body() body: any, @Req() req: any) {
-        const storeId = req.user?.storeId;
-        return this.estimateService.update(id, body, storeId);
+        return this.estimateService.update(id, body);
     }
 
     @ApiOperation({ summary: 'Admin: Send estimate' })
@@ -68,8 +65,7 @@ export class EstimateController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/estimates/:id/send')
     async send(@Param('id') id: string, @Req() req: any) {
-        const storeId = req.user?.storeId;
-        return this.estimateService.send(id, storeId);
+        return this.estimateService.send(id);
     }
 
     @ApiOperation({ summary: 'Admin: Delete estimate' })
@@ -81,8 +77,7 @@ export class EstimateController {
         if (!id || id === 'undefined' || id === 'null') {
             throw new NotFoundException('Invalid Estimate ID');
         }
-        const storeId = req.user?.storeId;
-        return this.estimateService.delete(id, storeId);
+        return this.estimateService.delete(id);
     }
 
     @ApiOperation({ summary: 'Admin: Generate PDF' })
@@ -91,8 +86,7 @@ export class EstimateController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/estimates/:id/generate-pdf')
     async generatePdf(@Param('id') id: string, @Req() req: any) {
-        const storeId = req.user?.storeId;
-        const url = await this.estimateService.generateAndStorePdf(id, storeId);
+        const url = await this.estimateService.generateAndStorePdf(id);
         return { success: true, message: 'PDF generated and stored', data: { pdfUrl: url } };
     }
 }

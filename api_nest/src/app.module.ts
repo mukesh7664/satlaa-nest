@@ -14,8 +14,6 @@ import { CmsModule } from './cms/cms.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TenantModule } from './tenant/tenant.module';
-import { TenantMiddleware } from './common/middleware/tenant.middleware';
-import { MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { PaymentsModule } from './payments/payments.module';
 import { CustomersModule } from './customers/customers.module';
 import { ReportsModule } from './admin/reports/reports.module';
@@ -66,25 +64,4 @@ import { BlogModule } from './blog/blog.module';
         },
     ],
 })
-export class AppModule implements NestModule {
-    configure(consumer: MiddlewareConsumer) {
-        consumer
-            .apply(TenantMiddleware)
-            .exclude(
-                { path: 'admin/(.*)', method: RequestMethod.ALL },
-                { path: 'admin', method: RequestMethod.ALL },
-                { path: 'payment/webhook/(.*)', method: RequestMethod.ALL },
-                { path: 'section-types/(.*)', method: RequestMethod.ALL },
-                { path: 'section-types', method: RequestMethod.ALL },
-                { path: 'documentation/(.*)', method: RequestMethod.ALL },
-                { path: 'documentation', method: RequestMethod.ALL },
-                { path: 'communication/inquiry/admin', method: RequestMethod.ALL },
-                { path: 'communication/inquiry/admin/(.*)', method: RequestMethod.ALL },
-                { path: 'payment/admin', method: RequestMethod.ALL },
-                { path: 'payment/admin/(.*)', method: RequestMethod.ALL },
-                { path: 'global/(.*)', method: RequestMethod.ALL },
-                { path: 'global', method: RequestMethod.ALL }
-            )
-            .forRoutes('*');
-    }
-}
+export class AppModule {}

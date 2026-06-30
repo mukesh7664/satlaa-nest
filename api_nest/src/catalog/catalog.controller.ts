@@ -2,7 +2,6 @@ import { Controller, Get, Post, Body, Param, Query, UseGuards, NotFoundException
 import { CatalogService } from './catalog.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 
 import { CategoriesService } from './categories.service';
 
@@ -32,9 +31,7 @@ export class CatalogController {
         @Query('search') search?: string,
         @Query('sortBy') sortBy?: string,
         @Query('sortOrder') sortOrder?: 'asc' | 'desc',
-        @CurrentTenant('id') storeId?: string,
     ) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
         const result = await this.catalogService.findAllProductsPaginated({
             page: parseInt(page) || 1,
             limit: parseInt(limit) || 12,
@@ -49,7 +46,6 @@ export class CatalogController {
             search,
             sortBy,
             sortOrder,
-            storeId,
         });
         return { success: true, data: result.products, pagination: result.pagination };
     }
@@ -58,13 +54,11 @@ export class CatalogController {
     @ApiParam({ name: 'idOrSlug', description: 'Product ID (UUID) or slug' })
     @ApiResponse({ status: 200, description: 'Product details.' })
     @Get('products/:idOrSlug')
-    async getProduct(@Param('idOrSlug') idOrSlug: string, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
-
+    async getProduct(@Param('idOrSlug') idOrSlug: string) {
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
         const product = isUUID
-            ? await this.catalogService.findOneProduct(idOrSlug, storeId)
-            : await this.catalogService.findProductBySlug(idOrSlug, storeId);
+            ? await this.catalogService.findOneProduct(idOrSlug)
+            : await this.catalogService.findProductBySlug(idOrSlug);
 
         if (!product) {
             throw new NotFoundException('Product not found');
@@ -79,20 +73,18 @@ export class CatalogController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Post('products')
-    async createProduct(@Body() createProductDto: any, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
-        return this.catalogService.createProduct(createProductDto, storeId);
+    async createProduct(@Body() createProductDto: any) {
+        return this.catalogService.createProduct(createProductDto);
     }
 
     // Collections
     @ApiOperation({ summary: 'Get all collections' })
     @ApiResponse({ status: 200, description: 'List of collections.' })
     @Get('collections')
-    async getCollections(@Query('page') page?: string, @Query('limit') limit?: string, @Query('type') type?: string, @Query('search') search?: string, @CurrentTenant('id') storeId?: string) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
+    async getCollections(@Query('page') page?: string, @Query('limit') limit?: string, @Query('type') type?: string, @Query('search') search?: string) {
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 50;
-        const result = await this.catalogService.findAllCollectionsPaginated(pageNum, limitNum, type, search, storeId);
+        const result = await this.catalogService.findAllCollectionsPaginated(pageNum, limitNum, type, search);
         return {
             success: true,
             collections: result.collections,
@@ -102,9 +94,8 @@ export class CatalogController {
 
     @ApiOperation({ summary: 'Get collections for filter sidebar' })
     @Get('collections/filters')
-    async getFilterCollections(@CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
-        const collections = await this.catalogService.findFilterCollections(storeId);
+    async getFilterCollections() {
+        const collections = await this.catalogService.findFilterCollections();
         return { success: true, collections };
     }
 
@@ -118,9 +109,8 @@ export class CatalogController {
 
     @ApiOperation({ summary: 'Get all categories for storefront' })
     @Get('categories')
-    async getCategories(@CurrentTenant('id') storeId: string) {
-        // Here we pass the storeId to show Global categories + this store's categories
-        const categories = await this.categoriesService.findAll(storeId);
+    async getCategories() {
+        const categories = await this.categoriesService.findAll();
         return { success: true, categories };
     }
 
@@ -128,21 +118,18 @@ export class CatalogController {
     @Get('filters')
     async getFilters(
         @Query('category') category: string,
-        @CurrentTenant('id') storeId: string
     ) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
-        const filters = await this.catalogService.getFilters(storeId, category);
+        const filters = await this.catalogService.getFilters(category);
         return { success: true, filters };
     }
 
     @ApiOperation({ summary: 'Get collection by slug with products' })
     @ApiParam({ name: 'slug', description: 'Collection slug' })
     @Get('collections/slug/:slug')
-    async getCollectionBySlug(@Param('slug') slug: string, @Query('page') page?: string, @Query('limit') limit?: string, @CurrentTenant('id') storeId?: string) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
+    async getCollectionBySlug(@Param('slug') slug: string, @Query('page') page?: string, @Query('limit') limit?: string) {
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 20;
-        const result = await this.catalogService.findCollectionBySlug(slug, pageNum, limitNum, storeId);
+        const result = await this.catalogService.findCollectionBySlug(slug, pageNum, limitNum);
         return {
             success: true,
             collection: result.collection,
@@ -153,11 +140,10 @@ export class CatalogController {
     @ApiOperation({ summary: 'Get collection by ID with products' })
     @ApiParam({ name: 'id', description: 'Collection ID' })
     @Get('collections/:id')
-    async getCollectionById(@Param('id') id: string, @Query('page') page?: string, @Query('limit') limit?: string, @CurrentTenant('id') storeId?: string) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
+    async getCollectionById(@Param('id') id: string, @Query('page') page?: string, @Query('limit') limit?: string) {
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 20;
-        const result = await this.catalogService.findCollectionById(id, pageNum, limitNum, storeId);
+        const result = await this.catalogService.findCollectionById(id, pageNum, limitNum);
         return {
             success: true,
             collection: result.collection,
@@ -171,10 +157,8 @@ export class CatalogController {
     @Get('products/:productId/reviews')
     async getProductReviews(
         @Param('productId') productId: string,
-        @CurrentTenant('id') storeId: string
     ) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
-        const reviews = await this.catalogService.findApprovedReviews(productId, storeId);
+        const reviews = await this.catalogService.findApprovedReviews(productId);
         return { success: true, data: reviews };
     }
 
@@ -183,16 +167,14 @@ export class CatalogController {
     async submitProductReview(
         @Param('productId') productId: string,
         @Body() dto: { customerName: string; customerEmail?: string; rating: number; comment: string },
-        @CurrentTenant('id') storeId: string
     ) {
-        if (!storeId) throw new BadRequestException('Store tenant not found in request');
         if (!dto.customerName || !dto.rating || !dto.comment) {
             throw new BadRequestException('Required fields: customerName, rating, comment');
         }
         if (dto.rating < 1 || dto.rating > 5) {
             throw new BadRequestException('Rating must be between 1 and 5');
         }
-        const review = await this.catalogService.submitReview(productId, storeId, dto);
+        const review = await this.catalogService.submitReview(productId, dto);
         return { success: true, data: review };
     }
 }

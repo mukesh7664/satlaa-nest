@@ -25,7 +25,6 @@ export class AuditLogInterceptor implements NestInterceptor {
     const admin = req.user;
     if (!admin) return next.handle();
 
-    const storeId = admin.storeId;
     const ipAddress = req.ip || req.connection?.remoteAddress;
     const userAgent = req.headers['user-agent'];
 
@@ -70,7 +69,6 @@ export class AuditLogInterceptor implements NestInterceptor {
             after: afterState,
             ipAddress,
             userAgent,
-            storeId,
           });
         } catch (error) {
           console.error('Failed to save audit log:', error);

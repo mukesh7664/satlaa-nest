@@ -31,14 +31,13 @@ export class BlogService {
     private async uniqueSlug<T extends { id: string; slug: string }>(
         repo: Repository<T>,
         base: string,
-        storeId: string,
         excludeId?: string,
     ): Promise<string> {
         let candidate = base || 'item';
         let attempt = 0;
         // eslint-disable-next-line no-constant-condition
         while (true) {
-            const existing = await repo.findOne({ where: { slug: candidate, storeId } as any });
+            const existing = await repo.findOne({ where: { slug: candidate } as any });
             if (!existing || (excludeId && existing.id === excludeId)) return candidate;
             attempt++;
             candidate = `${base}-${attempt}`;
@@ -47,14 +46,13 @@ export class BlogService {
 
     // ─── Admin: Posts ─────────────────────────────────────────────────────────
 
-    async findAllPosts(storeId: string, opts: { page?: number; limit?: number; search?: string; status?: string } = {}) {
+    async findAllPosts(opts: { page?: number; limit?: number; search?: string; status?: string } = {}) {
         const page = Number(opts.page) || 1;
         const limit = Number(opts.limit) || 20;
 
         const qb = this.postRepository.createQueryBuilder('post')
             .leftJoinAndSelect('post.categories', 'category')
-            .leftJoinAndSelect('post.tags', 'tag')
-            .where('post.storeId = :storeId', { storeId });
+            .leftJoinAndSelect('post.tags', 'tag');
 
         if (opts.search) {
             qb.andWhere('(post.title ILIKE :search OR post.slug ILIKE :search)', { search: `%${opts.search}%` });
@@ -75,18 +73,18 @@ export class BlogService {
         };
     }
 
-    async findPostById(id: string, storeId: string) {
+    async findPostById(id: string) {
         const post = await this.postRepository.findOne({
-            where: { id, storeId },
+            where: { id },
             relations: ['categories', 'tags'],
         });
         if (!post) throw new NotFoundException('Blog post not found');
         return post;
     }
 
-    async createPost(data: any, storeId: string) {
+    async createPost(data: any) {
         const base = slugify(data.slug || data.title);
-        const slug = await this.uniqueSlug(this.postRepository, base, storeId);
+        const slug = await this.uniqueSlug(this.postRepository, base);
 
         const post = this.postRepository.create({
             title: data.title,
@@ -99,21 +97,20 @@ export class BlogService {
             status: data.status === 'published' ? 'published' : 'draft',
             publishedAt: this.resolvePublishedAt(data),
             seo: data.seo ?? null,
-            storeId,
         });
 
-        post.categories = await this.resolveCategories(data.categoryIds, storeId);
-        post.tags = await this.resolveTags(data.tagIds, storeId);
+        post.categories = await this.resolveCategories(data.categoryIds);
+        post.tags = await this.resolveTags(data.tagIds);
 
         return this.postRepository.save(post);
     }
 
-    async updatePost(id: string, data: any, storeId: string) {
-        const post = await this.findPostById(id, storeId);
+    async updatePost(id: string, data: any) {
+        const post = await this.findPostById(id);
 
         if ((data.slug && data.slug !== post.slug) || (data.title && data.title !== post.title)) {
             const base = slugify(data.slug || data.title);
-            post.slug = await this.uniqueSlug(this.postRepository, base, storeId, id);
+            post.slug = await this.uniqueSlug(this.postRepository, base, id);
         }
 
         if (data.title !== undefined) post.title = data.title;
@@ -127,14 +124,14 @@ export class BlogService {
         if (data.status !== undefined || data.publishedAt !== undefined) {
             post.publishedAt = this.resolvePublishedAt(data, post);
         }
-        if (data.categoryIds !== undefined) post.categories = await this.resolveCategories(data.categoryIds, storeId);
-        if (data.tagIds !== undefined) post.tags = await this.resolveTags(data.tagIds, storeId);
+        if (data.categoryIds !== undefined) post.categories = await this.resolveCategories(data.categoryIds);
+        if (data.tagIds !== undefined) post.tags = await this.resolveTags(data.tagIds);
 
         return this.postRepository.save(post);
     }
 
-    async toggleStatus(id: string, storeId: string) {
-        const post = await this.findPostById(id, storeId);
+    async toggleStatus(id: string) {
+        const post = await this.findPostById(id);
         post.status = post.status === 'published' ? 'draft' : 'published';
         if (post.status === 'published' && !post.publishedAt) {
             post.publishedAt = new Date();
@@ -143,8 +140,8 @@ export class BlogService {
         return { success: true, status: post.status };
     }
 
-    async removePost(id: string, storeId: string) {
-        const post = await this.findPostById(id, storeId);
+    async removePost(id: string) {
+        const post = await this.findPostById(id);
         await this.postRepository.remove(post);
         return { success: true, message: 'Blog post deleted' };
     }
@@ -158,47 +155,46 @@ export class BlogService {
         return existing ? existing.publishedAt : null;
     }
 
-    private async resolveCategories(ids: string[] | undefined, storeId: string): Promise<BlogCategory[]> {
+    private async resolveCategories(ids: string[] | undefined): Promise<BlogCategory[]> {
         if (!ids || ids.length === 0) return [];
-        return this.categoryRepository.findBy({ id: In(ids), storeId });
+        return this.categoryRepository.findBy({ id: In(ids) });
     }
 
-    private async resolveTags(ids: string[] | undefined, storeId: string): Promise<BlogTag[]> {
+    private async resolveTags(ids: string[] | undefined): Promise<BlogTag[]> {
         if (!ids || ids.length === 0) return [];
-        return this.tagRepository.findBy({ id: In(ids), storeId });
+        return this.tagRepository.findBy({ id: In(ids) });
     }
 
     // ─── Admin: Categories ────────────────────────────────────────────────────
 
-    async findCategories(storeId: string) {
-        return this.categoryRepository.find({ where: { storeId }, order: { name: 'ASC' } });
+    async findCategories() {
+        return this.categoryRepository.find({ order: { name: 'ASC' } });
     }
 
-    async createCategory(data: any, storeId: string) {
+    async createCategory(data: any) {
         const base = slugify(data.slug || data.name);
-        const slug = await this.uniqueSlug(this.categoryRepository, base, storeId);
+        const slug = await this.uniqueSlug(this.categoryRepository, base);
         const category = this.categoryRepository.create({
             name: data.name,
             slug,
             description: data.description ?? null,
-            storeId,
         });
         return this.categoryRepository.save(category);
     }
 
-    async updateCategory(id: string, data: any, storeId: string) {
-        const category = await this.categoryRepository.findOne({ where: { id, storeId } });
+    async updateCategory(id: string, data: any) {
+        const category = await this.categoryRepository.findOne({ where: { id } });
         if (!category) throw new NotFoundException('Blog category not found');
         if (data.name !== undefined) category.name = data.name;
         if (data.description !== undefined) category.description = data.description;
         if (data.slug && data.slug !== category.slug) {
-            category.slug = await this.uniqueSlug(this.categoryRepository, slugify(data.slug), storeId, id);
+            category.slug = await this.uniqueSlug(this.categoryRepository, slugify(data.slug), id);
         }
         return this.categoryRepository.save(category);
     }
 
-    async removeCategory(id: string, storeId: string) {
-        const category = await this.categoryRepository.findOne({ where: { id, storeId } });
+    async removeCategory(id: string) {
+        const category = await this.categoryRepository.findOne({ where: { id } });
         if (!category) throw new NotFoundException('Blog category not found');
         await this.categoryRepository.remove(category);
         return { success: true, message: 'Blog category deleted' };
@@ -206,19 +202,19 @@ export class BlogService {
 
     // ─── Admin: Tags ──────────────────────────────────────────────────────────
 
-    async findTags(storeId: string) {
-        return this.tagRepository.find({ where: { storeId }, order: { name: 'ASC' } });
+    async findTags() {
+        return this.tagRepository.find({ order: { name: 'ASC' } });
     }
 
-    async createTag(data: any, storeId: string) {
+    async createTag(data: any) {
         const base = slugify(data.slug || data.name);
-        const slug = await this.uniqueSlug(this.tagRepository, base, storeId);
-        const tag = this.tagRepository.create({ name: data.name, slug, storeId });
+        const slug = await this.uniqueSlug(this.tagRepository, base);
+        const tag = this.tagRepository.create({ name: data.name, slug });
         return this.tagRepository.save(tag);
     }
 
-    async removeTag(id: string, storeId: string) {
-        const tag = await this.tagRepository.findOne({ where: { id, storeId } });
+    async removeTag(id: string) {
+        const tag = await this.tagRepository.findOne({ where: { id } });
         if (!tag) throw new NotFoundException('Blog tag not found');
         await this.tagRepository.remove(tag);
         return { success: true, message: 'Blog tag deleted' };
@@ -226,17 +222,16 @@ export class BlogService {
 
     // ─── Public (storefront) ──────────────────────────────────────────────────
 
-    private publishedQuery(storeId: string) {
+    private publishedQuery() {
         return this.postRepository.createQueryBuilder('post')
             .leftJoinAndSelect('post.categories', 'category')
             .leftJoinAndSelect('post.tags', 'tag')
-            .where('post.storeId = :storeId', { storeId })
-            .andWhere('post.status = :status', { status: 'published' })
+            .where('post.status = :status', { status: 'published' })
             .andWhere('(post.publishedAt IS NULL OR post.publishedAt <= :now)', { now: new Date() });
     }
 
-    async findPublicPosts(storeId: string, page = 1, perPage = 9, categorySlug?: string) {
-        const qb = this.publishedQuery(storeId);
+    async findPublicPosts(page = 1, perPage = 9, categorySlug?: string) {
+        const qb = this.publishedQuery();
 
         if (categorySlug) {
             // Restrict to posts that have the requested category, but still load
@@ -270,31 +265,31 @@ export class BlogService {
         };
     }
 
-    async findPublicPostBySlug(storeId: string, slug: string) {
-        const post = await this.publishedQuery(storeId)
+    async findPublicPostBySlug(slug: string) {
+        const post = await this.publishedQuery()
             .andWhere('post.slug = :slug', { slug })
             .getOne();
         if (!post) throw new NotFoundException('Blog post not found');
         return post;
     }
 
-    async findPublicSlugs(storeId: string, limit = 1000) {
-        const posts = await this.publishedQuery(storeId)
+    async findPublicSlugs(limit = 1000) {
+        const posts = await this.publishedQuery()
             .select(['post.slug'])
             .take(limit)
             .getMany();
         return posts.map(p => p.slug);
     }
 
-    async findRelatedPosts(storeId: string, slug: string, limit = 3) {
+    async findRelatedPosts(slug: string, limit = 3) {
         const post = await this.postRepository.findOne({
-            where: { storeId, slug },
+            where: { slug },
             relations: ['categories'],
         });
         if (!post || post.categories.length === 0) return [];
 
         const categoryIds = post.categories.map(c => c.id);
-        const related = await this.publishedQuery(storeId)
+        const related = await this.publishedQuery()
             .andWhere('post.id != :id', { id: post.id })
             .andWhere(
                 'post.id IN ' +
@@ -312,15 +307,14 @@ export class BlogService {
         return related;
     }
 
-    async findPublicCategories(storeId: string) {
+    async findPublicCategories() {
         // Categories with their published post counts.
-        const categories = await this.categoryRepository.find({ where: { storeId }, order: { name: 'ASC' } });
+        const categories = await this.categoryRepository.find({ order: { name: 'ASC' } });
         const counts = await this.postRepository.createQueryBuilder('post')
             .leftJoin('post.categories', 'category')
             .select('category.id', 'categoryId')
             .addSelect('COUNT(post.id)', 'count')
-            .where('post.storeId = :storeId', { storeId })
-            .andWhere('post.status = :status', { status: 'published' })
+            .where('post.status = :status', { status: 'published' })
             .andWhere('(post.publishedAt IS NULL OR post.publishedAt <= :now)', { now: new Date() })
             .groupBy('category.id')
             .getRawMany();
@@ -329,10 +323,10 @@ export class BlogService {
         return categories.map(c => ({ ...c, count: countMap.get(c.id) || 0 }));
     }
 
-    async findPublicCategoryBySlug(storeId: string, slug: string) {
-        const category = await this.categoryRepository.findOne({ where: { storeId, slug } });
+    async findPublicCategoryBySlug(slug: string) {
+        const category = await this.categoryRepository.findOne({ where: { slug } });
         if (!category) throw new NotFoundException('Blog category not found');
-        const count = await this.publishedQuery(storeId)
+        const count = await this.publishedQuery()
             .andWhere('category.slug = :slug', { slug })
             .getCount();
         return { ...category, count };

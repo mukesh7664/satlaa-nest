@@ -35,17 +35,16 @@ export class UploadController {
     async uploadMenuIcon(@UploadedFile() file: Express.Multer.File, @Body() body: any, @Req() req: any) {
         if (!file) throw new BadRequestException('Image file is required');
 
-        const storeId = req.user?.storeId;
         const role = req.user?.role;
         const isGlobal = role === AdminRole.ADMIN;
         const folder = body.folder || 'icons';
-        
-        const basePath = isGlobal ? `global-assets/${folder}` : `stores/${storeId}/${folder}`;
+
+        const basePath = isGlobal ? `global-assets/${folder}` : folder;
         const uniqueName = `${basePath}/${uuidv4()}${extname(file.originalname)}`;
-        
+
         const s3Url = await this.s3Service.uploadFile(file, uniqueName);
 
-        this.logger.log(`Created media: folder=${folder}, storeId=${isGlobal ? 'NULL' : storeId}, isGlobal=${isGlobal}, url=${s3Url}`);
+        this.logger.log(`Created media: folder=${folder}, isGlobal=${isGlobal}, url=${s3Url}`);
 
         const media = this.mediaRepository.create({
             name: body.name || file.originalname,
@@ -54,7 +53,6 @@ export class UploadController {
             size: file.size,
             mimeType: file.mimetype,
             key: uniqueName,
-            storeId: isGlobal ? null : storeId,
             isGlobal: isGlobal,
             folder: folder,
         });
@@ -73,18 +71,17 @@ export class UploadController {
     async uploadImage(@UploadedFile() file: Express.Multer.File, @Body() body: any, @Req() req: any) {
         if (!file) throw new BadRequestException('Image file is required');
 
-        const storeId = req.user?.storeId;
         const role = req.user?.role;
         // Only super_admin can set isGlobal to true
         const isGlobal = role === AdminRole.ADMIN && (body.isGlobal === 'true' || body.isGlobal === true);
         const folder = body.folder || 'uploads';
 
-        const basePath = isGlobal ? `global-assets/${folder}` : `stores/${storeId}/${folder}`;
+        const basePath = isGlobal ? `global-assets/${folder}` : folder;
         const uniqueName = `${basePath}/${uuidv4()}${extname(file.originalname)}`;
-        
+
         const s3Url = await this.s3Service.uploadFile(file, uniqueName);
 
-        this.logger.log(`Created image: folder=${folder}, storeId=${isGlobal ? 'NULL' : storeId}, isGlobal=${isGlobal}, url=${s3Url}`);
+        this.logger.log(`Created image: folder=${folder}, isGlobal=${isGlobal}, url=${s3Url}`);
 
         const media = this.mediaRepository.create({
             name: body.name || file.originalname,
@@ -93,7 +90,6 @@ export class UploadController {
             size: file.size,
             mimeType: file.mimetype,
             key: uniqueName,
-            storeId: isGlobal ? null : storeId,
             isGlobal: isGlobal,
             folder: folder,
             tags: body.tags ? (typeof body.tags === 'string' ? body.tags.split(',').map(t => t.trim()) : body.tags) : [],
@@ -121,19 +117,15 @@ export class UploadController {
         const pageNum = parseInt(page, 10);
         const limitNum = parseInt(limit, 10);
         const skip = (pageNum - 1) * limitNum;
-        const storeId = req.user?.storeId;
 
         const queryBuilder = this.mediaRepository.createQueryBuilder('media');
 
-        // Multi-tenant filtering: Show global assets IF requested, ELSE show store assets
+        // Show global assets IF requested, ELSE show non-global assets
         if (isGlobal === 'true') {
             queryBuilder.where('media.isGlobal = :isGlobal', { isGlobal: true });
         } else {
             // Strictly show store assets and EXCLUDE global assets
-            queryBuilder.where('media.storeId = :storeId AND media.isGlobal = :isGlobal', { 
-                storeId, 
-                isGlobal: false 
-            });
+            queryBuilder.where('media.isGlobal = :isGlobal', { isGlobal: false });
         }
 
         if (folder) {
@@ -204,16 +196,10 @@ export class UploadController {
         if (!media) throw new NotFoundException('Image not found');
 
         const isAdmin = req.user?.role === AdminRole.ADMIN;
-        const storeId = req.user?.storeId;
 
         // Security Check: Only super_admin can delete global assets
         if (media.isGlobal && !isAdmin) {
             throw new BadRequestException('Only super admins can delete global assets');
-        }
-
-        // Security Check: Store admins can only delete their own assets
-        if (!media.isGlobal && media.storeId !== storeId && !isAdmin) {
-            throw new BadRequestException('You do not have permission to delete this asset');
         }
 
         // Remove file from S3
@@ -238,15 +224,10 @@ export class UploadController {
         if (!media) throw new NotFoundException('Media not found');
 
         const isAdmin = req.user?.role === AdminRole.ADMIN;
-        const storeId = req.user?.storeId;
 
         // Security Check
         if (media.isGlobal && !isAdmin) {
             throw new BadRequestException('Only super admins can update global assets');
-        }
-
-        if (!media.isGlobal && media.storeId !== storeId && !isAdmin) {
-            throw new BadRequestException('You do not have permission to update this asset');
         }
 
         await this.mediaRepository.update(id, {
@@ -261,17 +242,10 @@ export class UploadController {
 
     @ApiOperation({ summary: 'Get all unique tags' })
     @Get('tags')
-    async getUniqueTags(@Req() req: any) {
-        const storeId = req.user?.storeId;
+    async getUniqueTags() {
         const queryBuilder = this.mediaRepository.createQueryBuilder('media');
-        
-        // Only fetch tags for the current store's assets or global assets
-        queryBuilder
-            .select('media.tags')
-            .where('media.storeId = :storeId OR media.isGlobal = :isGlobal', { 
-                storeId, 
-                isGlobal: true 
-            });
+
+        queryBuilder.select('media.tags');
 
         const results = await queryBuilder.getRawMany();
         

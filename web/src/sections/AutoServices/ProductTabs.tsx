@@ -6,7 +6,6 @@ import { PriceDisplay } from "@/components/common/PriceDisplay";
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ShoppingCart, Heart, Eye, Star } from "lucide-react";
-import { usePreview } from "@/contexts/PreviewContext";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -49,7 +48,6 @@ const getPriceNumber = (priceVal: any): number => {
 
 export default function AutoServicesProductTabs({ data, sectionIndex }: AutoServicesProductTabsProps) {
   const { addToCart } = useCart();
-  const { isPreview, pageData } = usePreview();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const router = useRouter();
 
@@ -111,13 +109,6 @@ export default function AutoServicesProductTabs({ data, sectionIndex }: AutoServ
         queryParams.append("limit", String(tab.limit || 5));
 
         const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (isPreview && pageData?.storeId) {
-          headers["x-tenant-domain"] = pageData.storeId;
-        } else if (typeof window !== "undefined") {
-          const host = window.location.host;
-          const cleanHost = host.split(":")[0];
-          headers["x-tenant-domain"] = cleanHost;
-        }
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5004/api/v1";
         const res = await fetch(`${apiUrl}/products?${queryParams.toString()}`, { headers });
@@ -174,7 +165,7 @@ export default function AutoServicesProductTabs({ data, sectionIndex }: AutoServ
     };
 
     fetchDynamicTabProducts();
-  }, [activeTab, normalizedTabs, isPreview, pageData?.storeId]);
+  }, [activeTab, normalizedTabs]);
 
   const handleWishlistToggle = async (product: any, e: React.MouseEvent) => {
     e.preventDefault();

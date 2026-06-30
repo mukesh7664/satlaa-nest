@@ -17,7 +17,6 @@ import { Product } from '../catalog/entities/product.entity';
 import { Admin, AdminRole } from './entities/admin.entity';
 import { EmailSettings } from './entities/email-settings.entity';
 import { AdminAuthService } from './admin-auth.service';
-import { Store } from '../stores/entities/store.entity';
 import { Section } from '../cms/entities/section.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import * as bcrypt from 'bcryptjs';
@@ -53,8 +52,6 @@ export class AdminController {
         private productRepository: Repository<Product>,
         @InjectRepository(Section)
         private sectionRepository: Repository<Section>,
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
         @InjectRepository(Order)
         private orderRepository: Repository<Order>,
         @InjectRepository(Customer)
@@ -76,19 +73,19 @@ export class AdminController {
     @ApiOperation({ summary: 'Get dashboard statistics' })
     @Get('dashboard')
     async getDashboardStats(@Request() req: any) {
-        return this.adminService.getDashboardStats(req.user?.storeId);
+        return this.adminService.getDashboardStats();
     }
 
     @ApiOperation({ summary: 'Get dashboard revenue chart' })
     @Get('dashboard/revenue')
     async getRevenueChart(@Request() req: any) {
-        return this.adminService.getDashboardStats(req.user?.storeId); // reuse
+        return this.adminService.getDashboardStats(); // reuse
     }
 
     @ApiOperation({ summary: 'Get recent activity' })
     @Get('activity')
     async getRecentActivity(@Request() req: any) {
-        return this.adminService.getRecentActivity(req.user?.storeId);
+        return this.adminService.getRecentActivity();
     }
 
     // ── Admin Orders ────────────────────────────────────────────────────
@@ -98,17 +95,12 @@ export class AdminController {
         const page = parseInt(query.page) || 1;
         const limit = parseInt(query.limit) || 10;
         const skip = (page - 1) * limit;
-        const storeId = req.user?.storeId;
 
         const queryBuilder = this.orderRepository.createQueryBuilder('o');
         queryBuilder.leftJoinAndSelect('o.customer', 'customer');
         queryBuilder.leftJoinAndSelect('o.items', 'items');
         queryBuilder.leftJoinAndSelect('items.product', 'product');
         queryBuilder.leftJoinAndSelect('o.shipment', 'shipment');
-
-        if (storeId) {
-            queryBuilder.andWhere('o.storeId = :storeId', { storeId });
-        }
 
         // Apply search filter
         if (query.search) {
@@ -231,8 +223,7 @@ export class AdminController {
     @ApiOperation({ summary: 'Get order stats' })
     @Get('orders/stats')
     async getOrderStats(@Request() req: any) {
-        const storeId = req.user?.storeId;
-        const where: any = storeId ? { storeId } : {};
+        const where: any = {};
 
         const [
             total, 
@@ -278,8 +269,7 @@ export class AdminController {
     @ApiOperation({ summary: 'Get order profit margin statistics' })
     @Get('orders/profit-margin')
     async getOrderProfitMargin(@Request() req: any, @Query('range') range: string) {
-        const storeId = req.user?.storeId;
-        const data = await this.adminService.getOrderProfitMargin(storeId, range || '12 months');
+        const data = await this.adminService.getOrderProfitMargin(range || '12 months');
         return { success: true, data };
     }
 
@@ -290,9 +280,9 @@ export class AdminController {
         console.log(`[Admin] Fetching order with ID: ${id}`);
 
         // Try to fetch with relations
-        let order = await this.orderRepository.findOne({ 
-            where: { id }, 
-            relations: ['customer', 'items', 'shipment', 'store', 'returnRequests'] 
+        let order = await this.orderRepository.findOne({
+            where: { id },
+            relations: ['customer', 'items', 'shipment', 'returnRequests']
         });
 
         // Fallback: If not found with relation, try without relation (maybe user was deleted)
@@ -338,7 +328,7 @@ export class AdminController {
             
             let productMap = new Map();
             if (productIds.length > 0) {
-                const products = await this.catalogService.findProductsByIds(productIds, order.storeId);
+                const products = await this.catalogService.findProductsByIds(productIds);
                 productMap = new Map(products.map(p => [p.id, p]));
             }
 
@@ -499,15 +489,6 @@ export class AdminController {
 
         const storefrontBase = process.env.NEXT_PUBLIC_WEBSITE_URL || 'http://localhost:3000';
         let storefrontUrl = storefrontBase;
-        if (order.store) {
-            // In local dev, we often use subdomains on localhost
-            if (storefrontBase.includes('localhost')) {
-                storefrontUrl = storefrontBase.replace('localhost', `${order.store.slug}.localhost`);
-            } else {
-                // Production logic: use store domain or subdomain
-                storefrontUrl = `https://${order.store.slug}.${process.env.BASE_DOMAIN || 'prefyn.com'}`;
-            }
-        }
 
         return {
             data: {
@@ -547,7 +528,6 @@ export class AdminController {
     @ApiOperation({ summary: 'Create manual order' })
     @Post('orders')
     async createOrder(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const pricing = body.pricing || {};
         // Normalize items: frontend sends {product, productName, ...} but entity uses {productId, productTitle, ...}
         const initialItems = body.items || [];
@@ -555,7 +535,7 @@ export class AdminController {
         const variantIds = initialItems.map((item: any) => item.variantId).filter((id: any) => id);
         const allQueryIds = Array.from(new Set([...productIds, ...variantIds]));
         const dbProducts = allQueryIds.length > 0
-            ? await this.catalogService.findProductsByIds(allQueryIds, storeId)
+            ? await this.catalogService.findProductsByIds(allQueryIds)
             : [];
         const productsMap = new Map(dbProducts.map(p => [p.id, p]));
 
@@ -598,7 +578,6 @@ export class AdminController {
             shippingCost: Number(pricing.shippingCost ?? body.shippingCost ?? 0),
             billingAddress: body.billingAddress || null,
             shippingAddress: body.shippingAddress || body.billingAddress || null,
-            storeId,
             orderType: body.orderType || 'manual_invoice',
             metadata: {
                 createdByAdmin: true,
@@ -613,9 +592,7 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Put('orders/:id')
     async updateOrder(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const order = await this.orderRepository.findOne({ where: whereCond });
         if (!order) throw new NotFoundException('Order not found');
@@ -628,9 +605,7 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Put('orders/:id/status')
     async updateOrderStatus(@Param('id') id: string, @Body() body: { status: OrderStatus }, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const order = await this.orderRepository.findOne({ where: whereCond });
         if (!order) throw new NotFoundException('Order not found');
@@ -643,9 +618,7 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Put('orders/:id/delivery')
     async updateDeliveryInfo(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const order = await this.orderRepository.findOne({ where: whereCond });
         if (!order) throw new NotFoundException('Order not found');
@@ -658,9 +631,7 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Delete('orders/:id')
     async deleteOrder(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const order = await this.orderRepository.findOne({ where: whereCond });
         if (!order) throw new NotFoundException('Order not found');
@@ -673,11 +644,9 @@ export class AdminController {
     @ApiParam({ name: 'customerId' })
     @Get('orders/customer/:customerId')
     async getCustomerOrders(@Param('customerId') customerId: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { customerId };
-        if (storeId) whereCond.storeId = storeId;
 
-        const orders = await this.orderRepository.find({ 
+        const orders = await this.orderRepository.find({
             where: whereCond, 
             order: { createdAt: 'DESC' } 
         });
@@ -687,34 +656,25 @@ export class AdminController {
 
     @Get('admins-list')
     async getAdmins(@Request() req: any, @Query() query: any) {
-        const storeId = req.user?.storeId;
-        const role = req.user?.role;
         const page = parseInt(query.page) || 1;
         const limit = parseInt(query.limit) || 20;
 
         const superRoles = [AdminRole.ADMIN];
-        
+
         let filterRole: any = undefined;
-        
+
         // Handle specific role request from query
         if (query.role) {
             filterRole = query.role;
-        } 
+        }
         // Handle Platform-only admins (Super + Super Sub)
         else if (query.type === 'super') {
             filterRole = In(superRoles);
         }
-        // Legacy/Default logic
-        else if (superRoles.includes(role) && !storeId && !query.storeId) {
-             // By default, if super admin doesn't provide storeId, only show Super Admin roles
-             // However, for consistency with the new 'type=super' param, we can leave this open
-             // or force it. Let's keep it open unless explicitly asked to filter.
-        }
 
         const { admins, total } = await this.adminAuthService.getAllAdmins(
-            query.storeId || storeId, 
-            filterRole, 
-            page, 
+            filterRole,
+            page,
             limit
         );
         return {
@@ -741,12 +701,8 @@ export class AdminController {
     @ApiOperation({ summary: 'Get admin by ID' })
     @Get('admins-list/:id')
     async getAdminById(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const admin = await this.adminAuthService.getAdminById(id);
 
-        if (storeId && admin.storeId !== storeId) {
-            throw new UnauthorizedException('You do not have permission to view this admin');
-        }
         return {
             data: {
                 _id: admin.id,
@@ -790,17 +746,7 @@ export class AdminController {
     @ApiOperation({ summary: 'Update admin' })
     @Put('admins-list/:id')
     async updateAdminUser(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const existingAdmin = await this.adminAuthService.getAdminById(id);
-
-        if (storeId && existingAdmin.storeId !== storeId) {
-            throw new UnauthorizedException('You do not have permission to edit this admin');
-        }
-
-        const superRoles = [AdminRole.ADMIN];
-        if (storeId && superRoles.includes(body.role)) {
-            throw new UnauthorizedException('You cannot grant super admin privileges');
-        }
 
         const admin = await this.adminAuthService.updateAdmin(id, body);
         return {
@@ -821,12 +767,7 @@ export class AdminController {
     @ApiOperation({ summary: 'Delete admin' })
     @Delete('admins-list/:id')
     async deleteAdminUser(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const existingAdmin = await this.adminAuthService.getAdminById(id);
-
-        if (storeId && existingAdmin.storeId !== storeId) {
-            throw new UnauthorizedException('You do not have permission to delete this admin');
-        }
 
         const superRoles = [AdminRole.ADMIN];
         if (superRoles.includes(existingAdmin.role) && req.user?.role !== AdminRole.ADMIN) {
@@ -841,17 +782,12 @@ export class AdminController {
     @ApiOperation({ summary: 'Get all customers' })
     @Get('customers')
     async getAllCustomers(@Request() req: any, @Query() query: any) {
-        const storeId = req.user?.storeId;
         const page = parseInt(query.page) || 1;
         const limit = parseInt(query.limit) || 20;
         const skip = (page - 1) * limit;
         const search = query.search || '';
 
         const qb = this.customerRepository.createQueryBuilder('c');
-
-        if (storeId) {
-            qb.andWhere('c.storeId = :storeId', { storeId });
-        }
 
         if (search) {
             const searchCondition = '(c.name ILIKE :search OR c.email ILIKE :search OR c.phone ILIKE :search)';
@@ -890,13 +826,9 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Get('customers/:id')
     async getCustomerById(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const customerRepo = this.customerRepository;
-        
+
         const where: any = { id };
-        if (storeId) {
-            where.storeId = storeId;
-        }
 
         const customer = await customerRepo.findOne({
             where,
@@ -921,13 +853,11 @@ export class AdminController {
     @ApiOperation({ summary: 'Create customer' })
     @Post('customers')
     async createCustomer(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const targetStoreId = storeId || body.storeId;
         const customerRepo = this.customerRepository;
 
-        if (targetStoreId && body.email) {
+        if (body.email) {
             const existingCustomer = await customerRepo.findOne({
-                where: { email: body.email, storeId: targetStoreId }
+                where: { email: body.email }
             });
 
             if (existingCustomer) {
@@ -940,7 +870,6 @@ export class AdminController {
             email: body.email,
             phone: body.phone || (body.phone?.number ? `${body.phone?.countryCode || ''} ${body.phone?.number}`.trim() : null),
             isActive: body.isActive !== undefined ? body.isActive : true,
-            storeId: targetStoreId,
         });
 
         if (body.password) {
@@ -1010,13 +939,9 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Put('customers/:id')
     async updateCustomer(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const customerRepo = this.customerRepository;
 
         const where: any = { id };
-        if (storeId) {
-            where.storeId = storeId;
-        }
 
         const customer = await customerRepo.findOne({ where });
         if (!customer) throw new NotFoundException('Customer not found');
@@ -1052,13 +977,9 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Delete('customers/:id')
     async deleteCustomer(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const customerRepo = this.customerRepository;
 
         const where: any = { id };
-        if (storeId) {
-            where.storeId = storeId;
-        }
 
         const customer = await customerRepo.findOne({ where });
         if (!customer) throw new NotFoundException('Customer not found');
@@ -1071,17 +992,12 @@ export class AdminController {
     @ApiOperation({ summary: 'Get audit logs' })
     @Get('audit-logs')
     async getAuditLogs(@Query() query: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const page = parseInt(query.page) || 1;
         const limit = parseInt(query.limit) || 20;
         const skip = (page - 1) * limit;
 
         const queryBuilder = this.auditLogRepository.createQueryBuilder('auditLog');
         queryBuilder.leftJoinAndSelect('auditLog.admin', 'admin');
-
-        if (storeId) {
-            queryBuilder.andWhere('auditLog.storeId = :storeId', { storeId });
-        }
 
         // Apply filters
         if (query.search) {
@@ -1152,10 +1068,8 @@ export class AdminController {
     @ApiOperation({ summary: 'Search tags' })
     @Get('tags/search')
     async searchTags(@Query('q') q: string, @Query('limit') limit: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = {};
-        if (storeId) whereCond.storeId = storeId;
-        
+
         if (q) {
             whereCond.name = Like(`%${q}%`);
         }
@@ -1172,9 +1086,7 @@ export class AdminController {
     @ApiOperation({ summary: 'Get all tags' })
     @Get('tags')
     async getAllTags(@Request() req: any, @Query('search') search?: string) {
-        const storeId = req.user?.storeId;
         const whereCond: any = {};
-        if (storeId) whereCond.storeId = storeId;
         if (search) {
             whereCond.name = Like(`%${search}%`);
         }
@@ -1186,10 +1098,8 @@ export class AdminController {
     @ApiOperation({ summary: 'Create tag' })
     @Post('tags')
     async createTag(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const tagData = { ...body };
-        if (storeId) tagData.storeId = storeId;
-        
+
         const tag = this.tagRepository.create(tagData);
         const saved = await this.tagRepository.save(tag);
         return { tag: saved, success: true, message: 'Tag created' };
@@ -1199,13 +1109,11 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Get('tags/:id')
     async getTagById(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const tag = await this.tagRepository.findOne({ where: whereCond });
         if (!tag) throw new NotFoundException('Tag not found');
-        
+
         return { tag, success: true };
     }
 
@@ -1213,13 +1121,11 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Put('tags/:id')
     async updateTag(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const tag = await this.tagRepository.findOne({ where: whereCond });
         if (!tag) throw new NotFoundException('Tag not found');
-        
+
         Object.assign(tag, body);
         const updated = await this.tagRepository.save(tag);
         return { tag: updated, success: true, message: 'Tag updated' };
@@ -1229,9 +1135,7 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Delete('tags/:id')
     async deleteTag(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const tag = await this.tagRepository.findOne({ where: whereCond });
         if (!tag) throw new NotFoundException('Tag not found');
@@ -1244,8 +1148,7 @@ export class AdminController {
     @ApiOperation({ summary: 'Get email settings' })
     @Get('email-config/settings')
     async getEmailSettings(@Request() req: any) {
-        const storeId = req.user?.storeId;
-        const settings = await this.emailSettingsRepository.findOne({ where: { storeId } });
+        const settings = await this.emailSettingsRepository.findOne({ where: {} });
         if (settings && settings.smtpPassword) {
             settings.smtpPassword = '********';
         }
@@ -1255,9 +1158,8 @@ export class AdminController {
     @ApiOperation({ summary: 'Update email settings' })
     @Put('email-config/settings')
     async updateEmailSettings(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        let settings = await this.emailSettingsRepository.findOne({ where: { storeId } });
-        
+        let settings = await this.emailSettingsRepository.findOne({ where: {} });
+
         const updateData = { ...body };
         if (updateData.smtpPassword === '********') {
             delete updateData.smtpPassword; // Don't update if it's the placeholder
@@ -1268,7 +1170,7 @@ export class AdminController {
         if (settings) {
             Object.assign(settings, updateData);
         } else {
-            settings = this.emailSettingsRepository.create({ ...updateData, storeId }) as any;
+            settings = this.emailSettingsRepository.create({ ...updateData }) as any;
         }
         
         const saved = await this.emailSettingsRepository.save(settings);
@@ -1286,8 +1188,7 @@ export class AdminController {
 
         // Handle masked password from UI
         if (settings.smtpPassword === '********') {
-            const storeId = req.user?.storeId;
-            const existing = await this.emailSettingsRepository.findOne({ where: { storeId } });
+            const existing = await this.emailSettingsRepository.findOne({ where: {} });
             if (existing) {
                 settings.smtpPassword = existing.smtpPassword; // Use real (encrypted) pass from DB
             }
@@ -1305,26 +1206,21 @@ export class AdminController {
     @ApiOperation({ summary: 'Get email templates' })
     @Get('email-config/templates')
     async getEmailTemplates(@Request() req: any) {
-        const storeId = req.user?.storeId;
-        const whereCond = storeId ? { storeId } : {};
-        return this.emailTemplateRepository.find({ where: whereCond, order: { createdAt: 'DESC' } });
+        return this.emailTemplateRepository.find({ where: {}, order: { createdAt: 'DESC' } });
     }
 
     @ApiOperation({ summary: 'Get email template by ID' })
     @ApiParam({ name: 'id' })
     @Get('email-config/templates/:id')
     async getEmailTemplateById(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
         return this.emailTemplateRepository.findOne({ where: whereCond });
     }
 
     @ApiOperation({ summary: 'Create email template' })
     @Post('email-config/templates')
     async createEmailTemplate(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const template = this.emailTemplateRepository.create({ ...body, storeId });
+        const template = this.emailTemplateRepository.create({ ...body });
         return this.emailTemplateRepository.save(template);
     }
 
@@ -1332,10 +1228,8 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Put('email-config/templates/:id')
     async updateEmailTemplate(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
+
         const template = await this.emailTemplateRepository.findOne({ where: whereCond });
         if (!template) throw new NotFoundException('Template not found');
 
@@ -1347,9 +1241,7 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Delete('email-config/templates/:id')
     async deleteEmailTemplate(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const template = await this.emailTemplateRepository.findOne({ where: whereCond });
         if (!template) throw new NotFoundException('Template not found');
@@ -1361,22 +1253,18 @@ export class AdminController {
     @ApiOperation({ summary: 'Initialize default email templates' })
     @Post('email-config/templates/init')
     async initializeTemplates(@Request() req: any) {
-        const storeId = req.user?.storeId;
-        if (!storeId) throw new BadRequestException('Store ID not found');
-        
-        await this.tenantService.createDefaultTemplates(storeId);
-        return this.emailTemplateRepository.find({ where: { storeId }, order: { createdAt: 'DESC' } });
+        await this.tenantService.createDefaultTemplates();
+        return this.emailTemplateRepository.find({ where: {}, order: { createdAt: 'DESC' } });
     }
 
     @ApiOperation({ summary: 'Send test email for template' })
     @ApiParam({ name: 'id' })
     @Post('email-config/templates/:id/test')
     async sendTestTemplateEmail(@Param('id') id: string, @Body() body: { email: string }, @Request() req: any) {
-        const storeId = req.user?.storeId;
         if (!body.email) throw new BadRequestException('Recipient email is required');
 
         try {
-            await this.emailService.sendTemplateTestEmail(id, body.email, storeId);
+            await this.emailService.sendTemplateTestEmail(id, body.email);
             return { success: true, message: 'Test email sent successfully' };
         } catch (error) {
             throw new BadRequestException(error.message || 'Failed to send test email');
@@ -1387,13 +1275,11 @@ export class AdminController {
     @ApiOperation({ summary: 'Get admin notifications' })
     @Get('notifications')
     async getNotifications(@Query() query: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const page = parseInt(query.page) || 1;
         const limit = parseInt(query.limit) || 10;
         const skip = (page - 1) * limit;
 
         const whereCond: any = {};
-        if (storeId) whereCond.storeId = storeId;
 
         const [data, total] = await this.notificationRepository.findAndCount({
             where: whereCond,
@@ -1416,9 +1302,7 @@ export class AdminController {
     @ApiOperation({ summary: 'Get unread notification count' })
     @Get('notifications/unread-count')
     async getUnreadCount(@Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { isRead: false };
-        if (storeId) whereCond.storeId = storeId;
 
         const count = await this.notificationRepository.count({ where: whereCond });
         return { data: { count } };
@@ -1427,15 +1311,10 @@ export class AdminController {
     @ApiOperation({ summary: 'Mark all notifications as read' })
     @Put('notifications/mark-all-read')
     async markAllAsRead(@Request() req: any) {
-        const storeId = req.user?.storeId;
         const qb = this.notificationRepository.createQueryBuilder().update().set({ isRead: true } as any);
-        
-        if (storeId) {
-            qb.where('isRead = :isRead AND "storeId" = :storeId', { isRead: false, storeId });
-        } else {
-            qb.where('isRead = :isRead', { isRead: false });
-        }
-        
+
+        qb.where('isRead = :isRead', { isRead: false });
+
         await qb.execute();
         return { success: true };
     }
@@ -1444,9 +1323,7 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Put('notifications/:id/read')
     async markNotificationRead(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const notification = await this.notificationRepository.findOne({ where: whereCond });
         if (!notification) throw new NotFoundException('Notification not found');
@@ -1459,9 +1336,7 @@ export class AdminController {
     @ApiParam({ name: 'id' })
     @Delete('notifications/:id')
     async deleteNotification(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const notification = await this.notificationRepository.findOne({ where: whereCond });
         if (!notification) throw new NotFoundException('Notification not found');

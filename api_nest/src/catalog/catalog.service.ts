@@ -33,7 +33,7 @@ export class CatalogService {
      * that the frontend components expect.
      */
     async transformProduct(product: Product): Promise<any> {
-        const settings = await this.settingsRepository.findOne({ where: { storeId: product.storeId } });
+        const settings = await this.settingsRepository.findOne({ where: {} });
         const defaultCurrency = settings?.defaultCurrency || 'INR';
 
         const baseUrl = process.env.API_URL || 'http://localhost:5004';
@@ -298,7 +298,7 @@ export class CatalogService {
         return normalized;
     }
 
-    async getFilters(storeId: string, categorySlugs?: string) {
+    async getFilters(categorySlugs?: string) {
         // Resolve category IDs if slugs are provided
         let targetCategoryIds: string[] = [];
         if (categorySlugs) {
@@ -317,10 +317,10 @@ export class CatalogService {
                 -- Base: Categories that have products
                 SELECT DISTINCT "categoryId" as id
                 FROM products
-                WHERE "storeId" = $1 AND "isActive" = true AND "categoryId" IS NOT NULL
-                
+                WHERE "isActive" = true AND "categoryId" IS NOT NULL
+
                 UNION
-                
+
                 -- Recursive: Get parents of those categories
                 SELECT c."parentId"
                 FROM categories c
@@ -328,7 +328,7 @@ export class CatalogService {
                 WHERE c."parentId" IS NOT NULL
             )
             SELECT DISTINCT id FROM category_tree
-        `, [storeId]);
+        `);
         const activeCategoryIds = activeCatIdsRaw.map(r => r.id);
 
         // 2. Fetch Category Tree (Filtering out empty branches)
@@ -349,8 +349,8 @@ export class CatalogService {
         // --- Context Clause for Attributes/Tags/Price ---
         // If a category is selected, we only want to show filters for products in that branch.
         let categoryContextQuery = '';
-        const queryParams = [storeId];
-        
+        const queryParams = [];
+
         if (targetCategoryIds.length > 0) {
             // Get all sub-category IDs for the selected categories
             const allSubCatIdsRaw = await this.productRepository.query(`
@@ -362,8 +362,8 @@ export class CatalogService {
                 SELECT id FROM subcats
             `, [targetCategoryIds]);
             const allSubCatIds = allSubCatIdsRaw.map(r => r.id);
-            
-            categoryContextQuery = ` AND "categoryId" = ANY($2)`;
+
+            categoryContextQuery = ` AND "categoryId" = ANY($1)`;
             queryParams.push(allSubCatIds);
         }
 
@@ -371,7 +371,7 @@ export class CatalogService {
         const priceRange = await this.productRepository.query(`
             SELECT MIN(price) as min, MAX(price) as max
             FROM products
-            WHERE "storeId" = $1 AND "isActive" = true AND "parentId" IS NULL
+            WHERE "isActive" = true AND "parentId" IS NULL
             ${categoryContextQuery}
         `, queryParams);
 
@@ -379,17 +379,17 @@ export class CatalogService {
         const attributesRaw = await this.productRepository.query(`
             SELECT key, json_agg(DISTINCT TRIM(v)) as values
             FROM (
-                SELECT key, 
+                SELECT key,
                        jsonb_array_elements_text(
-                           CASE 
-                               WHEN jsonb_typeof(value) = 'array' THEN value 
-                               ELSE jsonb_build_array(value) 
+                           CASE
+                               WHEN jsonb_typeof(value) = 'array' THEN value
+                               ELSE jsonb_build_array(value)
                            END
                        ) as v
                 FROM (
                     SELECT (jsonb_each(attributes)).*
                     FROM products
-                    WHERE "storeId" = $1 AND "isActive" = true
+                    WHERE "isActive" = true
                     ${categoryContextQuery}
                 ) AS pairs
             ) AS flat_pairs
@@ -407,14 +407,14 @@ export class CatalogService {
             SELECT DISTINCT t.name, t.slug, t.id
             FROM tags t
             WHERE t.id IN (
-                SELECT DISTINCT (CASE 
+                SELECT DISTINCT (CASE
                     WHEN jsonb_typeof(tag_elem) = 'object' THEN tag_elem->>'id'
-                    ELSE tag_elem#>>'{}' 
+                    ELSE tag_elem#>>'{}'
                 END)::uuid
                 FROM (
                     SELECT jsonb_array_elements(tags) as tag_elem
                     FROM products
-                    WHERE "storeId" = $1 AND "isActive" = true AND tags IS NOT NULL
+                    WHERE "isActive" = true AND tags IS NOT NULL
                     ${categoryContextQuery}
                 ) as elems
             )
@@ -422,7 +422,7 @@ export class CatalogService {
 
         // 6. Collections
         const collections = await this.collectionRepository.find({
-            where: { storeId, isActive: true, showInFilterBar: true },
+            where: { isActive: true, showInFilterBar: true },
             order: { sortOrder: 'ASC' }
         });
 
@@ -441,15 +441,14 @@ export class CatalogService {
     // ================= PRODUCTS =================
 
     async findAllProductsPaginated(params: any) {
-        const { page = 1, limit = 12, brand, category, collection, minPrice, maxPrice, rating, search, sortBy = 'createdAt', sortOrder = 'DESC', storeId } = params;
+        const { page = 1, limit = 12, brand, category, collection, minPrice, maxPrice, rating, search, sortBy = 'createdAt', sortOrder = 'DESC' } = params;
 
         const queryBuilder = this.productRepository.createQueryBuilder('product')
             .leftJoinAndSelect('product.media', 'media')
             .leftJoinAndSelect('product.children', 'children')
             .leftJoinAndSelect('product.productCollections', 'collectionProducts')
             .leftJoinAndSelect('collectionProducts.collection', 'collections')
-            .where('product.storeId = :storeId', { storeId })
-            .andWhere('product.isActive = true')
+            .where('product.isActive = true')
             .andWhere('product.parentId IS NULL');
 
         if (brand) {
@@ -550,21 +549,21 @@ export class CatalogService {
         };
     }
 
-    async findOneProduct(id: string, storeId: string) {
+    async findOneProduct(id: string) {
         return this.productRepository.findOne({
-            where: { id, storeId, isActive: true },
+            where: { id, isActive: true },
             relations: ['productCollections', 'productCollections.collection', 'media', 'children', 'category', 'bundleItems', 'bundleItems.product', 'bundleItems.product.media', 'bundleItems.product.children'],
         });
     }
 
-    async findProductBySlug(slug: string, storeId: string) {
+    async findProductBySlug(slug: string) {
         return this.productRepository.findOne({
-            where: { slug, storeId, isActive: true },
+            where: { slug, isActive: true },
             relations: ['productCollections', 'productCollections.collection', 'media', 'children', 'category', 'bundleItems', 'bundleItems.product', 'bundleItems.product.media', 'bundleItems.product.children'],
         });
     }
 
-    async createProduct(dto: any, storeId: string) {
+    async createProduct(dto: any) {
         const { variants, ...productData } = dto;
 
         // Generate slug if not provided
@@ -582,7 +581,6 @@ export class CatalogService {
 
         const product = this.productRepository.create({
             ...productData,
-            storeId,
         });
 
         const savedProduct: any = await this.productRepository.save(product);
@@ -592,7 +590,6 @@ export class CatalogService {
             for (const v of variants) {
                 const variantData: any = {
                     ...v,
-                    storeId,
                     parentId: savedProduct.id,
                     productStructureType: 'variant'
                 };
@@ -605,8 +602,8 @@ export class CatalogService {
 
     // ================= COLLECTIONS =================
 
-    async findAllCollectionsPaginated(page: number, limit: number, type: string, search: string, storeId: string) {
-        const where: any = { storeId, isActive: true };
+    async findAllCollectionsPaginated(page: number, limit: number, type: string, search: string) {
+        const where: any = { isActive: true };
         if (type) where.type = type;
         if (search) where.name = Like(`%${search}%`);
 
@@ -628,16 +625,16 @@ export class CatalogService {
         };
     }
 
-    async findFilterCollections(storeId: string) {
+    async findFilterCollections() {
         return this.collectionRepository.find({
-            where: { storeId, isActive: true, showInFilterBar: true },
+            where: { isActive: true, showInFilterBar: true },
             order: { sortOrder: 'ASC' }
         });
     }
 
-    async findCollectionBySlug(slug: string, page: number, limit: number, storeId: string) {
+    async findCollectionBySlug(slug: string, page: number, limit: number) {
         const collection = await this.collectionRepository.findOne({
-            where: { slug, storeId, isActive: true },
+            where: { slug, isActive: true },
             relations: ['collectionProducts', 'collectionProducts.product', 'collectionProducts.product.media'],
         });
 
@@ -671,9 +668,9 @@ export class CatalogService {
         };
     }
 
-    async findCollectionById(id: string, page: number, limit: number, storeId: string) {
+    async findCollectionById(id: string, page: number, limit: number) {
         const collection = await this.collectionRepository.findOne({
-            where: { id, storeId, isActive: true },
+            where: { id, isActive: true },
             relations: ['collectionProducts', 'collectionProducts.product', 'collectionProducts.product.media'],
         });
 
@@ -709,11 +706,11 @@ export class CatalogService {
 
     // ================= INVENTORY MANAGEMENT =================
 
-    async decrementStock(productId: string, quantity: number, storeId: string, bundleSelections?: Record<string, string>) {
-        // We assume validation has been called before for multiple items, 
+    async decrementStock(productId: string, quantity: number, bundleSelections?: Record<string, string>) {
+        // We assume validation has been called before for multiple items,
         // but we still check here for atomicity on single items.
         const product = await this.productRepository.findOne({
-            where: { id: productId, storeId },
+            where: { id: productId },
             relations: ['bundleItems', 'bundleItems.product']
         });
 
@@ -726,7 +723,7 @@ export class CatalogService {
             for (const item of product.bundleItems) {
                 const selectedVariantId = bundleSelections ? bundleSelections[item.id] : null;
                 const targetId = selectedVariantId || item.productId;
-                await this.decrementStock(targetId, item.quantity * quantity, storeId);
+                await this.decrementStock(targetId, item.quantity * quantity);
             }
         }
 
@@ -740,9 +737,9 @@ export class CatalogService {
         }
     }
 
-    async validateStock(productId: string, quantity: number, storeId: string, bundleSelections?: Record<string, string>) {
+    async validateStock(productId: string, quantity: number, bundleSelections?: Record<string, string>) {
         const product = await this.productRepository.findOne({
-            where: { id: productId, storeId },
+            where: { id: productId },
             relations: ['bundleItems', 'bundleItems.product']
         });
 
@@ -754,7 +751,7 @@ export class CatalogService {
             for (const item of product.bundleItems) {
                 const selectedVariantId = bundleSelections ? bundleSelections[item.id] : null;
                 const targetId = selectedVariantId || item.productId;
-                await this.validateStock(targetId, item.quantity * quantity, storeId);
+                await this.validateStock(targetId, item.quantity * quantity);
             }
         }
 
@@ -766,9 +763,9 @@ export class CatalogService {
         return true;
     }
 
-    async incrementStock(productId: string, quantity: number, storeId: string, bundleSelections?: Record<string, string>) {
+    async incrementStock(productId: string, quantity: number, bundleSelections?: Record<string, string>) {
         const product = await this.productRepository.findOne({
-            where: { id: productId, storeId },
+            where: { id: productId },
             relations: ['bundleItems', 'bundleItems.product']
         });
 
@@ -779,7 +776,7 @@ export class CatalogService {
             for (const item of product.bundleItems) {
                 const selectedVariantId = bundleSelections ? bundleSelections[item.id] : null;
                 const targetId = selectedVariantId || item.productId;
-                await this.incrementStock(targetId, item.quantity * quantity, storeId);
+                await this.incrementStock(targetId, item.quantity * quantity);
             }
         }
 
@@ -790,9 +787,9 @@ export class CatalogService {
         }
     }
 
-    async findProductsByIds(ids: string[], storeId: string): Promise<Product[]> {
+    async findProductsByIds(ids: string[]): Promise<Product[]> {
         return this.productRepository.find({
-            where: { id: In(ids), storeId },
+            where: { id: In(ids) },
             relations: [
                 'media', 
                 'children', 
@@ -807,17 +804,17 @@ export class CatalogService {
 
     // ================= REVIEWS =================
 
-    async findApprovedReviews(productId: string, storeId: string) {
+    async findApprovedReviews(productId: string) {
         return this.reviewRepository.find({
-            where: { productId, storeId, status: 'approved' },
+            where: { productId, status: 'approved' },
             order: { createdAt: 'DESC' }
         });
     }
 
-    async submitReview(productId: string, storeId: string, dto: { customerName: string; customerEmail?: string; rating: number; comment: string }) {
+    async submitReview(productId: string, dto: { customerName: string; customerEmail?: string; rating: number; comment: string }) {
         if (dto.customerEmail) {
             const existing = await this.reviewRepository.findOne({
-                where: { productId, storeId, customerEmail: dto.customerEmail }
+                where: { productId, customerEmail: dto.customerEmail }
             });
             if (existing) {
                 throw new BadRequestException('You have already submitted a review for this product.');
@@ -826,23 +823,22 @@ export class CatalogService {
         const review = this.reviewRepository.create({
             ...dto,
             productId,
-            storeId,
             status: 'pending' // Moderation by default
         });
         return this.reviewRepository.save(review);
     }
 
-    async findAdminReviews(productId: string, storeId: string) {
+    async findAdminReviews(productId: string) {
         return this.reviewRepository.find({
-            where: { productId, storeId },
+            where: { productId },
             order: { createdAt: 'DESC' }
         });
     }
 
-    async createAdminReview(productId: string, storeId: string, dto: { customerName: string; customerEmail?: string; rating: number; comment: string }) {
+    async createAdminReview(productId: string, dto: { customerName: string; customerEmail?: string; rating: number; comment: string }) {
         if (dto.customerEmail) {
             const existing = await this.reviewRepository.findOne({
-                where: { productId, storeId, customerEmail: dto.customerEmail }
+                where: { productId, customerEmail: dto.customerEmail }
             });
             if (existing) {
                 throw new BadRequestException('A review from this email address already exists for this product.');
@@ -851,21 +847,20 @@ export class CatalogService {
         const review = this.reviewRepository.create({
             ...dto,
             productId,
-            storeId,
             status: 'approved' // Automatically approved
         });
         return this.reviewRepository.save(review);
     }
 
-    async updateReviewStatus(reviewId: string, storeId: string, status: string) {
-        const review = await this.reviewRepository.findOne({ where: { id: reviewId, storeId } });
+    async updateReviewStatus(reviewId: string, status: string) {
+        const review = await this.reviewRepository.findOne({ where: { id: reviewId } });
         if (!review) throw new NotFoundException('Review not found');
         review.status = status;
         return this.reviewRepository.save(review);
     }
 
-    async deleteReview(reviewId: string, storeId: string) {
-        const review = await this.reviewRepository.findOne({ where: { id: reviewId, storeId } });
+    async deleteReview(reviewId: string) {
+        const review = await this.reviewRepository.findOne({ where: { id: reviewId } });
         if (!review) throw new NotFoundException('Review not found');
         return this.reviewRepository.remove(review);
     }

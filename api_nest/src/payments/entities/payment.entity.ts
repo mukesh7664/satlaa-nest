@@ -1,20 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
 @Entity('payments')
 export class Payment {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ type: 'varchar', nullable: true }) 
+    @Column({ type: 'varchar', nullable: true })
     payment_type: string; // 'SUBSCRIPTION' or 'ORDER'
-
-    @ManyToOne(() => Store, { nullable: true })
-    @JoinColumn({ name: 'store_id' })
-    store: Store;
-
-    @Column({ type: 'uuid', nullable: true })
-    store_id: string;
 
     @Column({ type: 'uuid', nullable: true })
     order_id: string; // If type is ORDER

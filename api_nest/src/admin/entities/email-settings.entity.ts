@@ -1,17 +1,9 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('email_settings')
 export class EmailSettings {
     @PrimaryGeneratedColumn('uuid')
     id: string;
-
-    @Column({ name: 'store_id', nullable: true })
-    storeId: string;
-
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'store_id' })
-    store: Store;
 
     @Column({ name: 'smtp_host', nullable: true })
     smtpHost: string;

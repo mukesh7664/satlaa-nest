@@ -2,7 +2,6 @@ import { SectionRenderer } from "@/components/SectionRenderer";
 import { SectionVisibilityManager } from "@/components/SectionVisibilityManager";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { getGlobalSEO, generatePageMetadata } from "@/lib/seo";
 import {
   getCollectionBySlug,
@@ -37,14 +36,11 @@ interface PageResponse {
   data: Page;
 }
 
-async function getPage(slug: string, host: string): Promise<Page | null> {
+async function getPage(slug: string): Promise<Page | null> {
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/homepage/pages/${slug}`,
       {
-        headers: {
-          "x-tenant-domain": host,
-        },
         next: { revalidate: 10 }, // Revalidate every 10 seconds
       }
     );
@@ -70,9 +66,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const headersList = await headers();
-  const host = headersList.get("host") || "";
-  const page = await getPage(slug, host);
+  const page = await getPage(slug);
 
   if (!page) {
     return {
@@ -100,9 +94,7 @@ export default async function PageDisplay({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const headersList = await headers();
-  const host = headersList.get("host") || "";
-  const page = await getPage(slug, host);
+  const page = await getPage(slug);
 
 
 

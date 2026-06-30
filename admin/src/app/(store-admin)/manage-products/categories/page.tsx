@@ -126,7 +126,6 @@ interface CategoryTreeItemProps {
     onAddSub: (parentId: string) => void;
     onView: (cat: Category) => void;
     isSuperAdmin: boolean;
-    currentStoreId?: string | null;
 }
 
 const CategoryTreeItem = ({
@@ -137,13 +136,12 @@ const CategoryTreeItem = ({
     onAddSub,
     onView,
     isSuperAdmin,
-    currentStoreId,
 }: CategoryTreeItemProps) => {
     const [open, setOpen] = useState(false);
     const hasChildren = category.children && category.children.length > 0;
 
     const isGlobal = !category.storeId || category.storeId === null;
-    const canManage = isSuperAdmin || (!isGlobal && category.storeId === currentStoreId);
+    const canManage = isSuperAdmin || !isGlobal;
 
     return (
         <>
@@ -245,7 +243,6 @@ const CategoryTreeItem = ({
                                 onAddSub={onAddSub}
                                 onView={onView}
                                 isSuperAdmin={isSuperAdmin}
-                                currentStoreId={currentStoreId}
                             />
                         ))}
                     </List>
@@ -283,7 +280,7 @@ export default function CategoriesPage() {
         const filteredList = categories.filter((item) => {
             const isGlobal = !item.storeId || item.storeId === null;
             if (activeTab === 0) return isGlobal;
-            if (activeTab === 1) return !isGlobal && item.storeId === admin?.storeId;
+            if (activeTab === 1) return !isGlobal;
             return true;
         });
 
@@ -296,7 +293,7 @@ export default function CategoriesPage() {
             ).map((item) => ({ ...item, children: buildTreeFromList(items, item.id || null) }));
 
         return buildTreeFromList(filteredList);
-    }, [categories, activeTab, admin?.storeId]);
+    }, [categories, activeTab]);
 
     const flatCategories = useMemo(
         () => categories.sort((a, b) => a.name.localeCompare(b.name)),
@@ -393,7 +390,7 @@ export default function CategoriesPage() {
 
     const canEditForm =
         isSuperAdmin ||
-        (editingCategory && editingCategory.storeId === admin?.storeId) ||
+        (editingCategory && !!editingCategory.storeId) ||
         !editingCategory;
 
     return (
@@ -514,7 +511,6 @@ export default function CategoriesPage() {
                                     onAddSub={(pid) => handleOpenDialog(undefined, pid)}
                                     onView={handleOpenView}
                                     isSuperAdmin={isSuperAdmin}
-                                    currentStoreId={admin?.storeId}
                                 />
                             ))}
                         </List>

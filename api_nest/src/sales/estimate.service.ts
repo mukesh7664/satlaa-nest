@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Estimate } from './entities/estimate.entity';
-import { Store } from '../stores/entities/store.entity';
 import { EmailService } from '../notifications/email.service';
 import { PdfService } from './pdf.service';
 import { S3Service } from '../cms/s3.service';
@@ -14,8 +13,6 @@ export class EstimateService {
     constructor(
         @InjectRepository(Estimate)
         private estimateRepository: Repository<Estimate>,
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
         @InjectRepository(GeneralSettings)
         private settingsRepository: Repository<GeneralSettings>,
         private readonly emailService: EmailService,
@@ -43,13 +40,13 @@ export class EstimateService {
         return { success: true, message: 'Marked as viewed' };
     }
 
-    async findOneAdmin(id: string, storeId?: string) {
+    async findOneAdmin(id: string) {
         if (!id || id === 'undefined' || id === 'null') {
             throw new NotFoundException('Invalid Estimate ID');
         }
 
         const estimate = await this.estimateRepository.findOne({
-            where: storeId ? { id, storeId } : { id },
+            where: { id },
             relations: ['convertedToOrder', 'createdBy']
         });
 
@@ -67,10 +64,6 @@ export class EstimateService {
         const skip = (page - 1) * limit;
 
         const qb = this.estimateRepository.createQueryBuilder('estimate');
-
-        if (query.storeId) {
-            qb.andWhere('estimate.storeId = :storeId', { storeId: query.storeId });
-        }
 
         if (query.status && query.status !== 'all') {
             qb.andWhere('estimate.status = :status', { status: query.status });
@@ -117,50 +110,49 @@ export class EstimateService {
         const estimate = this.estimateRepository.create({ ...data, estimateNumber });
         const savedEstimate = (await this.estimateRepository.save(estimate)) as any;
         // Generate and store PDF
-        await this.generateAndStorePdf(savedEstimate.id, savedEstimate.storeId);
+        await this.generateAndStorePdf(savedEstimate.id);
         return savedEstimate;
     }
 
-    async update(id: string, data: any, storeId?: string) {
-        const estimate = await this.estimateRepository.findOne({ where: storeId ? { id, storeId } : { id } });
+    async update(id: string, data: any) {
+        const estimate = await this.estimateRepository.findOne({ where: { id } });
         if (!estimate) throw new NotFoundException('Estimate not found');
         Object.assign(estimate, data);
         return this.estimateRepository.save(estimate);
     }
 
-    async send(id: string, storeId?: string) {
-        const estimate = await this.estimateRepository.findOne({ where: storeId ? { id, storeId } : { id } });
+    async send(id: string) {
+        const estimate = await this.estimateRepository.findOne({ where: { id } });
         if (!estimate) throw new NotFoundException('Estimate not found');
-        const store = estimate.storeId ? await this.storeRepository.findOne({ where: { id: estimate.storeId } }) : null;
 
         // Ensure PDF is generated before sending email
         if (!estimate.pdfUrl) {
-            await this.generateAndStorePdf(id, storeId);
+            await this.generateAndStorePdf(id);
             const updated = await this.estimateRepository.findOne({ where: { id } });
-            await this.emailService.sendEstimateEmail(updated, store);
+            await this.emailService.sendEstimateEmail(updated);
         } else {
-            await this.emailService.sendEstimateEmail(estimate, store);
+            await this.emailService.sendEstimateEmail(estimate);
         }
 
         estimate.status = 'sent';
         return this.estimateRepository.save(estimate);
     }
 
-    async delete(id: string, storeId?: string) {
-        const estimate = await this.estimateRepository.findOne({ where: storeId ? { id, storeId } : { id } });
+    async delete(id: string) {
+        const estimate = await this.estimateRepository.findOne({ where: { id } });
         if (!estimate) throw new NotFoundException('Estimate not found');
         await this.estimateRepository.remove(estimate);
         return { success: true, message: 'Estimate deleted' };
     }
 
-    async generateAndStorePdf(id: string, storeId?: string): Promise<string> {
+    async generateAndStorePdf(id: string): Promise<string> {
         const estimate = await this.estimateRepository.findOne({ where: { id } });
         if (!estimate) throw new NotFoundException('Estimate not found');
 
-        const settings = await this.settingsRepository.findOne({ where: { storeId: estimate.storeId } });
+        const settings = await this.settingsRepository.findOne({ where: {} });
         const pdfBuffer = await this.pdfService.generateEstimatePdf(estimate, settings);
 
-        const key = `stores/${estimate.storeId}/estimate/${estimate.id}.pdf`;
+        const key = `estimate/${estimate.id}.pdf`;
         await this.s3Service.uploadBuffer(pdfBuffer, key, 'application/pdf');
 
         estimate.pdfUrl = key;

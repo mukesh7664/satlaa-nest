@@ -84,7 +84,6 @@ export default function SectionsPage() {
         includeInactive: statusFilter === "all",
         page: page + 1,
         limit: rowsPerPage,
-        storeId: admin?.storeId,
       });
       setSections(response.data);
       setTotalItems(response.total);

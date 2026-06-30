@@ -47,7 +47,6 @@ export default function MyAddressPage() {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "x-tenant-domain": window.location.hostname,
           },
         }
       );
@@ -83,7 +82,6 @@ export default function MyAddressPage() {
       await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/addresses/${addressId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "x-tenant-domain": window.location.hostname,
         },
       });
       toast.success("Address deleted successfully");
@@ -99,7 +97,6 @@ export default function MyAddressPage() {
       await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/addresses/${addressId}/default`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "x-tenant-domain": window.location.hostname,
         },
       });
       toast.success("Default address updated");
@@ -117,7 +114,6 @@ export default function MyAddressPage() {
         await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/addresses/${editingAddress.id}`, addressData, {
           headers: {
             Authorization: `Bearer ${token}`,
-            "x-tenant-domain": window.location.hostname,
           },
         });
         toast.success("Address updated successfully");
@@ -125,7 +121,6 @@ export default function MyAddressPage() {
         await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/addresses`, addressData, {
           headers: {
             Authorization: `Bearer ${token}`,
-            "x-tenant-domain": window.location.hostname,
           },
         });
         toast.success("Address added successfully");

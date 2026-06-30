@@ -2,8 +2,6 @@ import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { CustomersModule } from '../customers/customers.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Store } from '../stores/entities/store.entity';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -14,7 +12,6 @@ import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard';
 @Module({
     imports: [
         CustomersModule,
-        TypeOrmModule.forFeature([Store]),
         PassportModule,
         JwtModule.registerAsync({
             imports: [ConfigModule],

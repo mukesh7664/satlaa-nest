@@ -1,5 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
 @Entity('payment_attempts')
 export class PaymentAttempt {
@@ -7,14 +6,7 @@ export class PaymentAttempt {
     id: string;
 
     @Column({ type: 'varchar', default: 'ORDER' }) // 'SUBSCRIPTION' or 'ORDER'
-    entity_type: string; 
-
-    @ManyToOne(() => Store, { nullable: true })
-    @JoinColumn({ name: 'store_id' })
-    store: Store;
-
-    @Column({ type: 'uuid', nullable: true })
-    store_id: string;
+    entity_type: string;
 
     @Column({ type: 'uuid', nullable: true })
     order_id: string;

@@ -19,15 +19,12 @@ import { adminApi, CreateAdminData } from "@/services/admin.api";
 import { toast } from "sonner";
 import PermissionSelector from "@/components/PermissionSelector";
 import { useAppSelector } from "@/store/hooks";
-import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function NewAdminPage() {
   const router = useRouter();
   const { admin } = useAppSelector((state) => state.auth);
   const isSuperAdmin = admin?.role === "admin";
   const isStoreAdmin = admin?.role === "admin";
-  const { subscription, loading: limitsLoading } = usePlanLimits();
-  const planCategory = subscription?.plan?.category || "ecommerce";
 
   const [loading, setLoading] = React.useState(false);
   const [formData, setFormData] = React.useState<CreateAdminData>({
@@ -103,20 +100,12 @@ export default function NewAdminPage() {
     };
 
     const newPermissions = rolePermissions[formData.adminType] || [];
-    
-    // Filter permissions based on plan category to be safe
-    const isPageBuilder = planCategory === "page_builder";
-    const ecommerceKeys = ["orders", "estimates", "invoices", "products", "brands", "collections", "customers"];
-    
-    const filteredPermissions = isPageBuilder 
-      ? newPermissions.filter(p => !ecommerceKeys.some(key => p.startsWith(key)))
-      : newPermissions;
 
     setFormData(prev => ({
       ...prev,
-      permissions: filteredPermissions
+      permissions: newPermissions
     }));
-  }, [formData.adminType, planCategory]);
+  }, [formData.adminType]);
 
   const handleSave = async () => {
     try {
@@ -130,14 +119,9 @@ export default function NewAdminPage() {
         return;
       }
 
-      const payload = {
-        ...formData,
-        storeId: isSuperAdmin ? undefined : admin?.storeId,
-      };
-
       setLoading(true);
       const dataToSave = {
-        ...payload,
+        ...formData,
         adminType: formData.adminType === "custom" ? formData.customType : formData.adminType
       };
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -294,22 +278,13 @@ export default function NewAdminPage() {
 
               {formData.role !== "admin" && (
                 <div className="border-t pt-6">
-                  {limitsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                      <span className="ml-3 text-sm text-slate-500">Loading plan permissions...</span>
-                    </div>
-                  ) : (
-                    <PermissionSelector
-                      selectedPermissions={formData.permissions || []}
-                      onChange={(permissions) =>
-                        setFormData((d) => ({ ...d, permissions }))
-                      }
-                      variant="minimal"
-                      planCategory={planCategory}
-                      allowedPages={subscription?.plan?.allowedPages}
-                    />
-                  )}
+                  <PermissionSelector
+                    selectedPermissions={formData.permissions || []}
+                    onChange={(permissions) =>
+                      setFormData((d) => ({ ...d, permissions }))
+                    }
+                    variant="minimal"
+                  />
                 </div>
               )}
 

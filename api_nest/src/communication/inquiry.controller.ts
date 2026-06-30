@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, Query, UseGuards, Delete, NotFoundException, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Query, UseGuards, Delete, NotFoundException } from '@nestjs/common';
 import { InquiryService } from './inquiry.service';
 import { CreateInquiryDto } from './dto/create-inquiry.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
@@ -12,11 +12,7 @@ export class InquiryController {
     @ApiOperation({ summary: 'Submit a new inquiry (Lead, Inquiry, Contact Us)' })
     @ApiResponse({ status: 201, description: 'Inquiry submitted.' })
     @Post('')
-    async createInquiry(@Body() body: CreateInquiryDto, @Req() req: any) {
-        // Inject storeId from tenant context if not provided in body
-        if (!body.storeId && req.tenant?.id) {
-            body.storeId = req.tenant.id;
-        }
+    async createInquiry(@Body() body: CreateInquiryDto) {
         return this.inquiryService.createInquiry(body);
     }
 
@@ -24,12 +20,8 @@ export class InquiryController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('admin')
-    async findAll(@Query() query: any, @Req() req: any) {
-        const adminQuery = { ...query };
-        if (req.user?.storeId) {
-            adminQuery.storeId = req.user.storeId;
-        }
-        return this.inquiryService.findAll(adminQuery);
+    async findAll(@Query() query: any) {
+        return this.inquiryService.findAll(query);
     }
 
     @ApiOperation({ summary: 'Admin: Get inquiry details' })

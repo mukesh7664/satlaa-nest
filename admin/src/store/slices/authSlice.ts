@@ -7,12 +7,7 @@ export interface AdminUser {
   role: string;
   phone?: string;
   avatar?: string;
-  storeId?: string;
-  storeName?: string;
-  storeLogo?: string;
   permissions?: string[];
-  planCategory?: string;
-  allowedPages?: string[];
   adminType?: string;
   createdAt?: string;
   preferences?: any;

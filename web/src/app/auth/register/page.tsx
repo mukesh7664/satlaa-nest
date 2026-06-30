@@ -11,26 +11,14 @@ export default function RegisterPage() {
   useEffect(() => {
     const fetchSiteName = async () => {
       try {
-        const hostname = window.location.hostname;
-        const tenantName = hostname.split('.')[0];
-        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-        
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5004/api/v1";
-        
-        const res = await fetch(`${apiUrl}/settings/seo`, {
-          headers: {
-            "x-tenant-domain": hostname,
-          },
-        });
-        
+
+        const res = await fetch(`${apiUrl}/settings/seo`);
+
         if (res.ok) {
           const result = await res.json();
-          let name = result.data?.siteName || result.data?.seo?.siteName;
-          
-          if ((!name || name === "EPxWEB" || name === "Inospire") && !isLocalhost && tenantName !== 'www') {
-            name = tenantName;
-          }
-          
+          const name = result.data?.siteName || result.data?.seo?.siteName;
+
           setSiteName(name || "EPxWEB");
         }
       } catch (error) {

@@ -27,9 +27,9 @@ export class ShiprocketService {
     private readonly cryptoService: CryptoService,
   ) {}
 
-  private async getShiprocketConfig(storeId: string) {
+  private async getShiprocketConfig() {
     const shippingConfig = await this.shippingConfigRepository.findOne({
-      where: { storeId, provider: 'shiprocket' }
+      where: { provider: 'shiprocket' }
     });
     
     let config = null;
@@ -55,9 +55,9 @@ export class ShiprocketService {
     return config;
   }
 
-  async getShippingConfig(storeId: string) {
+  async getShippingConfig() {
     const config = await this.shippingConfigRepository.findOne({
-      where: { storeId, provider: 'shiprocket' }
+      where: { provider: 'shiprocket' }
     });
     
     if (config) {
@@ -72,9 +72,9 @@ export class ShiprocketService {
     return { isEnabled: false, email: '', password: '', pickupPincode: '' };
   }
 
-  async saveShippingConfig(storeId: string, settings: any) {
+  async saveShippingConfig(settings: any) {
     let config = await this.shippingConfigRepository.findOne({
-      where: { storeId, provider: 'shiprocket' }
+      where: { provider: 'shiprocket' }
     });
 
     const encryptedPassword = settings.password ? this.cryptoService.encrypt(settings.password) : null;
@@ -88,7 +88,6 @@ export class ShiprocketService {
     }
 
     const newConfig = this.shippingConfigRepository.create({
-      storeId,
       provider: 'shiprocket',
       isEnabled: settings.isEnabled ?? false,
       email: settings.email,
@@ -98,8 +97,8 @@ export class ShiprocketService {
     return await this.shippingConfigRepository.save(newConfig);
   }
 
-  private async login(storeId: string): Promise<string> {
-    const config = await this.getShiprocketConfig(storeId);
+  private async login(): Promise<string> {
+    const config = await this.getShiprocketConfig();
 
     try {
       const response = await axios.post(`${this.baseUrl}/auth/login`, {
@@ -132,8 +131,8 @@ export class ShiprocketService {
     }
   }
 
-  async getPickupLocations(storeId: string) {
-    const token = await this.login(storeId);
+  async getPickupLocations() {
+    const token = await this.login();
 
     try {
       const response = await axios.get(`${this.baseUrl}/settings/company/pickup`, {
@@ -147,8 +146,8 @@ export class ShiprocketService {
     }
   }
 
-  async addPickupLocation(storeId: string, details: any) {
-    const token = await this.login(storeId);
+  async addPickupLocation(details: any) {
+    const token = await this.login();
 
     try {
       const response = await axios.post(`${this.baseUrl}/settings/company/addpickup`, details, {
@@ -198,7 +197,7 @@ export class ShiprocketService {
     if (!order) throw new BadRequestException('Order not found');
     if (order.shipment) throw new BadRequestException('Shipment already exists for this order');
 
-    const token = await this.login(order.storeId);
+    const token = await this.login();
 
     const shippingAddress = (order.shippingAddress as any) || {};
     const customer = (order.customer as any) || {};
@@ -262,8 +261,8 @@ export class ShiprocketService {
     }
   }
 
-  async generateLabel(storeId: string, shipmentId: string) {
-    const token = await this.login(storeId);
+  async generateLabel(shipmentId: string) {
+    const token = await this.login();
 
     try {
       const response = await axios.post(`${this.baseUrl}/courier/generate/label`, {
@@ -281,8 +280,8 @@ export class ShiprocketService {
     }
   }
 
-  async getServiceability(storeId: string, shiprocketOrderId: string) {
-    const token = await this.login(storeId);
+  async getServiceability(shiprocketOrderId: string) {
+    const token = await this.login();
 
     try {
       const response = await axios.get(`${this.baseUrl}/courier/serviceability/`, {
@@ -299,14 +298,14 @@ export class ShiprocketService {
     }
   }
 
-  async checkServiceability(storeId: string, delivery_pincode: string, productId?: string) {
-    const token = await this.login(storeId);
-    
+  async checkServiceability(delivery_pincode: string, productId?: string) {
+    const token = await this.login();
+
     // Attempt to get pickup pincode from shipping config
     const shippingConfig = await this.shippingConfigRepository.findOne({
-      where: { storeId, provider: 'shiprocket' }
+      where: { provider: 'shiprocket' }
     });
-    const settings = await this.settingsRepository.findOne({ where: { storeId } });
+    const settings = await this.settingsRepository.findOne({ where: {} });
     const pickupPincode = shippingConfig?.pickupPincode || settings?.address?.match(/\d{6}/)?.[0] || '110001';
     
     // Get product weight if productId is provided
@@ -372,8 +371,8 @@ export class ShiprocketService {
     }
   }
 
-  async assignAwb(storeId: string, shipmentId: string, courierId?: number) {
-    const token = await this.login(storeId);
+  async assignAwb(shipmentId: string, courierId?: number) {
+    const token = await this.login();
 
     try {
       const payload: any = {

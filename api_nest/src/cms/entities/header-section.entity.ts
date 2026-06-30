@@ -5,9 +5,6 @@ export class HeaderSection {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'store_id' })
-  storeId: string;
-
   @Column()
   type: string;
 

@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Button } from "@mui/material";
 import {
   ResponsiveContainer,
   LineChart,
@@ -14,28 +13,12 @@ import {
 } from "recharts";
 import { getImageUrl } from "@/utils/imageUtils";
 import { dashboardApiService, DashboardData } from "@/services/dashboard.api";
-import { subscriptionApiService, Subscription } from "@/services/subscription.api";
 import { useAppSelector } from "@/store/hooks";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { pagesApi, Page } from "@/services/pages.api";
+import { Page } from "@/services/pages.api";
 import StoreSetupWidget from "@/components/StoreSetupWidget";
 import {
-  Globe,
-  FileCode,
-  LayoutGrid,
-  Layers,
-  Eye,
-  Settings as SettingsIcon,
-  Plus,
-  ExternalLink,
-  Laptop
-} from "lucide-react";
-import {
-  Gem,
-  TriangleAlert,
-  Rocket,
-  CreditCard,
   ShoppingBag,
   DollarSign,
   FileText,
@@ -119,7 +102,6 @@ export default function Dashboard() {
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const router = useRouter();
 
   const { admin } = useAppSelector((state) => state.auth);
@@ -201,203 +183,6 @@ export default function Dashboard() {
               <p className="text-slate-500">You don't have access to any modules. Please contact your administrator.</p>
             </div>
           )}
-        </div>
-      </div>
-    );
-  }
-
-  const isPageBuilder = admin?.planCategory === 'page_builder';
-
-  if (isPageBuilder) {
-    const totalPages = pages.length;
-    const publishedPages = pages.filter(p => p.isPublished).length;
-    const draftPages = pages.filter(p => !p.isPublished).length;
-    const homepageSlug = pages.find(p => p.is_homepage)?.slug || "None";
-
-    return (
-      <div className="p-6 font-sans bg-slate-50/50 min-h-screen">
-        {/* Store Setup Checklist Progress Bar for Page Builder */}
-        {dashboardData?.setupStatus && !dashboardData.setupStatus.isComplete && (
-          <StoreSetupWidget setupStatus={dashboardData.setupStatus} />
-        )}
-
-        {/* Header */}
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Website Builder Dashboard</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage, customize, and publish your pages effortlessly.</p>
-          </div>
-        </div>
-
-        {/* 4 Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 2xl:gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <FileCode className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Pages</p>
-              <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{totalPages}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Globe className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Published Pages</p>
-              <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{publishedPages}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Layers className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Draft Pages</p>
-              <h3 className="text-2xl font-bold text-slate-800 mt-0.5">{draftPages}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
-              <Laptop className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Homepage</p>
-              <h3 className="text-lg font-bold text-slate-800 truncate mt-1 max-w-[150px]" title={homepageSlug}>
-                {homepageSlug !== "None" ? `/${homepageSlug}` : "Not Set"}
-              </h3>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-12 gap-6">
-          {/* Recent Pages List */}
-          <div className="col-span-12 lg:col-span-8 bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Recent Pages</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Quickly edit your newly created pages.</p>
-              </div>
-              <Link href="/pages" className="text-indigo-600 hover:text-indigo-700 text-xs font-semibold hover:underline">
-                View All Pages →
-              </Link>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                    <th className="pb-3 font-semibold">Page Title</th>
-                    <th className="pb-3 font-semibold">Slug</th>
-                    <th className="pb-3 font-semibold">Status</th>
-                    <th className="pb-3 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pages.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-8 text-center text-slate-400 text-sm">
-                        No pages created yet. Click "Add New Page" to get started!
-                      </td>
-                    </tr>
-                  ) : (
-                    pages.slice(0, 5).map((page) => {
-                      const pageId = page.id || page._id;
-                      return (
-                        <tr key={pageId} className="border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50 transition-colors">
-                          <td className="py-4 font-medium text-slate-700 text-sm">{page.title}</td>
-                          <td className="py-4 text-slate-500 text-sm font-mono">/{page.slug}</td>
-                          <td className="py-4">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${page.isPublished
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                : "bg-slate-50 text-slate-600 border border-slate-100"
-                              }`}>
-                              {page.isPublished ? "Published" : "Draft"}
-                            </span>
-                          </td>
-                          <td className="py-4 text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={() => router.push(`/pages/${pageId}`)}
-                                sx={{ textTransform: 'none', fontSize: '0.75rem', py: 0.5 }}
-                              >
-                                Edit Builder
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Quick Actions Panel */}
-          <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
-            {/* Quick action grid */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">Quick Links</h3>
-              <div className="grid grid-cols-1 gap-3">
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<Plus className="w-4 h-4" />}
-                  onClick={() => router.push("/pages")}
-                  fullWidth
-                  sx={{ textTransform: 'none', py: 1.2, borderRadius: '12px', boxShadow: 'none' }}
-                >
-                  Create New Page
-                </Button>
-
-                <div
-                  onClick={() => router.push("/sections")}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 cursor-pointer transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <LayoutGrid className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-700">Sections Library</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Prebuilt page component sections</p>
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => router.push("/themes")}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-violet-100 hover:bg-violet-50/30 cursor-pointer transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-700">Themes Customization</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Edit store styles and themes</p>
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => router.push("/media")}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-emerald-100 hover:bg-emerald-50/30 cursor-pointer transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <Globe className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-700">Media Manager</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Manage S3 bucket uploads and images</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     );

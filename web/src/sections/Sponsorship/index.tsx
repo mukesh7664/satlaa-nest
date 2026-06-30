@@ -70,7 +70,6 @@ export default function Sponsorship({ data, sectionIndex }: { data: SponsorshipP
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "x-tenant-domain": window.location.hostname,
                 },
                 body: JSON.stringify({
                     type: "contact_us",

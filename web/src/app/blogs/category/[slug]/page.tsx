@@ -7,8 +7,8 @@ import {
 } from "@/services/blog";
 import { BlogCard, Pagination, CategoryList } from "@/components/Pages/Blog";
 
-// Multi-tenant: the store is resolved from the request host header, so this
-// page must render per-request (not be prerendered statically).
+// Render per-request so blog content always reflects the latest data
+// (not prerendered statically).
 export const dynamic = "force-dynamic";
 
 interface CategoryPageProps {

@@ -206,8 +206,7 @@ export class AdminProductController {
         @Query('productStructureType') productStructureType: string,
         @Request() req: any
     ) {
-        const storeId = req.user?.storeId;
-        const settings = await this.settingsRepository.findOne({ where: { storeId } });
+        const settings = await this.settingsRepository.findOne({ where: {} });
         const defaultCurrency = settings?.defaultCurrency || 'INR';
 
         const queryBuilder = this.productRepository.createQueryBuilder('product')
@@ -215,10 +214,6 @@ export class AdminProductController {
             .leftJoinAndSelect('product.category', 'category')
             .leftJoinAndSelect('product.children', 'children')
             .where('product.parentId IS NULL');
-
-        if (storeId) {
-            queryBuilder.andWhere('product.storeId = :storeId', { storeId });
-        }
 
         if (search) {
             queryBuilder.andWhere('(product.title ILIKE :search OR product.sku ILIKE :search OR product.slug ILIKE :search)', { 
@@ -340,8 +335,7 @@ export class AdminProductController {
     @ApiOperation({ summary: 'Admin: Toggle product status' })
     @Patch(':id/status')
     async toggleStatus(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const product = await this.productRepository.findOne({ where: { id, storeId } });
+        const product = await this.productRepository.findOne({ where: { id } });
         if (!product) throw new NotFoundException('Product not found');
         product.isActive = !product.isActive;
         await this.productRepository.save(product);
@@ -351,8 +345,7 @@ export class AdminProductController {
     @ApiOperation({ summary: 'Admin: Toggle product featured' })
     @Patch(':id/featured')
     async toggleFeatured(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const product = await this.productRepository.findOne({ where: { id, storeId } });
+        const product = await this.productRepository.findOne({ where: { id } });
         if (!product) throw new NotFoundException('Product not found');
         product.isFeatured = !product.isFeatured;
         await this.productRepository.save(product);
@@ -363,8 +356,7 @@ export class AdminProductController {
     @Delete(':id')
     @HttpCode(HttpStatus.OK)
     async deleteProduct(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const product = await this.productRepository.findOne({ where: { id, storeId } });
+        const product = await this.productRepository.findOne({ where: { id } });
         if (!product) throw new NotFoundException('Product not found');
 
         try {
@@ -382,14 +374,10 @@ export class AdminProductController {
     @ApiOperation({ summary: 'Admin: Get unique tags' })
     @Get('tags/unique')
     async getUniqueTags(@Request() req: any) {
-        const storeId = req.user?.storeId;
-        if (!storeId) return { success: true, tags: [] };
-
         // Query unique tags from JSONB array
         const result = await this.productRepository
             .createQueryBuilder('product')
             .select('DISTINCT jsonb_array_elements_text(product.tags)', 'tag')
-            .where('product.storeId = :storeId', { storeId })
             .getRawMany();
 
         return { success: true, tags: result.map(r => r.tag).filter(t => !!t) };
@@ -398,12 +386,10 @@ export class AdminProductController {
     @ApiOperation({ summary: 'Admin: Get product by ID' })
     @Get(':id')
     async getProductById(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const settings = await this.settingsRepository.findOne({ where: { storeId } });
+        const settings = await this.settingsRepository.findOne({ where: {} });
         const defaultCurrency = settings?.defaultCurrency || 'INR';
 
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
 
         const product = await this.productRepository.findOne({
             where: whereCond,
@@ -527,7 +513,6 @@ export class AdminProductController {
     @ApiOperation({ summary: 'Admin: Create product' })
     @Post()
     async createProduct(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const mapped = mapBodyToProduct(body);
 
         if (!mapped.title) {
@@ -535,9 +520,8 @@ export class AdminProductController {
         }
 
         const baseSlug = mapped.sku ? slugify(mapped.sku) : slugify(mapped.title);
-        const slug = await this.generateUniqueSlug(baseSlug, storeId);
+        const slug = await this.generateUniqueSlug(baseSlug);
         mapped.slug = slug;
-        if (storeId) mapped.storeId = storeId;
 
         const product = this.productRepository.create(mapped);
         const savedProduct = await this.productRepository.save(product);
@@ -549,10 +533,9 @@ export class AdminProductController {
         if (variants && Array.isArray(variants)) {
             for (const v of variants) {
                 const variantSlug = v.sku ? slugify(v.sku) : `${savedProduct.slug}-${slugify(v.name)}`;
-                const uniqueVariantSlug = await this.generateUniqueSlug(variantSlug, storeId);
-                
+                const uniqueVariantSlug = await this.generateUniqueSlug(variantSlug);
+
                 const vData: any = {
-                    storeId,
                     parentId: savedProduct.id,
                     title: v.name,
                     slug: uniqueVariantSlug,
@@ -637,7 +620,6 @@ export class AdminProductController {
                 bundleId: savedProduct.id,
                 productId: item.productId,
                 quantity: item.quantity,
-                storeId: storeId,
             }));
             await this.productRepository.manager.getRepository(ProductBundleItem).save(items);
         }
@@ -648,8 +630,7 @@ export class AdminProductController {
     @ApiOperation({ summary: 'Admin: Update product' })
     @Put(':id')
     async updateProduct(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const existing = await this.productRepository.findOne({ where: { id, storeId } });
+        const existing = await this.productRepository.findOne({ where: { id } });
         if (!existing) throw new NotFoundException(`Product ${id} not found`);
 
         const mapped = mapBodyToProduct(body, existing);
@@ -659,7 +640,7 @@ export class AdminProductController {
 
         if (skuChanged || titleChanged) {
             const baseSlug = mapped.sku ? slugify(mapped.sku) : slugify(mapped.title || existing.title);
-            mapped.slug = await this.generateUniqueSlug(baseSlug, storeId, id);
+            mapped.slug = await this.generateUniqueSlug(baseSlug, id);
         }
 
         Object.assign(existing, mapped);
@@ -673,10 +654,9 @@ export class AdminProductController {
             await this.productRepository.delete({ parentId: id });
             for (const v of variants) {
                 const variantSlug = v.sku ? slugify(v.sku) : `${savedProduct.slug}-${slugify(v.name)}`;
-                const uniqueVariantSlug = await this.generateUniqueSlug(variantSlug, storeId);
+                const uniqueVariantSlug = await this.generateUniqueSlug(variantSlug);
 
                 const vData: any = {
-                    storeId,
                     parentId: savedProduct.id,
                     title: v.name,
                     slug: uniqueVariantSlug,
@@ -766,7 +746,6 @@ export class AdminProductController {
                 bundleId: savedProduct.id,
                 productId: item.productId,
                 quantity: item.quantity,
-                storeId: storeId,
             }));
             await this.productRepository.manager.getRepository(ProductBundleItem).save(items);
         }
@@ -779,8 +758,7 @@ export class AdminProductController {
     @ApiOperation({ summary: 'Admin: Export products to CSV' })
     @Get('export/csv')
     async exportProducts(@Request() req: any, @Res() res: Response) {
-        const storeId = req.user?.storeId;
-        const csv = await this.bulkService.exportStoreProducts(storeId);
+        const csv = await this.bulkService.exportStoreProducts();
 
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename=products-export-${Date.now()}.csv`);
@@ -790,8 +768,7 @@ export class AdminProductController {
     @ApiOperation({ summary: 'Admin: Export products to JSON' })
     @Get('export/json')
     async exportProductsJson(@Request() req: any) {
-        const storeId = req.user?.storeId;
-        return await this.bulkService.exportStoreProductsJson(storeId);
+        return await this.bulkService.exportStoreProductsJson();
     }
 
     @ApiOperation({ summary: 'Admin: Import products from CSV (Deprecated - use JSON)' })
@@ -812,27 +789,20 @@ export class AdminProductController {
         @Request() req: any
     ) {
         if (!file) throw new BadRequestException('No file uploaded');
-        const storeId = req.user?.storeId;
         const jsonData = JSON.parse(file.buffer.toString('utf-8'));
         if (!Array.isArray(jsonData)) throw new BadRequestException('JSON data must be an array of products');
-        return await this.bulkService.importStoreProductsJson(storeId, jsonData);
+        return await this.bulkService.importStoreProductsJson(jsonData);
     }
 
     @ApiOperation({ summary: 'Admin: Get product QR code' })
     @Get(':id/qr-code')
     async getProductQrCode(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const product = await this.productRepository.findOne({
-            where: { id, storeId },
-            relations: ['store']
+            where: { id },
         });
         if (!product) throw new NotFoundException('Product not found');
 
-        const store = product.store;
-        const isProd = process.env.NODE_ENV === 'production';
-        const baseDomain = process.env.BASE_DOMAIN || 'localhost';
-
-        const frontendUrl = process.env.FRONTEND_URL || (isProd ? `https://${store.slug}.${baseDomain}` : `http://localhost:3000`);
+        const frontendUrl = process.env.FRONTEND_URL || `http://localhost:3000`;
 
         const productUrl = `${frontendUrl}/products/${product.slug}`;
 
@@ -856,12 +826,11 @@ export class AdminProductController {
         }
     }
 
-    private async generateUniqueSlug(baseSlug: string, storeId: string, excludeId?: string): Promise<string> {
+    private async generateUniqueSlug(baseSlug: string, excludeId?: string): Promise<string> {
         let candidate = baseSlug;
         let attempt = 0;
         while (true) {
             const whereCond: any = { slug: candidate };
-            if (storeId) whereCond.storeId = storeId;
             const existing = await this.productRepository.findOne({ where: whereCond });
             if (!existing || (excludeId && existing.id === excludeId)) return candidate;
             attempt++;
@@ -877,9 +846,7 @@ export class AdminProductController {
         @Param('productId') productId: string,
         @Request() req: any
     ) {
-        const storeId = req.user?.storeId;
-        if (!storeId) throw new BadRequestException('Store ID not found in token');
-        const reviews = await this.catalogService.findAdminReviews(productId, storeId);
+        const reviews = await this.catalogService.findAdminReviews(productId);
         return { success: true, data: reviews };
     }
 
@@ -890,15 +857,13 @@ export class AdminProductController {
         @Body() dto: { customerName: string; customerEmail?: string; rating: number; comment: string },
         @Request() req: any
     ) {
-        const storeId = req.user?.storeId;
-        if (!storeId) throw new BadRequestException('Store ID not found in token');
         if (!dto.customerName || !dto.rating || !dto.comment) {
             throw new BadRequestException('Required fields: customerName, rating, comment');
         }
         if (dto.rating < 1 || dto.rating > 5) {
             throw new BadRequestException('Rating must be between 1 and 5');
         }
-        const review = await this.catalogService.createAdminReview(productId, storeId, dto);
+        const review = await this.catalogService.createAdminReview(productId, dto);
         return { success: true, data: review };
     }
 
@@ -909,12 +874,10 @@ export class AdminProductController {
         @Body() body: { status: string },
         @Request() req: any
     ) {
-        const storeId = req.user?.storeId;
-        if (!storeId) throw new BadRequestException('Store ID not found in token');
         if (!body.status || !['approved', 'rejected', 'pending'].includes(body.status)) {
             throw new BadRequestException('Invalid status: must be approved, rejected, or pending');
         }
-        const review = await this.catalogService.updateReviewStatus(id, storeId, body.status);
+        const review = await this.catalogService.updateReviewStatus(id, body.status);
         return { success: true, data: review };
     }
 
@@ -924,9 +887,7 @@ export class AdminProductController {
         @Param('id') id: string,
         @Request() req: any
     ) {
-        const storeId = req.user?.storeId;
-        if (!storeId) throw new BadRequestException('Store ID not found in token');
-        await this.catalogService.deleteReview(id, storeId);
+        await this.catalogService.deleteReview(id);
         return { success: true, message: 'Review deleted successfully' };
     }
 }

@@ -18,9 +18,8 @@ export class WishlistController {
     @ApiResponse({ status: 200, description: 'User wishlist.' })
     @Get()
     async getWishlist(@Request() req) {
-        const storeId = req.tenant.id;
-        const wishlistItems = await this.wishlistService.getWishlist(storeId, req.user.userId);
-        
+        const wishlistItems = await this.wishlistService.getWishlist(req.user.userId);
+
         return await Promise.all(
             wishlistItems.map(async (item) => ({
                 ...item,
@@ -34,8 +33,7 @@ export class WishlistController {
     @ApiResponse({ status: 201, description: 'Added to wishlist.' })
     @Post()
     async addToWishlist(@Request() req, @Body('productId') productId: string) {
-        const storeId = req.tenant.id;
-        return this.wishlistService.addToWishlist(storeId, req.user.userId, productId);
+        return this.wishlistService.addToWishlist(req.user.userId, productId);
     }
 
     @ApiOperation({ summary: 'Remove product from wishlist' })
@@ -43,8 +41,7 @@ export class WishlistController {
     @ApiResponse({ status: 200, description: 'Removed from wishlist.' })
     @Delete(':productId')
     async removeFromWishlist(@Request() req, @Param('productId') productId: string) {
-        const storeId = req.tenant.id;
-        return this.wishlistService.removeFromWishlist(storeId, req.user.userId, productId);
+        return this.wishlistService.removeFromWishlist(req.user.userId, productId);
     }
 }
 

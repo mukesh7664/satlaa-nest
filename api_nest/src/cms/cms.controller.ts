@@ -3,7 +3,6 @@ import { CmsService } from './cms.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuditLogInterceptor } from '../admin/audit-log.interceptor';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import { BadRequestException } from '@nestjs/common';
 
 @ApiTags('cms')
@@ -19,54 +18,48 @@ export class CmsController {
     // ── Pages (public) ──────────────────────────────────────────────────
     @ApiOperation({ summary: 'Get all pages (public)' })
     @Get('pages')
-    async getAllPages(@CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant not identified');
-        const pages = await this.cmsService.getAllPages(storeId);
+    async getAllPages() {
+        const pages = await this.cmsService.getAllPages();
         return { success: true, data: pages };
     }
 
     @ApiOperation({ summary: 'Get page by ID' })
     @ApiParam({ name: 'id' })
     @Get('pages/:id')
-    async getPageById(@Param('id') id: string, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant not identified');
+    async getPageById(@Param('id') id: string) {
         // Already returns { success: true, data: Page }
-        return this.cmsService.getPageById(id, storeId);
+        return this.cmsService.getPageById(id);
     }
 
     @ApiOperation({ summary: 'Get page by slug' })
     @ApiParam({ name: 'slug' })
     @Get('pages/slug/:slug')
-    async getPageBySlug(@Param('slug') slug: string, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant not identified');
+    async getPageBySlug(@Param('slug') slug: string) {
         // Already returns { success: true, data: Page }
-        return this.cmsService.getPageBySlug(slug, storeId);
+        return this.cmsService.getPageBySlug(slug);
     }
 
 
     // ── Global Sections (public) ────────────────────────────────────────
     @ApiOperation({ summary: 'Get global header sections' })
     @Get('header-sections')
-    async getGlobalHeaderSections(@CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant not identified');
-        const sections = await this.cmsService.getGlobalHeaderSections(storeId);
+    async getGlobalHeaderSections() {
+        const sections = await this.cmsService.getGlobalHeaderSections();
         return { success: true, data: sections };
     }
 
     @ApiOperation({ summary: 'Get global footer sections' })
     @Get('footer-sections')
-    async getGlobalFooterSections(@CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant not identified');
-        const sections = await this.cmsService.getGlobalFooterSections(storeId);
+    async getGlobalFooterSections() {
+        const sections = await this.cmsService.getGlobalFooterSections();
         return { success: true, data: sections };
     }
     @ApiOperation({ summary: 'Get homepage page by slug' })
     @ApiParam({ name: 'slug' })
     @Get('homepage/pages/:slug')
-    async getHomepagePageBySlug(@Param('slug') slug: string, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant not identified');
+    async getHomepagePageBySlug(@Param('slug') slug: string) {
         // Already returns { success: true, data: Page }
-        return this.cmsService.getPageBySlug(slug, storeId);
+        return this.cmsService.getPageBySlug(slug);
     }
 
 
@@ -79,9 +72,8 @@ export class CmsController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('admin/pages')
-    async getAdminPages(@Request() req: any) {
-        const storeId = req.user?.storeId;
-        return this.cmsService.getAllPages(storeId);
+    async getAdminPages() {
+        return this.cmsService.getAllPages();
     }
 
     @ApiOperation({ summary: 'Admin: Get page by ID' })
@@ -89,22 +81,16 @@ export class CmsController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('admin/pages/:id')
-    async getAdminPageById(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        // The provided snippet for this method was syntactically incorrect and referenced
-        // `this.pageRepository` and `data` which are not defined in this controller.
-        // To maintain syntactical correctness as per instructions, the original
-        // functional line is kept. If a change was intended, please provide a valid one.
-        return this.cmsService.getPageById(id, storeId);
+    async getAdminPageById(@Param('id') id: string) {
+        return this.cmsService.getPageById(id);
     }
 
     @ApiOperation({ summary: 'Admin: Create page' })
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Post('admin/pages')
-    async createPage(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        return this.cmsService.createPage(body, storeId);
+    async createPage(@Body() body: any) {
+        return this.cmsService.createPage(body);
     }
 
     @ApiOperation({ summary: 'Admin: Update page' })
@@ -112,9 +98,8 @@ export class CmsController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Put('admin/pages/:id')
-    async updatePage(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        return this.cmsService.updatePage(id, body, storeId);
+    async updatePage(@Param('id') id: string, @Body() body: any) {
+        return this.cmsService.updatePage(id, body);
     }
 
     @ApiOperation({ summary: 'Admin: Delete page' })
@@ -122,9 +107,8 @@ export class CmsController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Delete('admin/pages/:id')
-    async deletePage(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        return this.cmsService.deletePage(id, storeId);
+    async deletePage(@Param('id') id: string) {
+        return this.cmsService.deletePage(id);
     }
 
     // ── Section Types (The Library) ────────────────────────────────────
@@ -179,9 +163,8 @@ export class CmsController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('admin/header-sections')
-    async getAdminGlobalHeaderSections(@Request() req: any) {
-        const storeId = req.user?.storeId;
-        const sections = await this.cmsService.getGlobalHeaderSections(storeId);
+    async getAdminGlobalHeaderSections() {
+        const sections = await this.cmsService.getGlobalHeaderSections();
         return { success: true, data: sections };
     }
 
@@ -189,26 +172,23 @@ export class CmsController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('admin/footer-sections')
-    async getAdminGlobalFooterSections(@Request() req: any) {
-        const storeId = req.user?.storeId;
-        const sections = await this.cmsService.getGlobalFooterSections(storeId);
+    async getAdminGlobalFooterSections() {
+        const sections = await this.cmsService.getGlobalFooterSections();
         return { success: true, data: sections };
     }
     @ApiOperation({ summary: 'Admin: Update global header sections' })
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Put('admin/header-sections')
-    async updateGlobalHeaderSections(@Body() body: any[], @Request() req: any) {
-        const storeId = req.user?.storeId;
-        return this.cmsService.updateGlobalHeaderSections(storeId, body);
+    async updateGlobalHeaderSections(@Body() body: any[]) {
+        return this.cmsService.updateGlobalHeaderSections(body);
     }
 
     @ApiOperation({ summary: 'Admin: Update global footer sections' })
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Put('admin/footer-sections')
-    async updateGlobalFooterSections(@Body() body: any[], @Request() req: any) {
-        const storeId = req.user?.storeId;
-        return this.cmsService.updateGlobalFooterSections(storeId, body);
+    async updateGlobalFooterSections(@Body() body: any[]) {
+        return this.cmsService.updateGlobalFooterSections(body);
     }
 }

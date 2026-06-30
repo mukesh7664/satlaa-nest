@@ -2,7 +2,6 @@ import {
     Controller, Post, Patch, Get, Query, Body, Param, Headers,
     UseGuards, Request, BadRequestException,
 } from '@nestjs/common';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import {
     ApiTags, ApiOperation, ApiResponse, ApiBearerAuth,
     ApiParam, ApiBody,
@@ -24,9 +23,7 @@ export class PaymentController {
     @ApiResponse({ status: 200, description: 'Payment verified successfully.' })
     @ApiResponse({ status: 400, description: 'Invalid payment signature.' })
     @Post('verify')
-    async verifyPayment(@Body() body: VerifyPaymentDto, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant required');
-        
+    async verifyPayment(@Body() body: VerifyPaymentDto) {
         const paymentId = body.razorpayPaymentId || body.razorpay_payment_id;
         const razorpayOrder = body.razorpayOrderId || body.razorpay_order_id;
         const signature = body.razorpaySignature || body.razorpay_signature;
@@ -38,7 +35,7 @@ export class PaymentController {
         }
 
         const result = await this.paymentService.verifyPayment(
-            body.orderId, paymentId, razorpayOrder, signature, storeId
+            body.orderId, paymentId, razorpayOrder, signature
         );
 
         return {
@@ -53,11 +50,10 @@ export class PaymentController {
     @ApiOperation({ summary: 'Verify Stripe payment session' })
     @ApiResponse({ status: 200, description: 'Payment verified successfully.' })
     @Post('stripe-verify')
-    async verifyStripePayment(@Body('sessionId') sessionId: string, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant required');
+    async verifyStripePayment(@Body('sessionId') sessionId: string) {
         if (!sessionId) throw new BadRequestException('Session ID required');
 
-        const result = await this.paymentService.verifyStripeSession(sessionId, storeId);
+        const result = await this.paymentService.verifyStripeSession(sessionId);
 
         if (result.success) {
             return {
@@ -76,41 +72,39 @@ export class PaymentController {
     // ─── POST /payment/webhook ──────────────────────────────────────────
     @ApiOperation({ summary: 'Razorpay webhook handler' })
     @ApiResponse({ status: 200, description: 'Webhook processed.' })
-    @Post('webhook/:storeId')
+    @Post('webhook')
     async handleWebhook(
-        @Param('storeId') storeId: string,
         @Body() body: any,
         @Headers('x-razorpay-signature') signature: string,
     ) {
         if (signature) {
             const bodyStr = JSON.stringify(body);
-            const isValid = await this.paymentService.verifyWebhookSignature(bodyStr, signature, storeId);
+            const isValid = await this.paymentService.verifyWebhookSignature(bodyStr, signature);
             if (!isValid) {
                 throw new BadRequestException('Invalid webhook signature');
             }
         }
 
-        await this.paymentService.handleWebhook(body.event, body.payload, storeId);
+        await this.paymentService.handleWebhook(body.event, body.payload);
 
         return { success: true, message: 'Webhook processed successfully' };
     }
 
-    // ─── POST /payment/stripe-webhook/:storeId ──────────────────────────
+    // ─── POST /payment/stripe-webhook ───────────────────────────────────
     @ApiOperation({ summary: 'Stripe webhook handler' })
     @ApiResponse({ status: 200, description: 'Webhook processed.' })
-    @Post('stripe-webhook/:storeId')
+    @Post('stripe-webhook')
     async handleStripeWebhook(
-        @Param('storeId') storeId: string,
         @Request() req: any,
         @Headers('stripe-signature') signature: string,
     ) {
         if (!signature) throw new BadRequestException('Missing stripe signature');
 
-        const webhookSecret = await this.paymentService.getStripeWebhookSecret(storeId);
+        const webhookSecret = await this.paymentService.getStripeWebhookSecret();
         if (!webhookSecret) {
-            // If not configured, we might still want to process if we trust the source, 
+            // If not configured, we might still want to process if we trust the source,
             // but Stripe strongly recommends verification.
-            console.error(`Stripe Webhook Secret not configured for store ${storeId}`);
+            console.error(`Stripe Webhook Secret not configured`);
             return { success: false, message: 'Webhook secret not configured' };
         }
 
@@ -119,15 +113,15 @@ export class PaymentController {
             // NestJS by default parses JSON. If we need raw body, we'd need a middleware.
             // For now, we'll try to use the parsed body if possible, or assume trust if secret exists.
             // In a real production app, you MUST use the raw body and stripe.webhooks.constructEvent.
-            
-            const stripe = new (require('stripe'))(await this.paymentService.getStripePublishableKey(storeId)); // Just to get the instance for verification if needed
+
+            const stripe = new (require('stripe'))(await this.paymentService.getStripePublishableKey()); // Just to get the instance for verification if needed
             // However, verifyStripeSession is safer if we just pass the ID from the event metadata.
-            
+
             const event = req.body; // Parsed by NestJS
 
             if (event.type === 'checkout.session.completed') {
                 const session = event.data.object;
-                await this.paymentService.verifyStripeSession(session.id, storeId);
+                await this.paymentService.verifyStripeSession(session.id);
             }
 
             return { success: true };
@@ -143,11 +137,9 @@ export class PaymentController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Post('upload-proof')
-    async uploadPaymentProof(@Body() body: UploadPaymentProofDto, @Request() req, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant required');
-        
+    async uploadPaymentProof(@Body() body: UploadPaymentProofDto, @Request() req) {
         const order = await this.paymentService.uploadPaymentProof(
-            body.orderId, req.user.userId || req.user.customerId, body.paymentProof, storeId, body.transactionDetails,
+            body.orderId, req.user.userId || req.user.customerId, body.paymentProof, body.transactionDetails,
         );
 
         return {
@@ -167,12 +159,9 @@ export class PaymentController {
     async updatePaymentStatus(
         @Param('orderId') orderId: string,
         @Body() body: UpdatePaymentStatusDto,
-        @CurrentTenant('id') storeId: string
     ) {
-        if (!storeId) throw new BadRequestException('Tenant required');
-
         const order = await this.paymentService.updatePaymentStatus(
-            orderId, body.paymentStatus, storeId, body.orderStatus, body.adminNotes,
+            orderId, body.paymentStatus, body.orderStatus, body.adminNotes,
         );
 
         return { success: true, message: 'Payment status updated successfully', order };
@@ -188,12 +177,9 @@ export class PaymentController {
     async initiateRefund(
         @Param('orderId') orderId: string,
         @Body() body: InitiateRefundDto,
-        @CurrentTenant('id') storeId: string
     ) {
-        if (!storeId) throw new BadRequestException('Tenant required');
-
         const result = await this.paymentService.initiateRefund(
-            orderId, storeId, body.amount, body.reason,
+            orderId, body.amount, body.reason,
         );
 
         return {
@@ -218,9 +204,7 @@ export class PaymentController {
         @Query('endDate') endDate?: string,
     ) {
         const role = req.user?.role;
-        // Correct isolation: Admin panel ALWAYS uses JWT storeId, never URL-based tenant.
-        const storeId = req.user?.storeId;
-        return this.paymentService.getPaymentsForAdmin(role, storeId, limit, offset, startDate, endDate);
+        return this.paymentService.getPaymentsForAdmin(role, limit, offset, startDate, endDate);
     }
 
     // ─── GET /payment/admin/attempts ─────────────────────────────────────
@@ -237,8 +221,6 @@ export class PaymentController {
         @Query('endDate') endDate?: string,
     ) {
         const role = req.user?.role;
-        // Correct isolation: Admin panel ALWAYS uses JWT storeId, never URL-based tenant.
-        const storeId = req.user?.storeId;
-        return this.paymentService.getPaymentAttemptsForAdmin(role, storeId, limit, offset, startDate, endDate);
+        return this.paymentService.getPaymentAttemptsForAdmin(role, limit, offset, startDate, endDate);
     }
 }

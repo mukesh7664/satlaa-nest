@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Category } from './entities/category.entity';
 
 @Injectable()
@@ -10,29 +10,14 @@ export class CategoriesService {
         private categoryRepository: Repository<Category>,
     ) { }
 
-    async findAll(storeId?: string, isSuperAdmin: boolean = false) {
-        if (isSuperAdmin && !storeId) {
-            return this.categoryRepository.find({
-                relations: ['parent'],
-                order: { name: 'ASC' }
-            });
-        }
-
-        // For non-super admins or when storeId is explicitly provided (storefront)
-        // Return Global categories (storeId null) OR categories belonging to the store
-        const where: any[] = [{ storeId: IsNull() }];
-        if (storeId) {
-            where.push({ storeId: storeId });
-        }
-
+    async findAll() {
         return this.categoryRepository.find({
-            where,
             relations: ['parent', 'children'],
             order: { name: 'ASC' }
         });
     }
 
-    async findOne(id: string, storeId?: string, isSuperAdmin: boolean = false) {
+    async findOne(id: string) {
         const category = await this.categoryRepository.findOne({
             where: { id },
             relations: ['parent', 'children']
@@ -40,26 +25,12 @@ export class CategoriesService {
 
         if (!category) throw new NotFoundException('Category not found');
 
-        // Protection: If not super admin and it's not global and doesn't match storeId
-        if (!isSuperAdmin && category.storeId !== null && category.storeId !== storeId) {
-            throw new NotFoundException('Category not found');
-        }
-
         return category;
     }
 
-    async findBySlug(slug: string, storeId?: string) {
-        const where: any = { slug };
-        if (storeId) {
-            // Logic for storefront: slugs can be duplicate across stores, but we want the global one or the store's one
-            // This is trickier with findOne. Better to find where (slug and storeId) OR (slug and storeId is null)
-        }
-
+    async findBySlug(slug: string) {
         const category = await this.categoryRepository.findOne({
-            where: storeId ? [
-                { slug, storeId: null },
-                { slug, storeId }
-            ] : { slug },
+            where: { slug },
             relations: ['parent', 'children']
         });
 
@@ -69,10 +40,8 @@ export class CategoriesService {
 
     async create(data: any, user: any) {
         if (data.parentId === "") data.parentId = null;
-        
+
         const categoryData = { ...data };
-        // Single-store: always scope category to the user's store
-        categoryData.storeId = user.storeId;
 
         const category = this.categoryRepository.create(categoryData);
         return this.categoryRepository.save(category);
@@ -80,32 +49,14 @@ export class CategoriesService {
 
     async update(id: string, data: any, user: any) {
         if (data.parentId === "") data.parentId = null;
-        const category = await this.findOne(id, user.storeId, false);
-
-        // Protection: Cannot update global category
-        if (category.storeId === null) {
-            throw new ForbiddenException('Cannot update global categories');
-        }
-
-        // Protection: Cannot update other store's category
-        if (category.storeId !== user.storeId) {
-            throw new ForbiddenException('Access denied');
-        }
+        const category = await this.findOne(id);
 
         Object.assign(category, data);
         return this.categoryRepository.save(category);
     }
 
     async remove(id: string, user: any) {
-        const category = await this.findOne(id, user.storeId, false);
-
-        if (category.storeId === null) {
-            throw new ForbiddenException('Cannot delete global categories');
-        }
-
-        if (category.storeId !== user.storeId) {
-            throw new ForbiddenException('Access denied');
-        }
+        const category = await this.findOne(id);
 
         return this.categoryRepository.remove(category);
     }

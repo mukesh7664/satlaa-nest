@@ -1,19 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('store_payment_configs')
 export class StorePaymentConfig {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ nullable: true })
-    storeId: string;
-
-    @ManyToOne(() => Store)
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ type: 'varchar', length: 50 })
+    @Column({ type: 'varchar', length: 50, unique: true })
     provider: string; // 'razorpay', 'stripe', etc.
 
     @Column({ nullable: true })

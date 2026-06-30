@@ -3,7 +3,6 @@ import { OrderService } from './order.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiParam } from '@nestjs/swagger';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import { BadRequestException } from '@nestjs/common';
 
 @ApiTags('sales')
@@ -17,9 +16,8 @@ export class OrderController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Post()
-    async placeOrder(@Request() req, @Body() body: CreateOrderDto, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant not identified required for ordering.');
-        return this.orderService.createOrderFromCart(req.user.customerId || req.user.userId, body, storeId);
+    async placeOrder(@Request() req, @Body() body: CreateOrderDto) {
+        return this.orderService.createOrderFromCart(req.user.customerId || req.user.userId, body);
     }
 
     @ApiOperation({ summary: 'Get all orders for the current user' })
@@ -27,9 +25,8 @@ export class OrderController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get()
-    async getMyOrders(@Request() req, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant required');
-        const orders = await this.orderService.findAllOrders(req.user.customerId || req.user.userId, storeId);
+    async getMyOrders(@Request() req) {
+        const orders = await this.orderService.findAllOrders(req.user.customerId || req.user.userId);
         return { data: orders };
     }
 
@@ -39,9 +36,8 @@ export class OrderController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get(':id')
-    async getOrder(@Param('id') id: string, @Request() req, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant required');
-        return this.orderService.findOneOrder(id, req.user.customerId || req.user.userId, storeId);
+    async getOrder(@Param('id') id: string, @Request() req) {
+        return this.orderService.findOneOrder(id, req.user.customerId || req.user.userId);
     }
 
     // NOTE: This usually would be an Admin only or Webhook endpoint
@@ -53,9 +49,8 @@ export class OrderController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Patch(':id/status')
-    async updateStatus(@Param('id') id: string, @Body() body: { status: string, paymentInfo?: any }, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant required for updates');
-        return this.orderService.updateStatus(id, body.status as any, body.paymentInfo, storeId);
+    async updateStatus(@Param('id') id: string, @Body() body: { status: string, paymentInfo?: any }) {
+        return this.orderService.updateStatus(id, body.status as any, body.paymentInfo);
     }
 
     @ApiOperation({ summary: 'Cancel an order' })
@@ -65,8 +60,7 @@ export class OrderController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Post(':id/cancel')
-    async cancelOrder(@Param('id') id: string, @Body() body: { reason: string }, @Request() req, @CurrentTenant('id') storeId: string) {
-        if (!storeId) throw new BadRequestException('Tenant required');
-        return this.orderService.cancelOrder(id, body.reason, req.user.customerId || req.user.userId, storeId);
+    async cancelOrder(@Param('id') id: string, @Body() body: { reason: string }, @Request() req) {
+        return this.orderService.cancelOrder(id, body.reason, req.user.customerId || req.user.userId);
     }
 }

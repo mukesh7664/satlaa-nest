@@ -23,8 +23,7 @@ export class AnalyticsController {
     @Query('endDate') endDate: string,
     @Request() req: any,
   ) {
-    const storeId = req.user?.storeId;
-    return this.analyticsService.getSalesAnalytics(storeId, startDate, endDate);
+    return this.analyticsService.getSalesAnalytics(startDate, endDate);
   }
 
   @ApiOperation({ summary: 'Get Product Analytics' })
@@ -34,8 +33,7 @@ export class AnalyticsController {
     @Query('endDate') endDate: string,
     @Request() req: any,
   ) {
-    const storeId = req.user?.storeId;
-    return this.analyticsService.getProductAnalytics(storeId, startDate, endDate);
+    return this.analyticsService.getProductAnalytics(startDate, endDate);
   }
 
   @ApiOperation({ summary: 'Get Customer Analytics' })
@@ -45,8 +43,7 @@ export class AnalyticsController {
     @Query('endDate') endDate: string,
     @Request() req: any,
   ) {
-    const storeId = req.user?.storeId;
-    return this.analyticsService.getCustomerAnalytics(storeId, startDate, endDate);
+    return this.analyticsService.getCustomerAnalytics(startDate, endDate);
   }
 
   @ApiOperation({ summary: 'Get Financial Reports' })
@@ -56,8 +53,7 @@ export class AnalyticsController {
     @Query('endDate') endDate: string,
     @Request() req: any,
   ) {
-    const storeId = req.user?.storeId;
-    return this.analyticsService.getFinancialReports(storeId, startDate, endDate);
+    return this.analyticsService.getFinancialReports(startDate, endDate);
   }
 
   @ApiOperation({ summary: 'Get Marketing & Discount Analytics' })
@@ -67,8 +63,7 @@ export class AnalyticsController {
     @Query('endDate') endDate: string,
     @Request() req: any,
   ) {
-    const storeId = req.user?.storeId;
-    return this.analyticsService.getMarketingAnalytics(storeId, startDate, endDate);
+    return this.analyticsService.getMarketingAnalytics(startDate, endDate);
   }
 
   @ApiOperation({ summary: 'Get Operations & Fulfillment Stats' })
@@ -78,14 +73,12 @@ export class AnalyticsController {
     @Query('endDate') endDate: string,
     @Request() req: any,
   ) {
-    const storeId = req.user?.storeId;
-    return this.analyticsService.getOperationsAnalytics(storeId, startDate, endDate);
+    return this.analyticsService.getOperationsAnalytics(startDate, endDate);
   }
 
   @ApiOperation({ summary: 'Get Inventory Snapshots' })
   @Get('inventory')
   async getInventory(@Request() req: any) {
-    const storeId = req.user?.storeId;
-    return this.analyticsService.getInventorySnapshot(storeId);
+    return this.analyticsService.getInventorySnapshot();
   }
 }

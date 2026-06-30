@@ -1,8 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ModuleRef } from '@nestjs/core';
-import { Store } from '../stores/entities/store.entity';
 import { GeneralSettings } from '../admin/entities/general-settings.entity';
 import { SeoSettings } from '../admin/entities/seo-settings.entity';
 import { EmailTemplate } from '../admin/entities/email-template.entity';
@@ -12,14 +11,11 @@ import { PageSection } from '../cms/entities/page-section.entity';
 import { Section } from '../cms/entities/section.entity';
 import { DEFAULT_EMAIL_TEMPLATES } from '../common/default-email-templates';
 import { DEFAULT_POLICY_PAGES } from '../common/default-policy-pages';
-import { generateSlug } from '../common/utils/domain.utils';
 import { ThemeService } from '../cms/theme.service';
 
 @Injectable()
 export class TenantService {
     constructor(
-        @InjectRepository(Store)
-        private storeRepository: Repository<Store>,
         @InjectRepository(GeneralSettings)
         private generalSettingsRepository: Repository<GeneralSettings>,
         @InjectRepository(SeoSettings)
@@ -37,49 +33,19 @@ export class TenantService {
         private moduleRef: ModuleRef,
     ) { }
 
-    async getStoreByHost(_host?: string): Promise<Store> {
-        // Single-store mode: always resolve to the one (first) store, ignoring host/domain.
-        const store = await this.storeRepository.createQueryBuilder('store')
-            .orderBy('store.createdAt', 'ASC')
-            .getOne();
+    /**
+     * Single-store mode: bootstrap the default settings/SEO/email/policy pages/theme
+     * the first time an owner registers. There is no Store row anymore — store-level
+     * metadata lives in GeneralSettings (siteName etc.).
+     */
+    async createStore(_ownerId: string, name: string, _planCategory: 'page_builder' | 'ecommerce' = 'ecommerce'): Promise<void> {
+        // Skip if defaults already initialized
+        const existingSettings = await this.generalSettingsRepository.findOne({ where: {} });
+        if (existingSettings) return;
 
-        if (store) return store;
-
-        throw new NotFoundException('No store found');
-    }
-
-    async createStore(ownerId: string, name: string, planCategory: 'page_builder' | 'ecommerce' = 'ecommerce'): Promise<Store> {
-        // Generate a unique slug/subdomain base
-        const baseSlug = generateSlug(name);
-        let slug = baseSlug;
-
-        // Check Store registration for slug uniqueness (since Store now has slug field)
-        let existingStore = await this.storeRepository.findOne({
-            where: { slug }
-        });
-
-        let counter = 1;
-        while (existingStore) {
-            slug = `${baseSlug}-${counter}`;
-            existingStore = await this.storeRepository.findOne({
-                where: { slug }
-            });
-            counter++;
-        }
-
-        // Create the store metadata
-        const savedStore = await this.storeRepository.save(
-            this.storeRepository.create({
-                name,
-                owner_id: ownerId,
-                slug,
-            })
-        );
-
-        // Initialize default settings for the store
+        // Initialize default general settings
         await this.generalSettingsRepository.save(
             this.generalSettingsRepository.create({
-                storeId: savedStore.id,
                 siteName: name,
                 contactEmail: '',
                 contactPhone: '',
@@ -101,7 +67,6 @@ export class TenantService {
         // Initialize default SEO settings
         await this.seoSettingsRepository.save(
             this.seoSettingsRepository.create({
-                storeId: savedStore.id,
                 keywords: [],
                 googleAnalyticsId: '',
                 googleTagManagerId: '',
@@ -110,39 +75,36 @@ export class TenantService {
                 customScripts: { headerScripts: '', footerScripts: '' },
             })
         );
-        
-        // Step 2: Create default email templates
-        await this.createDefaultTemplates(savedStore.id);
 
-        // Step 3: Create default email settings
-        await this.createDefaultEmailSettings(savedStore.id);
+        // Create default email templates
+        await this.createDefaultTemplates();
 
-        // Step 4: Create default policy pages
-        await this.createDefaultPolicyPages(savedStore.id, name);
+        // Create default email settings
+        await this.createDefaultEmailSettings();
 
-        // Step 5: Apply default theme based on plan category
+        // Create default policy pages
+        await this.createDefaultPolicyPages(name);
+
+        // Apply default theme (single ecommerce category)
         try {
             const themeService = this.moduleRef.get(ThemeService, { strict: false });
             if (themeService) {
-                await themeService.applyDefaultThemeForCategory(savedStore.id, planCategory);
+                await themeService.applyDefaultThemeForCategory('ecommerce');
             }
         } catch (err) {
-            console.error(`Failed to apply default theme for ${planCategory} store:`, err);
+            console.error('Failed to apply default theme for store:', err);
         }
-
-        return savedStore;
     }
 
-    public async createDefaultTemplates(storeId: string) {
+    public async createDefaultTemplates() {
         for (const t of DEFAULT_EMAIL_TEMPLATES) {
             const exists = await this.emailTemplateRepository.findOne({
-                where: { storeId, key: t.key }
+                where: { key: t.key }
             });
 
             if (!exists) {
                 await this.emailTemplateRepository.save(
                     this.emailTemplateRepository.create({
-                        storeId,
                         key: t.key,
                         name: t.name,
                         subject: t.subject,
@@ -155,12 +117,11 @@ export class TenantService {
         }
     }
 
-    public async createDefaultEmailSettings(storeId: string) {
-        const exists = await this.emailSettingsRepository.findOne({ where: { storeId } });
+    public async createDefaultEmailSettings() {
+        const exists = await this.emailSettingsRepository.findOne({ where: {} });
         if (!exists) {
             await this.emailSettingsRepository.save(
                 this.emailSettingsRepository.create({
-                    storeId,
                     smtpHost: null,
                     smtpPort: null,
                     smtpUser: null,
@@ -173,7 +134,7 @@ export class TenantService {
         }
     }
 
-    public async createDefaultPolicyPages(storeId: string, storeName: string) {
+    public async createDefaultPolicyPages(storeName: string) {
         try {
             // Find the RichText section blueprint (seeded globally)
             const richTextSection = await this.sectionRepository.findOne({
@@ -190,9 +151,9 @@ export class TenantService {
             const ctx = { brandName: storeName, currentYear, contactEmail };
 
             for (const template of DEFAULT_POLICY_PAGES) {
-                // Skip if page already exists for this store
+                // Skip if page already exists
                 const existing = await this.pageRepository.findOne({
-                    where: { slug: template.slug, storeId },
+                    where: { slug: template.slug },
                 });
                 if (existing) continue;
 
@@ -206,7 +167,6 @@ export class TenantService {
                         showInFooter: template.showInFooter,
                         sortOrder: template.sortOrder,
                         template: 'custom',
-                        storeId,
                     })
                 );
 
@@ -225,7 +185,7 @@ export class TenantService {
                     })
                 );
 
-                console.log(`Created policy page: ${template.title} (${template.slug}) for store ${storeId}`);
+                console.log(`Created policy page: ${template.title} (${template.slug})`);
             }
         } catch (err) {
             console.error('Failed to create default policy pages:', err);

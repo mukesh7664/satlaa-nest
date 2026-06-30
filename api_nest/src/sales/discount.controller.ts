@@ -20,9 +20,8 @@ export class DiscountController {
     @ApiParam({ name: 'code' })
     @Get('discount/validate/:code')
     async validateDiscount(@Param('code') code: string, @Query('subtotal') subtotal = 0, @Request() req: any) {
-        const storeId = req.headers['x-store-id']; // Or however storeId is passed in public routes
         const customerId = req.user?.userId;
-        const discount = await this.discountService.validateDiscount(code, customerId, Number(subtotal), storeId);
+        const discount = await this.discountService.validateDiscount(code, customerId, Number(subtotal));
         return { valid: true, discount };
     }
 
@@ -39,10 +38,8 @@ export class DiscountController {
         @Query('is_active') is_active?: string,
         @Request() req?: any
     ) {
-        const storeId = req.user?.storeId;
         const baseWhere: any = {};
-        if (storeId) baseWhere.storeId = storeId;
-        
+
         const query: any = {
             order: { createdAt: 'DESC' },
             take: Number(limit),
@@ -90,10 +87,8 @@ export class DiscountController {
     @UseGuards(JwtAuthGuard)
     @Get('admin/discounts/:id')
     async getDiscountById(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
         const whereCond: any = { id };
-        if (storeId) whereCond.storeId = storeId;
-        
+
         const discount = await this.discountRepository.findOne({ where: whereCond });
         if (!discount) throw new NotFoundException('Discount not found');
         return discount;
@@ -104,8 +99,7 @@ export class DiscountController {
     @UseGuards(JwtAuthGuard)
     @Post('admin/discounts')
     async createDiscount(@Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        return this.discountService.create(storeId, body);
+        return this.discountService.create(body);
     }
 
     @ApiOperation({ summary: 'Admin: Update discount' })
@@ -114,8 +108,7 @@ export class DiscountController {
     @UseGuards(JwtAuthGuard)
     @Put('admin/discounts/:id')
     async updateDiscount(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        return this.discountService.update(id, storeId, body);
+        return this.discountService.update(id, body);
     }
 
     @ApiOperation({ summary: 'Admin: Delete discount' })
@@ -124,8 +117,7 @@ export class DiscountController {
     @UseGuards(JwtAuthGuard)
     @Delete('admin/discounts/:id')
     async deleteDiscount(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        await this.discountService.remove(id, storeId);
+        await this.discountService.remove(id);
         return { success: true, message: 'Discount deleted' };
     }
 
@@ -135,10 +127,9 @@ export class DiscountController {
     @UseGuards(JwtAuthGuard)
     @Patch('admin/discounts/:id/toggle')
     async toggleDiscountStatus(@Param('id') id: string, @Request() req: any) {
-        const storeId = req.user?.storeId;
-        const discount = await this.discountService.findOne(id, storeId);
+        const discount = await this.discountService.findOne(id);
         if (!discount) throw new NotFoundException('Discount not found');
-        
-        return this.discountService.update(id, storeId, { is_active: !discount.is_active });
+
+        return this.discountService.update(id, { is_active: !discount.is_active });
     }
 }

@@ -42,7 +42,6 @@ import dynamic from "next/dynamic";
 import { pagesApi, CreatePageDto } from "@/services/pages.api";
 import { settingsApi } from "@/services/settings.api";
 import { headerMenuApi } from "@/services/headerMenu.api";
-import { subscriptionApiService } from "@/services/subscription.api";
 import ResourcePicker from "@/components/admin/ResourcePicker";
 import { CopyUrlButton } from "@/components/admin/CopyUrlButton";
 import { SectionListItem } from "@/components/admin/SectionListItem";
@@ -131,7 +130,7 @@ export default function EditPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [mediaPickerOpen, setMediaPickerOpen] = React.useState(false);
-  const [storeScope, setStoreScope] = React.useState<string>("both");
+  const [storeScope] = React.useState<string>("ecommerce");
   const [pageStoreId, setPageStoreId] = React.useState<string | undefined>(undefined);
   const [storeDomain, setStoreDomain] = React.useState<string>("http://localhost:3000");
   const [showGuide, setShowGuide] = React.useState(() => {
@@ -144,20 +143,6 @@ export default function EditPage() {
   const handleDismissGuide = () => {
     setShowGuide(false);
     localStorage.setItem("editor_guide_dismissed", "true");
-  };
-
-  const fetchStoreScope = async () => {
-    try {
-      const sub = await subscriptionApiService.getMySubscription();
-      if (sub?.plan?.category === "page_builder") {
-        setStoreScope("page-builder");
-      } else {
-        setStoreScope("ecommerce");
-      }
-    } catch (err) {
-      console.error("Failed to fetch store subscription scope", err);
-      setStoreScope("ecommerce");
-    }
   };
 
   const fetchStoreDomain = async () => {
@@ -202,7 +187,6 @@ export default function EditPage() {
   };
 
   React.useEffect(() => {
-    fetchStoreScope();
     fetchStoreDomain();
   }, []);
 

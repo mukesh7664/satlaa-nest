@@ -16,12 +16,9 @@ export class AdminService {
         private notificationRepository: Repository<AdminNotification>,
     ) { }
 
-    async getDashboardStats(storeId?: string) {
+    async getDashboardStats() {
         // Parallel queries for performance
         const where: any = {};
-        if (storeId) {
-            where.storeId = storeId;
-        }
 
         const [
             totalOrders,
@@ -35,7 +32,6 @@ export class AdminService {
                 .createQueryBuilder('order')
                 .select('SUM(order.totalAmount)', 'total')
                 .where('order.status IN (:...statuses)', { statuses: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] })
-                .andWhere(storeId ? 'order.storeId = :storeId' : '1=1', { storeId })
                 .getRawOne(),
             this.orderRepository.count({ where: { ...where, status: OrderStatus.PENDING } }),
             this.inquiryRepository.count({ where: { ...where, status: InquiryStatus.PENDING } }),
@@ -60,11 +56,8 @@ export class AdminService {
         };
     }
 
-    async getRecentActivity(storeId?: string) {
+    async getRecentActivity() {
         const where: any = {};
-        if (storeId) {
-            where.storeId = storeId;
-        }
 
         const [recentOrders, recentInquiries] = await Promise.all([
             this.orderRepository.find({
@@ -88,16 +81,12 @@ export class AdminService {
         };
     }
 
-    async getOrderProfitMargin(storeId?: string, range: string = '12 months') {
+    async getOrderProfitMargin(range: string = '12 months') {
         const statuses = [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED];
 
         const queryBuilder = this.orderRepository.createQueryBuilder('order')
             .leftJoinAndSelect('order.items', 'items')
             .where('order.status IN (:...statuses)', { statuses });
-
-        if (storeId) {
-            queryBuilder.andWhere('order.storeId = :storeId', { storeId });
-        }
 
         const now = new Date();
         let startDate = new Date();

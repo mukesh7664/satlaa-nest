@@ -349,10 +349,6 @@ export default function ScannerClient() {
         "Content-Type": "application/json",
       };
 
-      if (typeof window !== "undefined") {
-        headers["x-tenant-domain"] = window.location.host.split(":")[0];
-      }
-
       const response = await fetch(`${apiUrl}/products/${slug}`, {
         method: "GET",
         headers: headers,

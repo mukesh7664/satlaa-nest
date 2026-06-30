@@ -86,10 +86,9 @@ export class ReportsService {
     format: string,
     columns: string[],
     filters: any,
-    storeId: string,
     res: Response,
   ) {
-    const data = await this.fetchData(type, filters, storeId);
+    const data = await this.fetchData(type, filters);
     const availableColumns = await this.getAvailableColumns(type);
     const selectedColumns = availableColumns.filter((col) =>
       columns.includes(col.key),
@@ -111,14 +110,14 @@ export class ReportsService {
     }
   }
 
-  private async fetchData(type: string, filters: any, storeId: string) {
+  private async fetchData(type: string, filters: any) {
     const { startDate, endDate } = filters;
     const dateFilter =
       startDate && endDate
         ? Between(new Date(startDate), new Date(endDate))
         : undefined;
 
-    const where: any = { storeId };
+    const where: any = {};
     if (dateFilter) {
       where.createdAt = dateFilter;
     }
@@ -139,7 +138,7 @@ export class ReportsService {
           where,
         });
       case 'invoices':
-        const invoiceWhere: any = { storeId };
+        const invoiceWhere: any = {};
         if (startDate && endDate) {
           invoiceWhere.invoiceDate = Between(new Date(startDate), new Date(endDate));
         }

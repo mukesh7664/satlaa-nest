@@ -1,6 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, AfterLoad } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, AfterLoad } from 'typeorm';
 import { getFullS3Url } from '../../common/utils/s3-url.util';
-import { Store } from '../../stores/entities/store.entity';
 
 @Entity('general_settings')
 export class GeneralSettings {
@@ -132,14 +131,6 @@ export class GeneralSettings {
 
     @Column({ nullable: true })
     lastUpdatedBy: string;
-
-    // Tenant Relation
-    @ManyToOne(() => Store, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'storeId' })
-    store: Store;
-
-    @Column({ nullable: true })
-    storeId: string;
 
     @CreateDateColumn()
     createdAt: Date;

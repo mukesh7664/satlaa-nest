@@ -6,7 +6,6 @@ import { PriceDisplay } from "@/components/common/PriceDisplay";
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ShoppingBag, Eye, Heart, Star } from "lucide-react";
-import { usePreview } from "@/contexts/PreviewContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
@@ -83,7 +82,6 @@ export default function ClothTopPicks({ data, sectionIndex }: ClothTopPicksProps
     ctaLink = ""
   } = data || {};
 
-  const { isPreview, pageData } = usePreview();
   const { addToCart, openCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const router = useRouter();
@@ -158,13 +156,6 @@ export default function ClothTopPicks({ data, sectionIndex }: ClothTopPicksProps
           queryParams.append("limit", String(tab.limit || 8));
 
           const headers: Record<string, string> = { "Content-Type": "application/json" };
-          if (isPreview && pageData?.storeId) {
-            headers["x-tenant-domain"] = pageData.storeId;
-          } else if (typeof window !== "undefined") {
-            const host = window.location.host;
-            const cleanHost = host.split(":")[0];
-            headers["x-tenant-domain"] = cleanHost;
-          }
 
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5004/api/v1";
           const res = await fetch(`${apiUrl}/products?${queryParams.toString()}`, { headers });

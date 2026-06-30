@@ -31,27 +31,9 @@ export class InquiryService {
             ...data,
             subject,
             status: data.status || InquiryStatus.PENDING,
-            storeId: data.storeId || null,
         });
 
         const savedInquiry = await this.inquiryRepository.save(inquiry);
-
-        // Trigger notification for store admin if storeId exists
-        if (savedInquiry.storeId) {
-            try {
-                const notification = this.adminNotificationRepository.create({
-                    type: 'inquiry',
-                    title: 'New Inquiry Received',
-                    message: `New ${savedInquiry.type} from ${savedInquiry.name}: ${savedInquiry.subject || 'No Subject'}`,
-                    storeId: savedInquiry.storeId,
-                    actionUrl: `/inquiries/${savedInquiry.id}`,
-                    priority: 'medium',
-                } as any);
-                await this.adminNotificationRepository.save(notification);
-            } catch (error) {
-                console.error('Failed to create admin notification for inquiry:', error);
-            }
-        }
 
         return savedInquiry;
     }
@@ -62,10 +44,6 @@ export class InquiryService {
         const skip = (page - 1) * limit;
 
         const qb = this.inquiryRepository.createQueryBuilder('inquiry');
-
-        if (query.storeId) {
-            qb.andWhere('inquiry.storeId = :storeId', { storeId: query.storeId });
-        }
 
         if (query.status && query.status !== 'all') {
             qb.andWhere('inquiry.status = :status', { status: query.status });
@@ -122,8 +100,7 @@ export class InquiryService {
             throw new NotFoundException('Invalid inquiry ID');
         }
         const inquiry = await this.inquiryRepository.findOne({
-            where: { id },
-            relations: ['store']
+            where: { id }
         });
         if (!inquiry) throw new NotFoundException('Inquiry not found');
         return { data: { ...inquiry, _id: inquiry.id } };

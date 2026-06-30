@@ -432,7 +432,6 @@ const ProductSectionInfo: React.FC<ProductSectionInfoProps & { children?: React.
 
     setIsSubmittingQuote(true);
     try {
-      const cleanHost = window.location.hostname;
       const payload = {
         name: customerName,
         email: customerEmail,
@@ -457,7 +456,6 @@ const ProductSectionInfo: React.FC<ProductSectionInfoProps & { children?: React.
         {
           headers: {
             "Content-Type": "application/json",
-            "x-tenant-domain": cleanHost,
           }
         }
       );

@@ -1,5 +1,4 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
-import { Store } from '../../stores/entities/store.entity';
 
 export enum DiscountType {
   PERCENTAGE = 'PERCENTAGE',
@@ -18,19 +17,11 @@ export enum ApplyTo {
 
 @Entity('discounts')
 @Index(['code'], { unique: true, where: '"code" IS NOT NULL' })
-@Index(['storeId'])
 @Index(['is_active'])
 @Index(['starts_at', 'ends_at'])
 export class Discount {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @Column()
-  storeId: string;
-
-  @ManyToOne(() => Store, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'storeId' })
-  store: Store;
 
   @Column()
   name: string;

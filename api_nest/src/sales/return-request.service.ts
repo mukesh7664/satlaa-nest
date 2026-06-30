@@ -26,7 +26,6 @@ export class ReturnRequestService {
 
     async createBulkRequest(
         customerId: string,
-        storeId: string,
         data: {
             orderId: string;
             type: ReturnRequestType;
@@ -39,7 +38,7 @@ export class ReturnRequestService {
         },
     ) {
         const order = await this.orderRepository.findOne({
-            where: { id: data.orderId, customerId, storeId },
+            where: { id: data.orderId, customerId },
             relations: ['items'],
         });
 
@@ -89,7 +88,6 @@ export class ReturnRequestService {
                 images: data.images,
                 customerNotes: data.customerNotes,
                 customerId,
-                storeId,
                 status: ReturnRequestStatus.PENDING,
                 replacementVariantId: data.replacementVariantId,
                 replacementVariantInfo: data.replacementVariantInfo,
@@ -103,7 +101,6 @@ export class ReturnRequestService {
 
     async createRequest(
         customerId: string,
-        storeId: string,
         data: {
             orderId: string;
             orderItemId: string;
@@ -115,7 +112,7 @@ export class ReturnRequestService {
         },
     ) {
         const order = await this.orderRepository.findOne({
-            where: { id: data.orderId, customerId, storeId },
+            where: { id: data.orderId, customerId },
         });
 
         if (!order) {
@@ -167,7 +164,6 @@ export class ReturnRequestService {
         const request = this.returnRequestRepository.create({
             ...data,
             customerId,
-            storeId,
             status: ReturnRequestStatus.PENDING,
             refundAmount: data.type === ReturnRequestType.RETURN ? Number(orderItem.totalPrice) : 0,
         });
@@ -175,8 +171,8 @@ export class ReturnRequestService {
         return this.returnRequestRepository.save(request);
     }
 
-    async findAll(storeId: string, customerId?: string, startDate?: string, endDate?: string) {
-        const where: any = { storeId };
+    async findAll(customerId?: string, startDate?: string, endDate?: string) {
+        const where: any = {};
         if (customerId) {
             where.customerId = customerId;
         }
@@ -206,9 +202,9 @@ export class ReturnRequestService {
         });
     }
 
-    async findOne(id: string, storeId: string) {
+    async findOne(id: string) {
         const request = await this.returnRequestRepository.findOne({
-            where: { id, storeId },
+            where: { id },
             relations: ['order', 'orderItem', 'customer'],
         });
 
@@ -221,7 +217,6 @@ export class ReturnRequestService {
 
     async updateStatus(
         id: string,
-        storeId: string,
         data: {
             status: ReturnRequestStatus;
             adminNotes?: string;
@@ -229,7 +224,7 @@ export class ReturnRequestService {
             addToInventory?: boolean;
         },
     ) {
-        const request = await this.findOne(id, storeId);
+        const request = await this.findOne(id);
 
         if (request.status === ReturnRequestStatus.COMPLETED || request.status === ReturnRequestStatus.REJECTED) {
             throw new BadRequestException('Cannot update status of a completed or rejected request');
@@ -255,14 +250,11 @@ export class ReturnRequestService {
     }
 
     private async handleQCPassed(request: ReturnRequest, addToInventory: boolean) {
-        const storeId = request.storeId;
-
         // 1. Return Logic
         if (request.type === ReturnRequestType.RETURN) {
             try {
                 await this.paymentService.initiateRefund(
                     request.orderId,
-                    storeId,
                     request.refundAmount,
                     `Return Request approved: ${request.reason}`,
                 );
@@ -277,7 +269,6 @@ export class ReturnRequestService {
                 await this.catalogService.incrementStock(
                     request.orderItem.variantId || request.orderItem.productId,
                     request.orderItem.quantity,
-                    storeId,
                     request.orderItem.bundleSelections,
                 );
             }
@@ -291,7 +282,6 @@ export class ReturnRequestService {
                 await this.catalogService.incrementStock(
                     request.orderItem.variantId || request.orderItem.productId,
                     request.orderItem.quantity,
-                    storeId,
                     request.orderItem.bundleSelections,
                 );
             }
@@ -315,7 +305,6 @@ export class ReturnRequestService {
             status: OrderStatus.CONFIRMED,
             paymentStatus: originalOrder.paymentStatus, // Usually PAID
             paymentMethod: 'Replacement',
-            storeId: request.storeId,
             totalAmount: 0,
             subtotal: 0,
             taxAmount: 0,
@@ -354,7 +343,6 @@ export class ReturnRequestService {
         await this.catalogService.decrementStock(
             request.replacementVariantId || originalItem.variantId || originalItem.productId,
             originalItem.quantity,
-            request.storeId,
             originalItem.bundleSelections,
         );
 

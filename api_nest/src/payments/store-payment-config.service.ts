@@ -15,15 +15,14 @@ export class StorePaymentConfigService {
         private readonly auditLogService: AuditLogService,
     ) {}
 
-    async upsert(storeId: string, dto: UpsertStorePaymentConfigDto, admin: any, ipAddress?: string, userAgent?: string) {
+    async upsert(dto: UpsertStorePaymentConfigDto, admin: any, ipAddress?: string, userAgent?: string) {
         const before = await this.configRepository.findOne({
-            where: { storeId, provider: dto.provider },
+            where: { provider: dto.provider },
         });
 
         let config = before;
         if (!config) {
             config = this.configRepository.create({
-                storeId,
                 provider: dto.provider,
             });
         }
@@ -51,10 +50,10 @@ export class StorePaymentConfigService {
         if (dto.isActive !== undefined) config.isActive = dto.isActive;
         if (dto.isTestMode !== undefined) config.isTestMode = dto.isTestMode;
 
-        // If this provider is being activated, deactivate others for this store
+        // If this provider is being activated, deactivate others
         if (config.isActive) {
             await this.configRepository.update(
-                { storeId, provider: Not(config.provider) },
+                { provider: Not(config.provider) },
                 { isActive: false }
             );
         }
@@ -70,7 +69,6 @@ export class StorePaymentConfigService {
             resourceName: saved.provider,
             before,
             after: saved,
-            storeId,
             ipAddress,
             userAgent,
         });
@@ -78,11 +76,9 @@ export class StorePaymentConfigService {
         return saved;
     }
 
-    async findByStore(storeId: string) {
+    async findByStore() {
 // ... existing masked logic
-        const configs = await this.configRepository.find({
-            where: { storeId },
-        });
+        const configs = await this.configRepository.find();
 
         return configs.map(c => {
             const result: any = { ...c };
@@ -102,10 +98,8 @@ export class StorePaymentConfigService {
         });
     }
 
-    async getDecryptedByStore(storeId: string, admin: any, ipAddress?: string, userAgent?: string) {
-        const configs = await this.configRepository.find({
-            where: { storeId },
-        });
+    async getDecryptedByStore(admin: any, ipAddress?: string, userAgent?: string) {
+        const configs = await this.configRepository.find();
 
         // Audit Logging for viewing secrets
         for (const config of configs) {
@@ -115,7 +109,6 @@ export class StorePaymentConfigService {
                 resourceType: 'PaymentConfig',
                 resourceId: config.id,
                 resourceName: config.provider,
-                storeId,
                 ipAddress,
                 userAgent,
             });
@@ -130,15 +123,15 @@ export class StorePaymentConfigService {
         });
     }
 
-    async getRawConfig(storeId: string, provider: string) {
+    async getRawConfig(provider: string) {
         const config = await this.configRepository.findOne({
-            where: { storeId, provider },
+            where: { provider },
         });
-        
+
         if (!config) return null;
-        
+
         if (!config.isActive) {
-            console.warn(`[PaymentConfig] Configuration for "${provider}" found for store ${storeId} but it is marked as INACTIVE.`);
+            console.warn(`[PaymentConfig] Configuration for "${provider}" found but it is marked as INACTIVE.`);
             return null;
         }
 
@@ -149,9 +142,9 @@ export class StorePaymentConfigService {
         };
     }
 
-    async delete(storeId: string, provider: string, admin: any, ipAddress?: string, userAgent?: string) {
+    async delete(provider: string, admin: any, ipAddress?: string, userAgent?: string) {
         const config = await this.configRepository.findOne({
-            where: { storeId, provider },
+            where: { provider },
         });
 
         if (!config) return;
@@ -167,7 +160,6 @@ export class StorePaymentConfigService {
             resourceName: config.provider,
             before: config,
             after: null,
-            storeId,
             ipAddress,
             userAgent,
         });
