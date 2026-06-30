@@ -19,9 +19,6 @@ import { getPublicSettings } from "@/lib/settings";
 import { PreviewProvider } from "@/contexts/PreviewContext";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { getGlobalSections } from "@/lib/sections";
-import { validateTenant } from "@/lib/tenant";
-import { RootDomainPortal } from "@/components/Navigation/RootDomainPortal";
-import { StoreNotFound } from "@/components/Navigation/StoreNotFound";
 
 
 const geistSans = Geist({
@@ -74,29 +71,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // 1. Perform tenant validation
-  const tenant = await validateTenant();
-
-  if (tenant.isRootDomain) {
-    return (
-      <html lang="en" suppressHydrationWarning>
-        <body className={`${geistSans.variable} ${poppins.variable} font-sans antialiased bg-slate-950`} suppressHydrationWarning>
-          <RootDomainPortal cleanHost={tenant.cleanHost} />
-        </body>
-      </html>
-    );
-  }
-
-  if (!tenant.isValid) {
-    return (
-      <html lang="en" suppressHydrationWarning>
-        <body className={`${geistSans.variable} ${poppins.variable} font-sans antialiased bg-slate-950`} suppressHydrationWarning>
-          <StoreNotFound cleanHost={tenant.cleanHost} />
-        </body>
-      </html>
-    );
-  }
-
   // Parallel fetching of layout requirements
   const [globalSectionsResult, seoDataResult, publicSettingsResult] = await Promise.allSettled([
     getGlobalSections(),
