@@ -46,6 +46,20 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Generates the app launcher icon (the icon on the phone home screen)
+  # from a single source image. Run: dart run flutter_launcher_icons
+  flutter_launcher_icons: ^0.14.1
+
+# Configuration for flutter_launcher_icons.
+# It takes assets/icon/icon.png and produces all required Android icon sizes.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  # Fallback background for the legacy/adaptive icon.
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/icon.png"
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
