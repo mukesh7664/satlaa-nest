@@ -46,14 +46,6 @@ export class Section {
     @Index()
     category: string;
 
-    @Column({
-        type: 'varchar',
-        length: 50,
-        default: 'both'
-    })
-    @Index()
-    scope: string; // 'page-builder', 'ecommerce', 'both'
-
     @CreateDateColumn()
     createdAt: Date;
 

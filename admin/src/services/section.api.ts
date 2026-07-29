@@ -14,7 +14,6 @@ export interface ISectionType {
   tags?: string[];
   isActive?: boolean;
   category?: 'header' | 'footer' | 'section' | 'cart' | 'checkout' | 'product';
-  scope?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -44,8 +43,6 @@ export const sectionApi = {
     includeInactive?: boolean;
     type?: string;
     category?: string;
-    scope?: string;
-    exact?: boolean;
     storeId?: string;
     page?: number;
     limit?: number;

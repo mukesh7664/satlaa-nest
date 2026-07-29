@@ -11,7 +11,6 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Chip,
   IconButton,
   CircularProgress,
   Typography,
@@ -19,8 +18,6 @@ import {
   Stack,
   Tooltip,
   Pagination,
-  Tabs,
-  Tab,
   Checkbox,
 } from "@mui/material";
 import {
@@ -36,7 +33,6 @@ interface SectionPickerProps {
   onClose: () => void;
   onSelect: (sections: ISectionType | ISectionType[]) => void;
   category?: string;
-  scope?: string;
   storeId?: string;
 }
 
@@ -45,27 +41,16 @@ export default function SectionPicker({
   onClose,
   onSelect,
   category,
-  scope: scopeProp,
   storeId,
 }: SectionPickerProps) {
   const [sections, setSections] = useState<ISectionType[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [scope, setScope] = useState<string>("All");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedSections, setSelectedSections] = useState<ISectionType[]>([]);
-
-  // Sync scope state when scopeProp is provided
-  useEffect(() => {
-    if (scopeProp) {
-      setScope(scopeProp);
-    } else {
-      setScope("All");
-    }
-  }, [scopeProp, open]);
 
   const fetchSections = async () => {
     try {
@@ -73,7 +58,6 @@ export default function SectionPicker({
       const response = await sectionApi.getAll({
         search,
         category,
-        scope: scope !== "All" ? scope : undefined,
         storeId,
         page,
         limit: 10
@@ -91,12 +75,12 @@ export default function SectionPicker({
     if (open) {
       fetchSections();
     }
-  }, [open, search, category, scope, page]);
+  }, [open, search, category, page]);
 
-  // Reset page when search or scope changes
+  // Reset page when search changes
   useEffect(() => {
     setPage(1);
-  }, [search, scope]);
+  }, [search]);
 
   const handlePreview = (thumbnail: string) => {
     setPreviewImage(thumbnail);
@@ -145,20 +129,6 @@ export default function SectionPicker({
             sx={{ mb: 2, mt: 1 }}
           />
 
-          {!scopeProp && (
-            <Tabs
-              value={scope}
-              onChange={(_, newValue) => setScope(newValue)}
-              indicatorColor="primary"
-              textColor="primary"
-              variant="fullWidth"
-              sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}
-            >
-              <Tab label="All Scopes" value="All" />
-              <Tab label="E-commerce" value="ecommerce" />
-            </Tabs>
-          )}
-
           <Box sx={{ minHeight: 450, position: "relative", mt: 1 }}>
             {loading ? (
               <Box
@@ -205,27 +175,6 @@ export default function SectionPicker({
                           <Typography variant="body2" color="text.secondary">
                             {section.type}
                           </Typography>
-                          {!scopeProp && (
-                            <Chip
-                              label={
-                                section.scope === "ecommerce"
-                                  ? "E-commerce"
-                                  : section.scope === "page-builder"
-                                  ? "Page Builder"
-                                  : "Both"
-                              }
-                              size="small"
-                              variant="outlined"
-                              color={
-                                section.scope === "ecommerce"
-                                  ? "primary"
-                                  : section.scope === "page-builder"
-                                  ? "secondary"
-                                  : "default"
-                              }
-                              sx={{ height: 18, fontSize: "0.65rem", fontWeight: 600 }}
-                            />
-                          )}
                         </Stack>
                       }
                     />

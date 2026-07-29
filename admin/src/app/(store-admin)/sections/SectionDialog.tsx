@@ -102,7 +102,6 @@ export default function SectionDialog({
     name: "",
     type: "",
     category: "section" as "header" | "footer" | "section" | "cart" | "checkout" | "product",
-    scope: "both",
     data: "{}",
     tags: "",
     isActive: true,
@@ -116,7 +115,6 @@ export default function SectionDialog({
         name: section.name,
         type: section.type,
         category: section.category || "section",
-        scope: section.scope || "both",
         data: section.data ? JSON.stringify(section.data, null, 2) : "{}",
         tags: "",
         isActive: section.isActive ?? true,
@@ -127,7 +125,6 @@ export default function SectionDialog({
         name: "",
         type: "",
         category: "section",
-        scope: "ecommerce",
         data: '{\n  "title": "Enter Title",\n  "subtitle": "Enter Subtitle",\n  "image": "/images/placeholder.jpg",\n  "collection": "generic"\n}',
         tags: "",
         isActive: true,
@@ -163,7 +160,6 @@ export default function SectionDialog({
         name: formData.name,
         type: formData.type,
         category: formData.category,
-        scope: formData.scope,
         data: parsedData,
         tags: tagList,
         isActive: formData.isActive,
@@ -211,20 +207,6 @@ export default function SectionDialog({
               <MenuItem value="cart">Cart Page</MenuItem>
               <MenuItem value="checkout">Checkout Page</MenuItem>
               <MenuItem value="product">Product Detail</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth>
-            <InputLabel>Section Scope</InputLabel>
-            <Select
-              value={formData.scope}
-              label="Section Scope"
-              onChange={(e) =>
-                setFormData({ ...formData, scope: e.target.value })
-              }
-            >
-              <MenuItem value="both">Both (Universal)</MenuItem>
-              <MenuItem value="ecommerce">E-commerce Only</MenuItem>
             </Select>
           </FormControl>
 

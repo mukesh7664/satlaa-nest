@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, In, IsNull, Not } from 'typeorm';
+import { Repository, ILike, IsNull, Not } from 'typeorm';
 import { Page } from './entities/page.entity';
 import { PageSection } from './entities/page-section.entity';
 import { Section } from './entities/section.entity';
@@ -327,7 +327,7 @@ export class CmsService {
     // ── Section Types (The Library) ────────────────────────────────────
 
     async getAllSectionTypes(query: any = {}) {
-        const { search, type, category, isActive, includeInactive, scope, exact, page = 1, limit = 20 } = query;
+        const { search, type, category, isActive, includeInactive, page = 1, limit = 20 } = query;
         const skip = (page - 1) * limit;
         const where: any = {};
 
@@ -343,16 +343,8 @@ export class CmsService {
             where.category = category;
         }
 
-        // Single-store: use the requested scope directly (no subscription-based scoping)
-        let effectiveScope = scope;
-
-        if (effectiveScope && effectiveScope !== 'All') {
-            if (exact === 'true' || exact === true) {
-                where.scope = effectiveScope;
-            } else {
-                where.scope = In([effectiveScope, 'both']);
-            }
-        }
+        // Single-store, single ecommerce app: no page-builder/ecommerce scope
+        // distinction — every section is available regardless of its scope value.
 
         if (isActive !== undefined) {
             where.isActive = isActive === 'true' || isActive === true;

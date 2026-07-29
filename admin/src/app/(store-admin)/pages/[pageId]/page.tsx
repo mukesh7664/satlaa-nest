@@ -130,7 +130,6 @@ export default function EditPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [mediaPickerOpen, setMediaPickerOpen] = React.useState(false);
-  const [storeScope] = React.useState<string>("ecommerce");
   const [pageStoreId, setPageStoreId] = React.useState<string | undefined>(undefined);
   const [storeDomain, setStoreDomain] = React.useState<string>("http://localhost:3000");
   const [showGuide, setShowGuide] = React.useState(() => {
@@ -1605,7 +1604,6 @@ export default function EditPage() {
                     ? formData.template
                     : "section"
             }
-            scope={storeScope}
             storeId={pageStoreId}
           />
         )
