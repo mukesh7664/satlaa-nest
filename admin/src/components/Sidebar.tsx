@@ -33,7 +33,6 @@ import {
   Subscriptions as SubscriptionsIcon,
   PermMedia as MediaIcon,
   ViewQuilt as ViewQuiltIcon,
-  Palette as ThemeIcon,
   Language as LanguageIcon,
   Article as ArticleIcon,
   AssignmentReturn as ReturnIcon,
@@ -182,13 +181,6 @@ const menu = [
           { label: "Create Post", key: "blog-create-post", href: "/blog/create-post" },
           { label: "Categories", key: "blog-categories", href: "/blog/categories" },
         ],
-      },
-      {
-        label: "Themes",
-        icon: <ThemeIcon />,
-        key: "themes",
-        href: "/themes",
-        permission: "pages.view", // Reusing pages.view for now or we can add a new one
       },
       {
         label: "Media",
