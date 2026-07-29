@@ -54,7 +54,6 @@ import {
 import { toast } from "sonner";
 import { uploadApi } from "@/services/upload.api";
 import { useInView } from "react-intersection-observer";
-import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { useAppSelector } from "@/store/hooks";
 
 interface MediaFile {
@@ -132,7 +131,6 @@ export default function MediaPage() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isDeletingMultiple, setIsDeletingMultiple] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  const { subscription, usage, limits, loading: limitsLoading } = usePlanLimits();
 
   // No longer needed for discrete pagination
   // const { ref, inView } = useInView({
@@ -502,20 +500,6 @@ export default function MediaPage() {
           >
             Upload Media
           </Button>
-
-          {subscription && (
-            <Box className="mt-4 2xl:mt-8 p-3 2xl:p-5 bg-slate-50 rounded-xl border border-slate-100">
-              <div className="flex justify-between items-center mb-2">
-                <Typography variant="caption" className="font-bold text-slate-500 text-[10px] 2xl:text-[12px]">STORAGE USAGE</Typography>
-                <Typography variant="caption" className="font-bold text-slate-700 text-[10px] 2xl:text-[12px]">
-                  {usage?.storage?.used || 0} MB / {usage?.storage?.limit || limits.storageMb} MB
-                </Typography>
-              </div>
-              <Typography variant="caption" className="text-[10px] 2xl:text-[11px] text-slate-400 mt-2 block leading-tight">
-                Plan: {subscription.plan?.name}
-              </Typography>
-            </Box>
-          )}
         </div>
 
       </Box>

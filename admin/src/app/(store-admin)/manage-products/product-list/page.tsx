@@ -51,7 +51,6 @@ import { toast } from "sonner";
 import { productsApi, Product } from "@/services/products.api";
 import { collectionsApi } from "@/services/collections.api";
 import { settingsApi } from "@/services/settings.api";
-import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 import { getCurrencySymbol } from "@/utils/currencyUtils";
 import { useAppSelector } from "@/store/hooks";
@@ -75,7 +74,6 @@ export default function ProductListPage() {
   const [exportAnchorEl, setExportAnchorEl] = useState<null | HTMLElement>(null);
   const isExportMenuOpen = Boolean(exportAnchorEl);
   const [storeDomain, setStoreDomain] = useState<string>("http://localhost:3000");
-  const { limits, subscription, usage, loading: limitsLoading } = usePlanLimits();
 
   // Filters
   const searchParams = useSearchParams();
@@ -378,25 +376,7 @@ export default function ProductListPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Products</h1>
           <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
-            {(!subscription || limitsLoading) ? (
-              "Loading plan information..."
-            ) : (
-              <>
-                <span className={(usage?.products?.limit || limits.products) !== -1 && (usage?.products?.used || totalCount) >= (usage?.products?.limit || limits.products) ? "text-red-500 font-bold" : ""}>
-                  Plan: {subscription.plan?.name} ({(usage?.products?.used || totalCount)} / {(usage?.products?.limit || limits.products) === -1 ? "Unlimited" : (usage?.products?.limit || limits.products)} used)
-                </span>
-                {(usage?.products?.limit || limits.products) !== -1 && (usage?.products?.used || totalCount) >= (usage?.products?.limit || limits.products) && (
-                  <Button
-                    size="small"
-                    variant="text"
-                    onClick={() => router.push('/manage-subscription')}
-                    sx={{ textTransform: 'none', color: '#4f46e5', fontWeight: 'bold', minWidth: 0, p: 0 }}
-                  >
-                    Upgrade Plan
-                  </Button>
-                )}
-              </>
-            )}
+            {totalCount} {totalCount === 1 ? "product" : "products"}
           </p>
         </div>
         <div className="flex items-center gap-3">

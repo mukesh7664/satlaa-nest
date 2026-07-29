@@ -44,7 +44,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   "shipping-settings": "Shipping",
   "seo-settings": "SEO",
   "audit-logs": "Audit Logs",
-  "manage-subscription": "Subscription",
   "promo-popups": "Promo Popups",
   "email-config": "Email Config",
   "template": "Templates",

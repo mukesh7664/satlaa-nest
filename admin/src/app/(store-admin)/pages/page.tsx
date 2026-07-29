@@ -17,7 +17,6 @@ import {
 import { toast } from "sonner";
 import { pagesApi, Page } from "@/services/pages.api";
 import { settingsApi } from "@/services/settings.api";
-import { usePlanLimits } from "@/hooks/usePlanLimits";
 import {
   Dialog,
   DialogTitle,
@@ -52,7 +51,6 @@ export default function PagesSection() {
   const [storeDomain, setStoreDomain] = useState<string>("localhost:3000");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const fileInputFullThemeRef = React.useRef<HTMLInputElement>(null);
-  const { limits, subscription, usage, loading: limitsLoading } = usePlanLimits();
 
   useEffect(() => {
     fetchData();
@@ -454,25 +452,7 @@ export default function PagesSection() {
             Pages
           </h1>
           <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
-            {(!subscription || limitsLoading) ? (
-              "Loading plan information..."
-            ) : (
-              <>
-                <span className={limits.pages !== -1 && (usage?.pages?.used || pages.length) >= (usage?.pages?.limit || limits.pages) ? "text-red-500 font-bold" : ""}>
-                  Plan: {subscription.plan?.name} ({(usage?.pages?.used || pages.length)} / {(usage?.pages?.limit || limits.pages) === -1 ? "Unlimited" : (usage?.pages?.limit || limits.pages)} used)
-                </span>
-                {(usage?.pages?.limit || limits.pages) !== -1 && (usage?.pages?.used || pages.length) >= (usage?.pages?.limit || limits.pages) && (
-                  <Button 
-                    size="small" 
-                    variant="text" 
-                    onClick={() => router.push('/manage-subscription')}
-                    sx={{ textTransform: 'none', color: 'primary.main', fontWeight: 'bold', minWidth: 0, p: 0 }}
-                  >
-                    Upgrade Plan
-                  </Button>
-                )}
-              </>
-            )}
+            {pages.length} {pages.length === 1 ? "page" : "pages"}
           </p>
         </div>
           <div className="flex gap-2">
@@ -489,7 +469,7 @@ export default function PagesSection() {
               color="info"
               className="border-dashed"
               startIcon={themeLoading ? <CircularProgress size={16} /> : <CloudUploadIcon fontSize="small" />}
-              disabled={themeLoading || limitsLoading}
+              disabled={themeLoading}
               sx={{
                   textTransform: "none",
                   borderRadius: "8px",
@@ -502,7 +482,7 @@ export default function PagesSection() {
               onClick={handleDownloadFullTheme}
               variant="outlined"
               startIcon={themeLoading ? <CircularProgress size={16} /> : <DownloadIcon fontSize="small" />}
-              disabled={themeLoading || limitsLoading}
+              disabled={themeLoading}
               sx={{
                   textTransform: "none",
                   borderRadius: "8px",
@@ -517,7 +497,6 @@ export default function PagesSection() {
               }}
               variant="contained"
               startIcon={<AddIcon fontSize="small" />}
-              disabled={limitsLoading}
               sx={{
                   textTransform: "none",
                   borderRadius: "8px",
