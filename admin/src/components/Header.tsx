@@ -54,13 +54,15 @@ const shortId = (seg: string) => `#${seg.slice(-6).toUpperCase()}`;
 
 function buildBreadcrumb(pathname: string) {
   const segments = pathname.split('/').filter(Boolean);
-  const crumbs: { label: string; href: string }[] = [];
+  const crumbs: { label: string; href: string; path: string }[] = [];
   let cumPath = '';
   for (const seg of segments) {
     cumPath += `/${seg}`;
     const label = isId(seg) ? shortId(seg) : (SEGMENT_LABELS[seg] || seg.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     const href = cumPath === "/manage-products" ? "/manage-products/product-list" : cumPath;
-    crumbs.push({ label, href });
+    // `path` stays the true cumulative path so React keys are always unique,
+    // even when `href` is remapped (e.g. /manage-products -> product-list).
+    crumbs.push({ label, href, path: cumPath });
   }
   return crumbs;
 }
@@ -131,7 +133,7 @@ export default function Header() {
           {breadcrumbs.map((crumb, i) => {
             const isLast = i === breadcrumbs.length - 1;
             return (
-              <React.Fragment key={crumb.href}>
+              <React.Fragment key={crumb.path}>
                 {i > 0 && <ChevronRight size={13} className="text-slate-300 flex-shrink-0" />}
                 <span
                   onClick={() => !isLast && router.push(crumb.href)}
