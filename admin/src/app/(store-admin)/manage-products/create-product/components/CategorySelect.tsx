@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { CircularProgress, Tabs, Tab } from "@mui/material";
+import { CircularProgress } from "@mui/material";
 import {
   Checkroom as ClothingIcon,
   Devices as ElectronicsIcon,
@@ -11,15 +11,12 @@ import {
   Category as CategoryIcon,
   ChevronRight as ChevronRightIcon,
   ArrowBack as BackIcon,
-  Add as AddIcon,
 } from "@mui/icons-material";
 import { categoriesApi, Category } from "@/services/categories.api";
 import { useAppSelector } from "@/store/hooks";
-import { useRouter } from "next/navigation";
 
 interface CategorySelectProps {
   onSelect: (category: Category) => void;
-  adminStoreId?: string | null;
 }
 
 const getCategoryIcon = (slug: string) => {
@@ -44,13 +41,11 @@ const CARD_COLORS = [
   { bg: "bg-orange-50", icon: "text-orange-500", border: "border-orange-100 hover:border-orange-300" },
 ];
 
-export default function CategorySelect({ onSelect, adminStoreId }: CategorySelectProps) {
-  const router = useRouter();
+export default function CategorySelect({ onSelect }: CategorySelectProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
   const [history, setHistory] = useState<Category[]>([]);
-  const [activeTab, setActiveTab] = useState(0);
   const { themeColors, componentColors } = useAppSelector((state) => state.settings);
   const btnColor = (() => {
     const key = componentColors?.buttonContained || "primary";
@@ -74,14 +69,11 @@ export default function CategorySelect({ onSelect, adminStoreId }: CategorySelec
   const displayCategories = useMemo(() => {
     return categories.filter((c) => {
       if (currentParentId === null) {
-        const isGlobal = !c.storeId || c.storeId === null;
-        if (activeTab === 0) return isGlobal && !c.parentId;
-        if (activeTab === 1) return !isGlobal && c.storeId === adminStoreId && !c.parentId;
         return !c.parentId;
       }
       return c.parentId === currentParentId;
     });
-  }, [categories, currentParentId, activeTab, adminStoreId]);
+  }, [categories, currentParentId]);
 
   const handleCategoryClick = (category: Category) => {
     const hasChildren = categories.some((c) => c.parentId === category.id);
@@ -153,49 +145,23 @@ export default function CategorySelect({ onSelect, adminStoreId }: CategorySelec
         )}
       </div>
 
-      {/* Tabs + Back */}
-      <div className="flex items-center justify-between gap-3 w-full">
-        <div className="flex items-center gap-3">
-          {history.length > 0 && (
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
-            >
-              <BackIcon sx={{ fontSize: 14 }} /> Back
-            </button>
-          )}
-          {currentParentId === null && (
-            <Tabs
-              value={activeTab}
-              onChange={(_, v) => setActiveTab(v)}
-              sx={{
-                minHeight: 32,
-                "& .MuiTab-root": { minHeight: 32, fontSize: 11, py: 0.5, px: 2, textTransform: "none", fontWeight: 600 },
-                "& .MuiTabs-indicator": { height: 2, borderRadius: "2px 2px 0 0" },
-              }}
-            >
-              <Tab label="Global Categories" />
-              <Tab label="My Store Categories" />
-            </Tabs>
-          )}
-        </div>
-        {currentParentId === null && activeTab === 1 && (
+      {/* Back */}
+      {history.length > 0 && (
+        <div className="flex items-center gap-3 w-full">
           <button
-            onClick={() => router.push("/manage-products/categories")}
-            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors duration-200 shadow-sm cursor-pointer"
+            onClick={handleBack}
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all"
           >
-            <AddIcon sx={{ fontSize: 16 }} />
-            Add Category
+            <BackIcon sx={{ fontSize: 14 }} /> Back
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Category Grid */}
       {displayCategories.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
           <CategoryIcon sx={{ fontSize: 40, opacity: 0.3 }} />
           <p className="text-sm mt-2">No categories found</p>
-          <p className="text-xs mt-1">Try switching to the other tab</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">

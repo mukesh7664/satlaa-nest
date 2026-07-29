@@ -24,8 +24,6 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Tabs,
-    Tab,
     InputBase,
 } from "@mui/material";
 import {
@@ -42,9 +40,7 @@ import {
     FolderOutlined,
     VisibilityOutlined,
 } from "@mui/icons-material";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAppSelector } from "@/store/hooks";
 import { categoriesApi, Category } from "@/services/categories.api";
 import ConfirmationModal from "@/components/modals/ConfirmationModal";
 
@@ -125,7 +121,6 @@ interface CategoryTreeItemProps {
     onDelete: (id: string) => void;
     onAddSub: (parentId: string) => void;
     onView: (cat: Category) => void;
-    isSuperAdmin: boolean;
 }
 
 const CategoryTreeItem = ({
@@ -135,13 +130,11 @@ const CategoryTreeItem = ({
     onDelete,
     onAddSub,
     onView,
-    isSuperAdmin,
 }: CategoryTreeItemProps) => {
     const [open, setOpen] = useState(false);
     const hasChildren = category.children && category.children.length > 0;
 
-    const isGlobal = !category.storeId || category.storeId === null;
-    const canManage = isSuperAdmin || !isGlobal;
+    const canManage = true;
 
     return (
         <>
@@ -242,7 +235,6 @@ const CategoryTreeItem = ({
                                 onDelete={onDelete}
                                 onAddSub={onAddSub}
                                 onView={onView}
-                                isSuperAdmin={isSuperAdmin}
                             />
                         ))}
                     </List>
@@ -253,9 +245,6 @@ const CategoryTreeItem = ({
 };
 
 export default function CategoriesPage() {
-    const { admin } = useAppSelector((state) => state.auth);
-    const isSuperAdmin = admin?.role === "admin";
-    const router = useRouter();
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
@@ -264,7 +253,6 @@ export default function CategoriesPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-    const [activeTab, setActiveTab] = useState(0);
 
     const [viewCategory, setViewCategory] = useState<Category | null>(null);
     const handleOpenView = (cat: Category) => setViewCategory(cat);
@@ -277,13 +265,6 @@ export default function CategoriesPage() {
     const [fields, setFields] = useState<DynamicField[]>([]);
 
     const categoryTree = useMemo(() => {
-        const filteredList = categories.filter((item) => {
-            const isGlobal = !item.storeId || item.storeId === null;
-            if (activeTab === 0) return isGlobal;
-            if (activeTab === 1) return !isGlobal;
-            return true;
-        });
-
         const buildTreeFromList = (items: Category[], parentId: string | null = null): Category[] =>
             (parentId === null
                 ? items.filter(
@@ -292,8 +273,8 @@ export default function CategoriesPage() {
                 : items.filter((item) => item.parentId === parentId)
             ).map((item) => ({ ...item, children: buildTreeFromList(items, item.id || null) }));
 
-        return buildTreeFromList(filteredList);
-    }, [categories, activeTab]);
+        return buildTreeFromList(categories);
+    }, [categories]);
 
     const flatCategories = useMemo(
         () => categories.sort((a, b) => a.name.localeCompare(b.name)),
@@ -388,10 +369,7 @@ export default function CategoriesPage() {
         setDeleteConfirmOpen(true);
     };
 
-    const canEditForm =
-        isSuperAdmin ||
-        (editingCategory && !!editingCategory.storeId) ||
-        !editingCategory;
+    const canEditForm = true;
 
     return (
         <Box sx={{ p: 3 }}>
@@ -469,26 +447,11 @@ export default function CategoriesPage() {
                         </Typography>
                     </Box>
 
-                    <Tabs
-                        value={activeTab}
-                        onChange={(_, v) => setActiveTab(v)}
-                        sx={{
-                            borderBottom: "1.5px solid",
-                            borderColor: "divider",
-                            minHeight: 40,
-                            "& .MuiTab-root": { minHeight: 40, fontSize: "0.8125rem", fontWeight: 600, textTransform: "none" },
-                            "& .MuiTabs-indicator": { height: 2 },
-                        }}
-                    >
-                        <Tab label="Global Categories" />
-                        <Tab label="My Store Categories" />
-                    </Tabs>
-
                     {categoryTree.length === 0 ? (
                         <Box sx={{ py: 8, textAlign: "center" }}>
                             <FolderOutlined sx={{ fontSize: 40, color: "text.disabled", mb: 1 }} />
                             <Typography color="text.secondary" fontSize="0.875rem">
-                                {activeTab === 0 ? "No global categories found" : "No store categories found"}
+                                No categories found
                             </Typography>
                             <Button
                                 size="small"
@@ -510,7 +473,6 @@ export default function CategoriesPage() {
                                     onDelete={handleDelete}
                                     onAddSub={(pid) => handleOpenDialog(undefined, pid)}
                                     onView={handleOpenView}
-                                    isSuperAdmin={isSuperAdmin}
                                 />
                             ))}
                         </List>
@@ -586,7 +548,7 @@ export default function CategoriesPage() {
                                     value={formData.name}
                                     onChange={handleNameChange}
                                     placeholder="e.g. Electronics"
-                                    disabled={!!(editingCategory && !isSuperAdmin && !editingCategory.storeId)}
+                                    disabled={false}
                                     sx={inputSx}
                                 />
                             </LabeledInput>
@@ -596,7 +558,7 @@ export default function CategoriesPage() {
                                     value={formData.slug}
                                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                                     placeholder="e.g. electronics"
-                                    disabled={!!(editingCategory && !isSuperAdmin && !editingCategory.storeId)}
+                                    disabled={false}
                                     sx={inputSx}
                                 />
                                 <Typography fontSize="0.75rem" color="text.disabled" mt={0.5}>
@@ -608,7 +570,7 @@ export default function CategoriesPage() {
                                 <Select
                                     value={formData.parentId}
                                     onChange={(e) => setFormData({ ...formData, parentId: e.target.value as string })}
-                                    disabled={!!(editingCategory && !isSuperAdmin && !editingCategory.storeId)}
+                                    disabled={false}
                                     displayEmpty
                                     sx={selectSx}
                                 >
@@ -682,7 +644,7 @@ export default function CategoriesPage() {
                                                 value={field.name}
                                                 onChange={(e) => updateField(index, { name: e.target.value })}
                                                 placeholder="e.g. Color, Size, Material"
-                                                disabled={!!(editingCategory && !isSuperAdmin && !editingCategory.storeId)}
+                                                disabled={false}
                                                 sx={inputSx}
                                             />
                                         </LabeledInput>
@@ -693,7 +655,7 @@ export default function CategoriesPage() {
                                                     <Select
                                                         value={field.type}
                                                         onChange={(e) => updateField(index, { type: e.target.value as any })}
-                                                        disabled={!!(editingCategory && !isSuperAdmin && !editingCategory.storeId)}
+                                                        disabled={false}
                                                         sx={selectSx}
                                                     >
                                                         <MenuItem value="text" sx={{ fontSize: "0.875rem" }}>Text</MenuItem>
@@ -709,7 +671,7 @@ export default function CategoriesPage() {
                                                         <Checkbox
                                                             checked={field.is_variant}
                                                             onChange={(e) => updateField(index, { is_variant: e.target.checked })}
-                                                            disabled={!!(editingCategory && !isSuperAdmin && !editingCategory.storeId)}
+                                                            disabled={false}
                                                             size="small"
                                                         />
                                                     }
@@ -733,7 +695,7 @@ export default function CategoriesPage() {
                                                             options: e.target.value.split(",").map((o) => o.trim()),
                                                         })
                                                     }
-                                                    disabled={!!(editingCategory && !isSuperAdmin && !editingCategory.storeId)}
+                                                    disabled={false}
                                                     sx={inputSx}
                                                 />
                                                 <Typography fontSize="0.75rem" color="text.disabled" mt={0.5}>
