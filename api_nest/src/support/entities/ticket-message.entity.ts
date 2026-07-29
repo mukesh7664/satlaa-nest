@@ -16,11 +16,11 @@ export class TicketMessage {
     @JoinColumn({ name: 'ticketId' })
     ticket: SupportTicket;
 
-    @ApiProperty({ description: 'The ID of the admin who sent the message' })
+    @ApiProperty({ description: 'The ID of the sender (customer or admin)' })
     @Column()
     senderId: string;
 
-    @ApiProperty({ description: 'Role of the sender' })
+    @ApiProperty({ description: "Role of the sender: 'customer' or 'admin'" })
     @Column()
     senderRole: string;
 

@@ -13,7 +13,8 @@ import {
   LogOut,
   Settings,
   CreditCard,
-  Bell
+  Bell,
+  LifeBuoy
 } from "lucide-react";
 
 const menuItems = [
@@ -21,6 +22,7 @@ const menuItems = [
   { name: "My Orders", href: "/profile/orders", icon: Package },
   { name: "My Favorites", href: "/profile/favorites", icon: Heart },
   { name: "Saved Addresses", href: "/profile/addresses", icon: MapPin },
+  { name: "Support", href: "/profile/support", icon: LifeBuoy },
 ];
 
 export function ProfileSidebar() {

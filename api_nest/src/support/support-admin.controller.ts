@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Quer
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SupportService } from './support.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { SuperAdminGuard } from '../auth/guards/super-admin.guard';
+import { AdminRoleGuard } from '../auth/guards/admin-role.guard';
 import { CreateHelpResourceDto } from './dto/create-help-resource.dto';
 import { UpdateHelpResourceDto } from './dto/update-help-resource.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -11,7 +11,7 @@ import { TicketStatus, TicketPriority } from './entities/support-ticket.entity';
 
 @ApiTags('support-admin')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, SuperAdminGuard)
+@UseGuards(JwtAuthGuard, AdminRoleGuard)
 @Controller('admin/support')
 export class SupportAdminController {
     constructor(private readonly supportService: SupportService) {}
@@ -74,7 +74,7 @@ export class SupportAdminController {
         return this.supportService.findTicketMessages(id);
     }
 
-    @ApiOperation({ summary: 'Admin: Send a reply message to the merchant' })
+    @ApiOperation({ summary: 'Admin: Send a reply message to the customer' })
     @Post('tickets/:id/messages')
     async createTicketMessage(
         @Req() req: any,
@@ -82,8 +82,7 @@ export class SupportAdminController {
         @Body() createMessageDto: CreateMessageDto,
     ) {
         const senderId = req.user.userId;
-        const senderRole = req.user.role; // e.g. 'super_admin'
-        return this.supportService.createMessage(id, senderId, senderRole, createMessageDto);
+        return this.supportService.createMessage(id, senderId, 'admin', createMessageDto);
     }
 
     @ApiOperation({ summary: 'Admin: Update ticket status' })

@@ -2,14 +2,13 @@ import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, Query } from
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SupportService } from './support.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { AdminRoleGuard } from '../auth/guards/admin-role.guard';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { HelpResourceType } from './entities/help-resource.entity';
 
 @ApiTags('support')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, AdminRoleGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('support')
 export class SupportController {
     constructor(private readonly supportService: SupportService) {}
@@ -27,48 +26,55 @@ export class SupportController {
 
     // ---- Support Tickets ----
 
-    @ApiOperation({ summary: 'Create a new support ticket' })
+    @ApiOperation({ summary: 'Customer: create a new support ticket / complaint' })
     @Post('tickets')
     async createTicket(@Req() req: any, @Body() createTicketDto: CreateTicketDto) {
-        const adminId = req.user.userId;
-        return this.supportService.createTicket(adminId, createTicketDto);
+        const customerId = req.user.customerId || req.user.sub;
+        return this.supportService.createTicket(customerId, createTicketDto);
     }
 
-    @ApiOperation({ summary: 'List all support tickets raised by this store' })
+    @ApiOperation({ summary: 'Customer: list my support tickets' })
     @Get('tickets')
-    async getStoreTickets(@Query('status') status?: any) {
-        return this.supportService.findStoreTickets(status);
+    async getMyTickets(@Req() req: any, @Query('status') status?: any) {
+        const customerId = req.user.customerId || req.user.sub;
+        return this.supportService.findMyTickets(customerId, status);
     }
 
-    @ApiOperation({ summary: 'Get details of a specific ticket' })
+    @ApiOperation({ summary: 'Customer: get details of my ticket' })
     @Get('tickets/:id')
-    async getTicketDetails(@Param('id') id: string) {
-        return this.supportService.findTicketDetails(id);
+    async getTicketDetails(@Req() req: any, @Param('id') id: string) {
+        const customerId = req.user.customerId || req.user.sub;
+        return this.supportService.findTicketDetails(id, customerId);
     }
 
-    @ApiOperation({ summary: 'Close a ticket' })
+    @ApiOperation({ summary: 'Customer: close my ticket' })
     @Patch('tickets/:id/close')
-    async closeTicket(@Param('id') id: string) {
-        return this.supportService.closeTicket(id);
+    async closeTicket(@Req() req: any, @Param('id') id: string) {
+        const customerId = req.user.customerId || req.user.sub;
+        return this.supportService.closeTicket(id, customerId);
     }
 
     // ---- Ticket Messages (Chat) ----
 
-    @ApiOperation({ summary: 'Get all messages of a ticket' })
+    @ApiOperation({ summary: 'Customer: get all messages of my ticket' })
     @Get('tickets/:id/messages')
-    async getTicketMessages(@Param('id') id: string) {
+    async getTicketMessages(@Req() req: any, @Param('id') id: string) {
+        const customerId = req.user.customerId || req.user.sub;
+        // Enforce ownership before returning the thread
+        await this.supportService.findTicketDetails(id, customerId);
         return this.supportService.findTicketMessages(id);
     }
 
-    @ApiOperation({ summary: 'Send a reply message in the ticket chat thread' })
+    @ApiOperation({ summary: 'Customer: send a reply in my ticket thread' })
     @Post('tickets/:id/messages')
     async createTicketMessage(
         @Req() req: any,
         @Param('id') id: string,
         @Body() createMessageDto: CreateMessageDto,
     ) {
-        const senderId = req.user.userId;
-        const senderRole = req.user.role; // e.g. 'store_admin'
-        return this.supportService.createMessage(id, senderId, senderRole, createMessageDto);
+        const customerId = req.user.customerId || req.user.sub;
+        // Enforce ownership before allowing a reply
+        await this.supportService.findTicketDetails(id, customerId);
+        return this.supportService.createMessage(id, customerId, 'customer', createMessageDto);
     }
 }

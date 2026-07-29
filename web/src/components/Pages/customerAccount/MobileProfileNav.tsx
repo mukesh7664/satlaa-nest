@@ -21,6 +21,7 @@ const menuItems = [
   { name: "My Reviews", href: "/profile/reviews" },
   { name: "My Addresses", href: "/profile/addresses" },
   { name: "My Wishlist", href: "/profile/favorites" },
+  { name: "Support", href: "/profile/support" },
 ];
 
 export function MobileProfileNav() {

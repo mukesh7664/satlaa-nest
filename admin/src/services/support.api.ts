@@ -18,8 +18,7 @@ export interface HelpResource {
 
 export interface SupportTicket {
     id: string;
-    storeId?: string;
-    adminId: string;
+    customerId: string;
     subject: string;
     description: string;
     category: string;
@@ -27,19 +26,13 @@ export interface SupportTicket {
     priority: 'low' | 'medium' | 'high' | 'urgent';
     createdAt: string;
     updatedAt: string;
+    // Enriched customer (requester) details
     creatorName?: string;
     creatorEmail?: string;
-    storeName?: string;
     creator?: {
         id: string;
         name: string;
         email: string;
-        avatar?: string;
-    };
-    store?: {
-        id: string;
-        name: string;
-        slug: string;
     };
 }
 
@@ -57,76 +50,7 @@ export interface TicketMessage {
 
 export const supportApi = {
     // ==========================================
-    // Store Admin Endpoints
-    // ==========================================
-
-    getHelpResources: async (type?: 'faq' | 'video', category?: string): Promise<HelpResource[]> => {
-        const token = localStorage.getItem('token');
-        const params: any = {};
-        if (type) params.type = type;
-        if (category) params.category = category;
-
-        const res = await axios.get(`${API_URL}/support/help-resources`, {
-            params,
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        return res.data;
-    },
-
-    createTicket: async (data: { subject: string; description: string; category: string; priority?: string }): Promise<SupportTicket> => {
-        const token = localStorage.getItem('token');
-        const res = await axios.post(`${API_URL}/support/tickets`, data, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        return res.data;
-    },
-
-    getStoreTickets: async (status?: string): Promise<SupportTicket[]> => {
-        const token = localStorage.getItem('token');
-        const params: any = {};
-        if (status) params.status = status;
-
-        const res = await axios.get(`${API_URL}/support/tickets`, {
-            params,
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        return res.data;
-    },
-
-    getTicketDetails: async (id: string): Promise<SupportTicket> => {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`${API_URL}/support/tickets/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        return res.data;
-    },
-
-    closeTicket: async (id: string): Promise<SupportTicket> => {
-        const token = localStorage.getItem('token');
-        const res = await axios.patch(`${API_URL}/support/tickets/${id}/close`, {}, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        return res.data;
-    },
-
-    getTicketMessages: async (id: string): Promise<TicketMessage[]> => {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`${API_URL}/support/tickets/${id}/messages`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        return res.data;
-    },
-
-    sendTicketMessage: async (id: string, message: string, attachments?: string[]): Promise<TicketMessage> => {
-        const token = localStorage.getItem('token');
-        const res = await axios.post(`${API_URL}/support/tickets/${id}/messages`, { message, attachments }, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        return res.data;
-    },
-
-    // ==========================================
-    // Super Admin Endpoints
+    // Admin Support Endpoints (manage customer tickets)
     // ==========================================
 
     getAdminHelpResources: async (type?: 'faq' | 'video', category?: string): Promise<HelpResource[]> => {
@@ -166,7 +90,7 @@ export const supportApi = {
         return res.data;
     },
 
-    getAdminTickets: async (filters?: { status?: string; priority?: string; storeId?: string; search?: string }): Promise<SupportTicket[]> => {
+    getAdminTickets: async (filters?: { status?: string; priority?: string; search?: string }): Promise<SupportTicket[]> => {
         const token = localStorage.getItem('token');
         const res = await axios.get(`${API_URL}/admin/support/tickets`, {
             params: filters,

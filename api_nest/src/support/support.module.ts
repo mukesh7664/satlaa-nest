@@ -4,13 +4,14 @@ import { HelpResource } from './entities/help-resource.entity';
 import { SupportTicket } from './entities/support-ticket.entity';
 import { TicketMessage } from './entities/ticket-message.entity';
 import { Admin } from '../admin/entities/admin.entity';
+import { Customer } from '../customers/entities/customer.entity';
 import { SupportService } from './support.service';
 import { SupportController } from './support.controller';
 import { SupportAdminController } from './support-admin.controller';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([HelpResource, SupportTicket, TicketMessage, Admin]),
+        TypeOrmModule.forFeature([HelpResource, SupportTicket, TicketMessage, Admin, Customer]),
     ],
     controllers: [SupportController, SupportAdminController],
     providers: [SupportService],

@@ -22,9 +22,9 @@ export class SupportTicket {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @ApiProperty({ description: 'The admin ID who created the ticket' })
+    @ApiProperty({ description: 'The customer ID who created the ticket' })
     @Column()
-    adminId: string;
+    customerId: string;
 
     @ApiProperty({ description: 'Subject of the support ticket' })
     @Column({ length: 255 })

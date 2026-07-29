@@ -5,6 +5,7 @@ import { HelpResource, HelpResourceType } from './entities/help-resource.entity'
 import { SupportTicket, TicketStatus, TicketPriority } from './entities/support-ticket.entity';
 import { TicketMessage } from './entities/ticket-message.entity';
 import { Admin } from '../admin/entities/admin.entity';
+import { Customer } from '../customers/entities/customer.entity';
 import { CreateHelpResourceDto } from './dto/create-help-resource.dto';
 import { UpdateHelpResourceDto } from './dto/update-help-resource.dto';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -24,6 +25,9 @@ export class SupportService {
 
         @InjectRepository(Admin)
         private adminRepository: Repository<Admin>,
+
+        @InjectRepository(Customer)
+        private customerRepository: Repository<Customer>,
     ) {}
 
     // ==========================================
@@ -76,17 +80,17 @@ export class SupportService {
     // Support Tickets (Store Admin Panel)
     // ==========================================
 
-    async createTicket(adminId: string, createTicketDto: CreateTicketDto): Promise<SupportTicket> {
+    async createTicket(customerId: string, createTicketDto: CreateTicketDto): Promise<SupportTicket> {
         const ticket = this.ticketRepository.create({
             ...createTicketDto,
-            adminId,
+            customerId,
             status: TicketStatus.OPEN,
         });
         return this.ticketRepository.save(ticket);
     }
 
-    async findStoreTickets(status?: TicketStatus): Promise<SupportTicket[]> {
-        const query: any = {};
+    async findMyTickets(customerId: string, status?: TicketStatus): Promise<SupportTicket[]> {
+        const query: any = { customerId };
         if (status) query.status = status;
 
         return this.ticketRepository.find({
@@ -95,16 +99,21 @@ export class SupportService {
         });
     }
 
-    async findTicketDetails(ticketId: string): Promise<any> {
+    async findTicketDetails(ticketId: string, customerId?: string): Promise<any> {
         const ticket = await this.ticketRepository.findOne({ where: { id: ticketId } });
         if (!ticket) {
             throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
         }
 
-        // Fetch creator details
-        const creator = await this.adminRepository.findOne({
-            where: { id: ticket.adminId },
-            select: ['id', 'name', 'email', 'avatar'],
+        // Ownership check for customer-facing access
+        if (customerId && ticket.customerId !== customerId) {
+            throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
+        }
+
+        // Fetch creator (customer) details
+        const creator = await this.customerRepository.findOne({
+            where: { id: ticket.customerId },
+            select: ['id', 'name', 'email'],
         });
 
         return {
@@ -113,9 +122,14 @@ export class SupportService {
         };
     }
 
-    async closeTicket(ticketId: string): Promise<SupportTicket> {
+    async closeTicket(ticketId: string, customerId?: string): Promise<SupportTicket> {
         const ticket = await this.ticketRepository.findOne({ where: { id: ticketId } });
         if (!ticket) {
+            throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
+        }
+
+        // Ownership check for customer-facing access
+        if (customerId && ticket.customerId !== customerId) {
             throw new NotFoundException(`Ticket with ID "${ticketId}" not found`);
         }
 
@@ -142,12 +156,12 @@ export class SupportService {
             order: { createdAt: 'DESC' },
         });
 
-        // Enrich tickets with Creator info
+        // Enrich tickets with Creator (customer) info
         const enrichedTickets = await Promise.all(
             tickets.map(async (ticket) => {
-                const creator = await this.adminRepository.findOne({
-                    where: { id: ticket.adminId },
-                    select: ['id', 'name', 'email', 'avatar'],
+                const creator = await this.customerRepository.findOne({
+                    where: { id: ticket.customerId },
+                    select: ['id', 'name', 'email'],
                 });
 
                 return {
@@ -207,8 +221,9 @@ export class SupportService {
 
         // Update ticket's updatedAt timestamp to indicate activity
         ticket.updatedAt = new Date();
-        // If a message is sent from admin, auto mark ticket as Open if it was resolved/closed
-        if (senderRole === 'admin' && (ticket.status === TicketStatus.RESOLVED || ticket.status === TicketStatus.CLOSED)) {
+        // A new reply from either side reopens a resolved/closed ticket so it
+        // returns to the active queue instead of being silently ignored.
+        if (ticket.status === TicketStatus.RESOLVED || ticket.status === TicketStatus.CLOSED) {
             ticket.status = TicketStatus.OPEN;
         }
         await this.ticketRepository.save(ticket);
@@ -227,17 +242,30 @@ export class SupportService {
             order: { createdAt: 'ASC' },
         });
 
-        // Enrich messages with sender name
+        // Enrich messages with sender name, resolving by role:
+        // customer replies -> customers table, admin replies -> admins table
         const enrichedMessages = await Promise.all(
             messages.map(async (msg) => {
-                const sender = await this.adminRepository.findOne({
+                if (msg.senderRole === 'customer') {
+                    const customer = await this.customerRepository.findOne({
+                        where: { id: msg.senderId },
+                        select: ['id', 'name'],
+                    });
+                    return {
+                        ...msg,
+                        senderName: customer?.name || 'Customer',
+                        senderAvatar: '',
+                    };
+                }
+
+                const admin = await this.adminRepository.findOne({
                     where: { id: msg.senderId },
                     select: ['id', 'name', 'avatar'],
                 });
                 return {
                     ...msg,
-                    senderName: sender?.name || 'System',
-                    senderAvatar: sender?.avatar || '',
+                    senderName: admin?.name || 'Support Team',
+                    senderAvatar: admin?.avatar || '',
                 };
             }),
         );

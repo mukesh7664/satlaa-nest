@@ -94,16 +94,6 @@ export default function SupportHelpPage() {
     const [loadingTickets, setLoadingTickets] = useState(false);
     const [ticketFilterStatus, setTicketFilterStatus] = useState("");
 
-    // Create Ticket States
-    const [createOpen, setCreateOpen] = useState(false);
-    const [submittingTicket, setSubmittingTicket] = useState(false);
-    const [newTicket, setNewTicket] = useState({
-        subject: "",
-        category: "Technical Support",
-        priority: "medium" as any,
-        description: "",
-    });
-
     // Chat Drawer States
     const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
     const [chatOpen, setChatOpen] = useState(false);
@@ -156,7 +146,7 @@ export default function SupportHelpPage() {
     const fetchHelpResources = async (type: "faq" | "video") => {
         try {
             setLoadingResources(true);
-            const data = await supportApi.getHelpResources(type);
+            const data = await supportApi.getAdminHelpResources(type);
             setResources(data);
         } catch (error) {
             console.error("Error fetching resources:", error);
@@ -169,7 +159,7 @@ export default function SupportHelpPage() {
     const fetchTickets = async () => {
         try {
             setLoadingTickets(true);
-            const data = await supportApi.getStoreTickets(ticketFilterStatus || undefined);
+            const data = await supportApi.getAdminTickets({ status: ticketFilterStatus || undefined });
             setTickets(data);
         } catch (error) {
             console.error("Error fetching tickets:", error);
@@ -182,39 +172,12 @@ export default function SupportHelpPage() {
     const fetchMessages = async (ticketId: string, showLoader = true) => {
         try {
             if (showLoader) setLoadingMessages(true);
-            const data = await supportApi.getTicketMessages(ticketId);
+            const data = await supportApi.getAdminTicketMessages(ticketId);
             setMessages(data);
         } catch (error) {
             console.error("Error loading chat messages:", error);
         } finally {
             if (showLoader) setLoadingMessages(false);
-        }
-    };
-
-    const handleCreateTicket = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newTicket.subject.trim() || !newTicket.description.trim()) {
-            toast.error("Please fill in all required fields.");
-            return;
-        }
-
-        try {
-            setSubmittingTicket(true);
-            await supportApi.createTicket(newTicket);
-            toast.success("Support ticket created successfully!");
-            setCreateOpen(false);
-            setNewTicket({
-                subject: "",
-                category: "Technical Support",
-                priority: "medium",
-                description: "",
-            });
-            fetchTickets();
-        } catch (error) {
-            console.error("Error creating ticket:", error);
-            toast.error("Failed to create support ticket.");
-        } finally {
-            setSubmittingTicket(false);
         }
     };
 
@@ -224,7 +187,7 @@ export default function SupportHelpPage() {
 
         try {
             setSendingReply(true);
-            const msg = await supportApi.sendTicketMessage(activeTicket.id, replyText);
+            const msg = await supportApi.sendAdminTicketMessage(activeTicket.id, replyText);
             setMessages((prev) => [...prev, msg]);
             setReplyText("");
             // Update ticket list state in background
@@ -237,9 +200,22 @@ export default function SupportHelpPage() {
         }
     };
 
-    const handleCloseTicket = async (ticketId: string) => {
+    const handleUpdateStatus = async (ticketId: string, status: string) => {
         try {
-            await supportApi.closeTicket(ticketId);
+            const updated = await supportApi.updateTicketStatus(ticketId, status);
+            setActiveTicket((prev) => (prev && prev.id === ticketId ? { ...prev, status: updated.status } : prev));
+            toast.success(`Ticket marked as ${status.replace("_", " ")}`);
+            fetchTickets();
+        } catch (error) {
+            console.error("Error updating status:", error);
+            toast.error("Failed to update ticket status.");
+        }
+    };
+
+    const handleCloseTicket = async (ticketId: string) => {
+        // Closing a ticket is a status transition on the admin side
+        try {
+            await supportApi.updateTicketStatus(ticketId, "closed");
             toast.success("Ticket closed successfully.");
             setChatOpen(false);
             fetchTickets();
@@ -293,7 +269,7 @@ export default function SupportHelpPage() {
             <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800">Support & Help Center</h1>
-                    <p className="text-sm text-slate-500 mt-1">Get answer to your queries, watch video tutorials, or chat directly with our support team.</p>
+                    <p className="text-sm text-slate-500 mt-1">Manage customer complaints, reply to their tickets, and maintain the help center content.</p>
                 </div>
             </div>
 
@@ -730,23 +706,6 @@ export default function SupportHelpPage() {
                                 <RefreshIcon fontSize="small" />
                             </IconButton>
                         </div>
-
-                        <Button
-                            variant="contained"
-                            size="small"
-                            onClick={() => setCreateOpen(true)}
-                            sx={{
-                                bgcolor: "var(--primary)",
-                                "&:hover": { bgcolor: "var(--primary)", filter: "brightness(0.9)" },
-                                textTransform: "none",
-                                fontWeight: "bold",
-                                px: 3,
-                                height: "36px",
-                                borderRadius: "8px"
-                            }}
-                        >
-                            + Raise New Ticket
-                        </Button>
                     </div>
 
                     {/* Tickets Table */}
@@ -757,7 +716,7 @@ export default function SupportHelpPage() {
                     ) : tickets.length === 0 ? (
                         <div className="text-center py-16 bg-white border border-slate-200 rounded-xl">
                             <TicketIcon sx={{ fontSize: 48 }} className="text-slate-300 mb-2" />
-                            <p className="text-slate-500 font-semibold">No tickets found. Raise a ticket if you need assistance!</p>
+                            <p className="text-slate-500 font-semibold">No customer tickets found for this filter.</p>
                         </div>
                     ) : (
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -767,6 +726,7 @@ export default function SupportHelpPage() {
                                         <TableRow sx={{ bgcolor: "#f8fafc" }}>
                                             <TableCell sx={{ py: 2 }}><span className="text-[10px] uppercase font-bold text-slate-500">Ticket ID</span></TableCell>
                                             <TableCell sx={{ py: 2 }}><span className="text-[10px] uppercase font-bold text-slate-500">Subject</span></TableCell>
+                                            <TableCell sx={{ py: 2 }}><span className="text-[10px] uppercase font-bold text-slate-500">Requester</span></TableCell>
                                             <TableCell sx={{ py: 2 }}><span className="text-[10px] uppercase font-bold text-slate-500">Category</span></TableCell>
                                             <TableCell sx={{ py: 2 }}><span className="text-[10px] uppercase font-bold text-slate-500">Priority</span></TableCell>
                                             <TableCell sx={{ py: 2 }}><span className="text-[10px] uppercase font-bold text-slate-500">Status</span></TableCell>
@@ -790,6 +750,12 @@ export default function SupportHelpPage() {
                                                 </TableCell>
                                                 <TableCell sx={{ py: 2, fontSize: "13px", fontWeight: "700", color: "#1e293b" }}>
                                                     {ticket.subject}
+                                                </TableCell>
+                                                <TableCell sx={{ py: 2, fontSize: "13px", color: "#475569" }}>
+                                                    <div className="font-semibold text-slate-700">{ticket.creatorName || "Unknown"}</div>
+                                                    {ticket.creatorEmail && (
+                                                        <div className="text-[11px] text-slate-400">{ticket.creatorEmail}</div>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell sx={{ py: 2, fontSize: "13px", color: "#475569" }}>
                                                     {ticket.category}
@@ -888,113 +854,6 @@ export default function SupportHelpPage() {
                 )}
             </Dialog>
 
-            {/* RAISE NEW TICKET DIALOG */}
-            <Dialog
-                open={createOpen}
-                onClose={() => !submittingTicket && setCreateOpen(false)}
-                maxWidth="sm"
-                fullWidth
-                slotProps={{ paper: { sx: { borderRadius: "16px", p: 1 } } }}
-            >
-                <form onSubmit={handleCreateTicket}>
-                    <DialogTitle className="flex justify-between items-center pb-2 border-b border-slate-100">
-                        <span className="text-base font-bold text-slate-800">Raise a Support Ticket</span>
-                        <IconButton size="small" onClick={() => setCreateOpen(false)} disabled={submittingTicket}>
-                            <CloseIcon />
-                        </IconButton>
-                    </DialogTitle>
-                    <DialogContent className="space-y-4 pt-4">
-                        <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-600">Subject <span className="text-red-500">*</span></label>
-                            <TextField
-                                placeholder="Brief summary of your query"
-                                required
-                                fullWidth
-                                size="small"
-                                value={newTicket.subject}
-                                onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
-                                slotProps={{ input: { sx: { borderRadius: "8px" } } }}
-                            />
-                        </div>
-
-                        <div className="flex gap-4">
-                            <div className="space-y-1 flex-1">
-                                <label className="text-xs font-semibold text-slate-600">Category</label>
-                                <FormControl size="small" fullWidth>
-                                    <Select
-                                        value={newTicket.category}
-                                        onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
-                                        sx={{ borderRadius: "8px" }}
-                                    >
-                                        <MenuItem value="Technical Support">Technical Support</MenuItem>
-                                        <MenuItem value="Billing & Pricing">Billing & Pricing</MenuItem>
-                                        <MenuItem value="Bug Report">Bug Report</MenuItem>
-                                        <MenuItem value="Feature Request">Feature Request</MenuItem>
-                                        <MenuItem value="General Inquiry">General Inquiry</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </div>
-
-                            <div className="space-y-1 flex-1">
-                                <label className="text-xs font-semibold text-slate-600">Priority</label>
-                                <FormControl size="small" fullWidth>
-                                    <Select
-                                        value={newTicket.priority}
-                                        onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value as any })}
-                                        sx={{ borderRadius: "8px" }}
-                                    >
-                                        <MenuItem value="low">Low</MenuItem>
-                                        <MenuItem value="medium">Medium</MenuItem>
-                                        <MenuItem value="high">High</MenuItem>
-                                        <MenuItem value="urgent">Urgent</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-600">Detailed Description <span className="text-red-500">*</span></label>
-                            <TextField
-                                placeholder="Explain your issue or query in detail so we can help you faster..."
-                                required
-                                fullWidth
-                                multiline
-                                rows={5}
-                                value={newTicket.description}
-                                onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
-                                slotProps={{ input: { sx: { borderRadius: "8px" } } }}
-                            />
-                        </div>
-                    </DialogContent>
-                    <DialogActions className="p-4 border-t border-slate-100">
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => setCreateOpen(false)}
-                            disabled={submittingTicket}
-                            sx={{ textTransform: "none", fontWeight: "bold", borderRadius: "8px" }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            size="small"
-                            disabled={submittingTicket}
-                            sx={{
-                                textTransform: "none",
-                                fontWeight: "bold",
-                                bgcolor: "var(--primary)",
-                                "&:hover": { bgcolor: "var(--primary)", filter: "brightness(0.9)" },
-                                borderRadius: "8px"
-                            }}
-                        >
-                            {submittingTicket ? <CircularProgress size={18} color="inherit" /> : "Submit Ticket"}
-                        </Button>
-                    </DialogActions>
-                </form>
-            </Dialog>
-
             {/* CHAT MESSAGES DRAWER (SLIDE OVER) */}
             <Drawer
                 anchor="right"
@@ -1040,14 +899,34 @@ export default function SupportHelpPage() {
                                 {activeTicket.subject}
                             </h2>
                             <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+                                <span>
+                                    From: <strong>{activeTicket.creatorName || "Customer"}</strong>
+                                    {activeTicket.creatorEmail ? ` (${activeTicket.creatorEmail})` : ""}
+                                </span>
                                 <span>Category: <strong>{activeTicket.category}</strong></span>
-                                {activeTicket.status !== "closed" && activeTicket.status !== "resolved" && (
+                            </div>
+
+                            {/* Admin status controls */}
+                            <div className="flex items-center gap-2 mt-2">
+                                <FormControl size="small" sx={{ minWidth: 150 }}>
+                                    <Select
+                                        value={activeTicket.status}
+                                        onChange={(e) => handleUpdateStatus(activeTicket.id, e.target.value)}
+                                        sx={{ borderRadius: "8px", height: "32px", fontSize: "12px", bgcolor: "#ffffff" }}
+                                    >
+                                        <MenuItem value="open" sx={{ fontSize: "12px" }}>Open</MenuItem>
+                                        <MenuItem value="in_progress" sx={{ fontSize: "12px" }}>In Progress</MenuItem>
+                                        <MenuItem value="resolved" sx={{ fontSize: "12px" }}>Resolved</MenuItem>
+                                        <MenuItem value="closed" sx={{ fontSize: "12px" }}>Closed</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                {activeTicket.status !== "closed" && (
                                     <Button
                                         variant="text"
                                         size="small"
                                         color="error"
                                         onClick={() => handleCloseTicket(activeTicket.id)}
-                                        sx={{ textTransform: "none", py: 0, height: "20px", fontSize: "10px", fontWeight: "bold" }}
+                                        sx={{ textTransform: "none", fontSize: "11px", fontWeight: "bold" }}
                                     >
                                         Close Ticket
                                     </Button>
