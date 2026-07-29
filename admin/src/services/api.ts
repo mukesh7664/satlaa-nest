@@ -5,15 +5,6 @@ export interface LoginCredentials {
   password: string;
 }
 
-export interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  phone?: string;
-  role?: string;
-  storeName?: string;
-}
-
 export interface Plan {
   id: string;
   name: string;
@@ -115,38 +106,6 @@ class ApiService {
     return response.json();
   }
 
-  async register(data: RegisterData): Promise<LoginResponse> {
-    const response = await fetch(`${this.baseUrl}/admin/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "Registration failed");
-    }
-
-    return response.json();
-  }
-
-  async checkEmail(email: string): Promise<{ exists: boolean }> {
-    const response = await fetch(`${this.baseUrl}/admin/check-email?email=${encodeURIComponent(email)}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "Failed to check email");
-    }
-
-    return response.json();
-  }
 
   async getPlans(activeOnly?: boolean): Promise<Plan[]> {
     let url = `${this.baseUrl}/plans`;

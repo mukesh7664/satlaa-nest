@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ModuleRef } from '@nestjs/core';
 import { GeneralSettings } from '../admin/entities/general-settings.entity';
 import { SeoSettings } from '../admin/entities/seo-settings.entity';
 import { EmailTemplate } from '../admin/entities/email-template.entity';
@@ -11,7 +10,6 @@ import { PageSection } from '../cms/entities/page-section.entity';
 import { Section } from '../cms/entities/section.entity';
 import { DEFAULT_EMAIL_TEMPLATES } from '../common/default-email-templates';
 import { DEFAULT_POLICY_PAGES } from '../common/default-policy-pages';
-import { ThemeService } from '../cms/theme.service';
 
 @Injectable()
 export class TenantService {
@@ -30,71 +28,7 @@ export class TenantService {
         private pageSectionRepository: Repository<PageSection>,
         @InjectRepository(Section)
         private sectionRepository: Repository<Section>,
-        private moduleRef: ModuleRef,
     ) { }
-
-    /**
-     * Single-store mode: bootstrap the default settings/SEO/email/policy pages/theme
-     * the first time an owner registers. There is no Store row anymore — store-level
-     * metadata lives in GeneralSettings (siteName etc.).
-     */
-    async createStore(_ownerId: string, name: string, _planCategory: 'page_builder' | 'ecommerce' = 'ecommerce'): Promise<void> {
-        // Skip if defaults already initialized
-        const existingSettings = await this.generalSettingsRepository.findOne({ where: {} });
-        if (existingSettings) return;
-
-        // Initialize default general settings
-        await this.generalSettingsRepository.save(
-            this.generalSettingsRepository.create({
-                siteName: name,
-                contactEmail: '',
-                contactPhone: '',
-                address: '',
-                socialLinks: {},
-                taxSettings: {},
-                features: {},
-                topBar: { isEnabled: true, content: '', links: [] },
-                popupSettings: { isEnabled: false },
-                whatsappButton: { isEnabled: false },
-                invoiceSettings: {},
-                maintenanceMode: { isEnabled: false },
-                security: {},
-                notificationSettings: {},
-                policies: {},
-            })
-        );
-
-        // Initialize default SEO settings
-        await this.seoSettingsRepository.save(
-            this.seoSettingsRepository.create({
-                keywords: [],
-                googleAnalyticsId: '',
-                googleTagManagerId: '',
-                facebookPixelId: '',
-                metaImage: '',
-                customScripts: { headerScripts: '', footerScripts: '' },
-            })
-        );
-
-        // Create default email templates
-        await this.createDefaultTemplates();
-
-        // Create default email settings
-        await this.createDefaultEmailSettings();
-
-        // Create default policy pages
-        await this.createDefaultPolicyPages(name);
-
-        // Apply default theme (single ecommerce category)
-        try {
-            const themeService = this.moduleRef.get(ThemeService, { strict: false });
-            if (themeService) {
-                await themeService.applyDefaultThemeForCategory('ecommerce');
-            }
-        } catch (err) {
-            console.error('Failed to apply default theme for store:', err);
-        }
-    }
 
     public async createDefaultTemplates() {
         for (const t of DEFAULT_EMAIL_TEMPLATES) {

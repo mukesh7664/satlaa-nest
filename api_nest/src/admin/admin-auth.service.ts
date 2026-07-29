@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin, AdminRole } from './entities/admin.entity';
 import { JwtService } from '@nestjs/jwt';
-import { TenantService } from '../tenant/tenant.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { EmailService } from '../notifications/email.service';
@@ -14,60 +13,8 @@ export class AdminAuthService {
         @InjectRepository(Admin)
         private adminRepository: Repository<Admin>,
         private jwtService: JwtService,
-        private tenantService: TenantService,
         private emailService: EmailService,
     ) { }
-
-    async checkEmailExists(email: string): Promise<boolean> {
-        const admin = await this.adminRepository.findOne({ where: { email } });
-        return !!admin;
-    }
-
-    async register(data: { name: string; email: string; password: string; role?: string; phone?: string; storeName?: string; planCategory?: 'page_builder' | 'ecommerce' }) {
-        const existingEmail = await this.adminRepository.findOne({ where: { email: data.email } });
-        if (existingEmail) throw new BadRequestException('Admin with this email already exists');
-
-        const adminCount = await this.adminRepository.count();
-        const isFirstAdmin = adminCount === 0;
-
-        const hashedPassword = await bcrypt.hash(data.password, 10);
-        
-        // 1. Create and Save Admin FIRST (to get ID for owner_id)
-        const admin = this.adminRepository.create({
-            name: data.name,
-            email: data.email,
-            password: hashedPassword,
-            role: isFirstAdmin ? AdminRole.ADMIN : (data.role as AdminRole) || AdminRole.ADMIN,
-            phone: data.phone,
-            adminType: data.storeName || data.role === AdminRole.ADMIN ? 'store_owner' : undefined,
-        });
-
-        const savedAdmin = await this.adminRepository.save(admin);
-
-        // 2. Bootstrap default store settings/theme via TenantService
-        if (data.storeName) {
-            await this.tenantService.createStore(savedAdmin.id, data.storeName, data.planCategory);
-        }
-
-        const token = this.jwtService.sign({
-            sub: savedAdmin.id,
-            email: savedAdmin.email,
-            role: savedAdmin.role,
-        });
-
-        return {
-            message: 'Admin registered successfully',
-            token,
-            admin: {
-                id: savedAdmin.id,
-                name: savedAdmin.name,
-                email: savedAdmin.email,
-                role: savedAdmin.role,
-                permissions: savedAdmin.permissions,
-                adminType: savedAdmin.adminType || null,
-            },
-        };
-    }
 
     async login(email: string, password: string) {
         const admin = await this.adminRepository.findOne({ where: { email } });

@@ -8,19 +8,6 @@ import { AdminAuthService } from './admin-auth.service';
 export class AdminAuthController {
     constructor(private readonly adminAuthService: AdminAuthService) { }
 
-    @ApiOperation({ summary: 'Check if admin email exists' })
-    @Get('check-email')
-    async checkEmail(@Query('email') email: string) {
-        const exists = await this.adminAuthService.checkEmailExists(email);
-        return { exists };
-    }
-
-    @ApiOperation({ summary: 'Admin Register' })
-    @Post('register')
-    async register(@Body() body: { name: string; email: string; password: string; role?: string; phone?: string; storeName?: string; planCategory?: 'page_builder' | 'ecommerce' }) {
-        return this.adminAuthService.register(body);
-    }
-
     @ApiOperation({ summary: 'Admin Login' })
     @Post('login')
     async login(@Body() body: { email: string; password: string }) {

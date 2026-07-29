@@ -320,14 +320,6 @@ export default function LoginPage() {
               </Button>
             </div>
 
-            <div className="text-center">
-              <p className="text-sm font-bold text-gray-500">
-                Don't have an account?{' '}
-                <Link href="/register" className="text-blue-600 hover:text-blue-700">
-                  Sign up
-                </Link>
-              </p>
-            </div>
           </form>
 
           {error && (

@@ -7,7 +7,7 @@ import { Box, CircularProgress } from '@mui/material';
 import { isTokenExpired } from '@/utils/auth';
 import { logout } from '@/store/slices/authSlice';
 
-const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
