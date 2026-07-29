@@ -19,7 +19,7 @@ function ResetPasswordForm() {
   const router = useRouter();
   const token = searchParams.get("token");
 
-  const [siteName, setSiteName] = useState<string>("EPxWEB");
+  const [siteName, setSiteName] = useState<string>("Satlaa");
   const [siteLoading, setSiteLoading] = useState(true);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ function ResetPasswordForm() {
           const result = await res.json();
           const name = result.data?.siteName || result.data?.seo?.siteName;
 
-          setSiteName(name || "EPxWEB");
+          setSiteName(name || "Satlaa");
         }
       } catch (error) {
         console.error("Error fetching site name:", error);

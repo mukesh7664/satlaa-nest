@@ -60,7 +60,7 @@ interface FooterSettings {
 const defaultFooterData: FooterSettings = {
   contact: {
     phone: "+91-124-4549014",
-    email: "info@EPxWEB.com",
+    email: "info@satlaa.in",
     address: "204, Vipul Business Park, Sohna Rd, Sector 48, Gurugram, Haryana 122001, India",
   },
   columns: [

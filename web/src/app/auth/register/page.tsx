@@ -5,7 +5,7 @@ import { RegisterForm } from "@/components/Auth/RegisterForm";
 import { Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
-  const [siteName, setSiteName] = useState<string>("EPxWEB");
+  const [siteName, setSiteName] = useState<string>("Satlaa");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export default function RegisterPage() {
           const result = await res.json();
           const name = result.data?.siteName || result.data?.seo?.siteName;
 
-          setSiteName(name || "EPxWEB");
+          setSiteName(name || "Satlaa");
         }
       } catch (error) {
         console.error("Error fetching site name:", error);

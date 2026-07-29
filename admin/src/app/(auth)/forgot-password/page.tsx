@@ -282,7 +282,7 @@ export default function ForgotPasswordPage() {
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
             <span className="text-emerald-600 font-bold text-xl">E</span>
           </div>
-          <span className="text-2xl font-bold tracking-tight">EPXWEB</span>
+          <span className="text-2xl font-bold tracking-tight">SATLAA</span>
         </Link>
 
         <div className="z-10 max-w-lg">
@@ -330,7 +330,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="z-10 flex items-center space-x-4 text-emerald-200 text-sm">
-          <span>© 2026 EPXWEB Inc.</span>
+          <span>© 2026 SATLAA Inc.</span>
           <span className="w-1 h-1 bg-emerald-200/50 rounded-full"></span>
           <span>Terms & Privacy</span>
         </div>
@@ -346,7 +346,7 @@ export default function ForgotPasswordPage() {
                 <span className="text-white font-bold text-xl">E</span>
               </div>
               <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600">
-                EPXWEB
+                SATLAA
               </span>
             </Link>
           </div>

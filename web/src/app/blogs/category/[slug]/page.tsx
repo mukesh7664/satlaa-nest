@@ -24,12 +24,12 @@ export async function generateMetadata({
 
   if (!category) {
     return {
-      title: "Category Not Found - EPxWEB",
+      title: "Category Not Found - Satlaa",
     };
   }
 
   return {
-    title: `${category.name} - EPxWEB Blog`,
+    title: `${category.name} - Satlaa Blog`,
     description:
       category.description ||
       `Browse all articles in ${category.name} category.`,

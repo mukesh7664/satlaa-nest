@@ -108,12 +108,12 @@ export default function LoginPage() {
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/4" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-white/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/4" />
 
-        {/* EPXWEB Small Branding at top */}
+        {/* SATLAA Small Branding at top */}
         <div className="absolute top-10 left-12 z-20 flex items-center space-x-2">
           <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
             <span className="text-[#6c3aed] font-black text-lg">E</span>
           </div>
-          <span className="text-xl font-black tracking-tighter text-white">EPXWEB</span>
+          <span className="text-xl font-black tracking-tighter text-white">SATLAA</span>
         </div>
 
         {/* Content Container */}
@@ -159,7 +159,7 @@ export default function LoginPage() {
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
                 </div>
                 <div className="text-[10px] text-gray-400 font-bold bg-gray-200/50 px-6 py-1 rounded-full uppercase tracking-widest">
-                  app.epxweb.co
+                  app.satlaa.in
                 </div>
                 <div className="w-8 h-1 bg-transparent" />
               </div>
@@ -200,7 +200,7 @@ export default function LoginPage() {
               <div className="w-10 h-10 bg-[#6c3aed] rounded-xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-black text-xl">E</span>
               </div>
-              <span className="text-2xl font-black tracking-tighter text-gray-900 uppercase">EPXWEB</span>
+              <span className="text-2xl font-black tracking-tighter text-gray-900 uppercase">SATLAA</span>
             </div>
           </div>
 
@@ -329,7 +329,7 @@ export default function LoginPage() {
           )}
 
           <div className="mt-12 text-center text-xs text-gray-500 font-bold opacity-80 uppercase tracking-widest">
-            © 2026 EPXWEB TECHNOLOGIES INC. ALL RIGHTS RESERVED.
+            © 2026 SATLAA TECHNOLOGIES INC. ALL RIGHTS RESERVED.
           </div>
         </div>
       </div>

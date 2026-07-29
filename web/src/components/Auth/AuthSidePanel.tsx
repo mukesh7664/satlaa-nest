@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 export function AuthSidePanel() {
-  const [siteName, setSiteName] = useState<string>("EPxWEB");
+  const [siteName, setSiteName] = useState<string>("Satlaa");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export function AuthSidePanel() {
         if (res.ok) {
           const result = await res.json();
           const name = result.data?.siteName || result.data?.seo?.siteName;
-          setSiteName(name || "EPxWEB");
+          setSiteName(name || "Satlaa");
         }
       } catch (error) {
         console.error("Error fetching site name:", error);

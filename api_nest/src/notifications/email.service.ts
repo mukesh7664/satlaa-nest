@@ -26,8 +26,8 @@ export class EmailService {
     private emailSettingsRepository: Repository<EmailSettings>,
     private cryptoService: CryptoService,
   ) {
-    this.globalFromName = this.configService.get<string>('EMAIL_FROM_NAME') || 'EPxWEB';
-    this.globalFromEmail = this.configService.get<string>('EMAIL_FROM_ADDRESS') || 'noreply@epxweb.com';
+    this.globalFromName = this.configService.get<string>('EMAIL_FROM_NAME') || 'Satlaa';
+    this.globalFromEmail = this.configService.get<string>('EMAIL_FROM_ADDRESS') || 'noreply@satlaa.in';
     this.initGlobalTransporter();
   }
 
@@ -164,7 +164,7 @@ export class EmailService {
         <p>If you have any questions or require support, please reply to this email.</p>
         <br />
         <p>Best regards,</p>
-        <p><strong>The EPxWEB Team</strong></p>
+        <p><strong>The Satlaa Team</strong></p>
       </div>
     `;
 
@@ -213,7 +213,7 @@ export class EmailService {
 
   async sendOrderConfirmationEmail(order: any, store?: any) {
     const email = order.billingAddress?.email || order.shippingAddress?.email;
-    const storeName = store?.name || 'EPxWEB';
+    const storeName = store?.name || 'Satlaa';
     if (!email) {
       this.logger.warn(`No email found on order ${order.orderNumber}; skipping.`);
       return;
@@ -266,7 +266,7 @@ export class EmailService {
 
   async sendPasswordResetEmail(email: string, resetToken: string, store?: any) {
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
-    const storeName = store?.name || 'EPxWEB';
+    const storeName = store?.name || 'Satlaa';
     const resetUrl = `${clientUrl}/auth/reset-password?token=${resetToken}`;
 
     const template = await this.resolveTemplate('reset_password');
@@ -301,12 +301,12 @@ export class EmailService {
    */
   async sendOtpEmail(email: string, otp: string, name?: string): Promise<void> {
     const displayName = name || 'Admin';
-    const subject = `${otp} is your EPxWEB verification code`;
+    const subject = `${otp} is your Satlaa verification code`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
-        <h2 style="color: #4F46E5; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px;">Account Verification - EPxWEB</h2>
+        <h2 style="color: #4F46E5; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px;">Account Verification - Satlaa</h2>
         <p>Dear ${displayName},</p>
-        <p>We received a request to reset the password for your EPxWEB account associated with <strong>${email}</strong>.</p>
+        <p>We received a request to reset the password for your Satlaa account associated with <strong>${email}</strong>.</p>
         <p>Please use the following verification code to proceed:</p>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
@@ -319,7 +319,7 @@ export class EmailService {
         <p>If you have any questions or require support, please reply to this email.</p>
         <br />
         <p>Best regards,</p>
-        <p><strong>The EPxWEB Team</strong></p>
+        <p><strong>The Satlaa Team</strong></p>
       </div>
     `;
 
@@ -328,7 +328,7 @@ export class EmailService {
 
   async sendPasswordChangedEmail(email: string, firstName: string, store?: any) {
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
-    const storeName = store?.name || 'EPxWEB';
+    const storeName = store?.name || 'Satlaa';
     const now = new Date();
 
     const template = await this.resolveTemplate('password_changed');
@@ -362,7 +362,7 @@ export class EmailService {
 
   async sendVerificationEmail(email: string, verificationToken: string, store?: any) {
     const clientUrl = this.configService.get<string>('CLIENT_URL') || 'http://localhost:3000';
-    const storeName = store?.name || 'EPxWEB';
+    const storeName = store?.name || 'Satlaa';
     const verificationUrl = `${clientUrl}/auth/verify-email?token=${verificationToken}`;
 
     const template = await this.resolveTemplate('verify_email');
@@ -393,7 +393,7 @@ export class EmailService {
 
   async sendEstimateEmail(estimate: any, store?: any) {
     const email = estimate.customer?.email;
-    const storeName = store?.name || 'EPxWEB';
+    const storeName = store?.name || 'Satlaa';
     if (!email) {
       this.logger.warn(`No email found for estimate ${estimate.estimateNumber}; skipping.`);
       return;
@@ -440,7 +440,7 @@ export class EmailService {
 
   async sendInvoiceEmail(invoice: any, store?: any) {
     const email = invoice.customer?.email || invoice.billingAddress?.email;
-    const storeName = store?.name || 'EPxWEB';
+    const storeName = store?.name || 'Satlaa';
     if (!email) {
       this.logger.warn(`No email found for invoice ${invoice.invoiceNumber}; skipping.`);
       return;
@@ -535,7 +535,7 @@ export class EmailService {
       throw new Error('Template not found');
     }
 
-    const siteName = this.globalFromName || 'EPxWEB Test';
+    const siteName = this.globalFromName || 'Satlaa Test';
 
     // Use dummy variables for test
     const vars: Record<string, string> = {
