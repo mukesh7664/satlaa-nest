@@ -13,7 +13,6 @@ import { CommunicationModule } from './communication/communication.module';
 import { CmsModule } from './cms/cms.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
-import { TenantModule } from './tenant/tenant.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CustomersModule } from './customers/customers.module';
 import { ReportsModule } from './admin/reports/reports.module';
@@ -46,7 +45,6 @@ import { BlogModule } from './blog/blog.module';
         CommunicationModule,
         CmsModule,
         AdminModule,
-        TenantModule,
         PaymentsModule,
         CustomersModule,
         ReportsModule,

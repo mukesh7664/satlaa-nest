@@ -22,9 +22,9 @@ import { Customer } from '../customers/entities/customer.entity';
 import * as bcrypt from 'bcryptjs';
 import { Address, AddressType } from '../customers/entities/address.entity';
 import { SettingsService } from './settings.service';
-import { TenantService } from '../tenant/tenant.service';
 import { EmailService } from '../notifications/email.service';
 import { CryptoService } from '../common/crypto.service';
+import { DEFAULT_EMAIL_TEMPLATES } from '../common/default-email-templates';
 import { CatalogService } from '../catalog/catalog.service';
 
 @ApiTags('admin')
@@ -63,7 +63,6 @@ export class AdminController {
         @InjectRepository(Payment)
         private paymentRepository: Repository<Payment>,
         private readonly settingsService: SettingsService,
-        private readonly tenantService: TenantService,
         private readonly emailService: EmailService,
         private readonly cryptoService: CryptoService,
         private readonly catalogService: CatalogService,
@@ -1253,7 +1252,22 @@ export class AdminController {
     @ApiOperation({ summary: 'Initialize default email templates' })
     @Post('email-config/templates/init')
     async initializeTemplates(@Request() req: any) {
-        await this.tenantService.createDefaultTemplates();
+        // Seed any default email templates that don't already exist
+        for (const t of DEFAULT_EMAIL_TEMPLATES) {
+            const exists = await this.emailTemplateRepository.findOne({ where: { key: t.key } });
+            if (!exists) {
+                await this.emailTemplateRepository.save(
+                    this.emailTemplateRepository.create({
+                        key: t.key,
+                        name: t.name,
+                        subject: t.subject,
+                        htmlContent: t.htmlContent,
+                        variables: t.variables,
+                        isActive: true,
+                    }),
+                );
+            }
+        }
         return this.emailTemplateRepository.find({ where: {}, order: { createdAt: 'DESC' } });
     }
 
