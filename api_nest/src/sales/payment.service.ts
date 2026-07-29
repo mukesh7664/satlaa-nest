@@ -721,7 +721,7 @@ export class PaymentService {
     /**
      * Admin: Get all successful payments
      */
-    async getPaymentsForAdmin(role: string, limit: number = 20, offset: number = 0, startDate?: string, endDate?: string) {
+    async getPaymentsForAdmin(limit: number = 20, offset: number = 0, startDate?: string, endDate?: string) {
         let where: any = {};
 
         where.payment_type = 'ORDER';
@@ -757,7 +757,7 @@ export class PaymentService {
     /**
      * Admin: Get all payment attempts (including failed)
      */
-    async getPaymentAttemptsForAdmin(role: string, limit: number = 20, offset: number = 0, startDate?: string, endDate?: string) {
+    async getPaymentAttemptsForAdmin(limit: number = 20, offset: number = 0, startDate?: string, endDate?: string) {
         const query = this.paymentAttemptRepository.createQueryBuilder('attempt')
             .orderBy('attempt.created_at', 'DESC')
             .take(limit)
@@ -778,16 +778,7 @@ export class PaymentService {
 
         const [items, total] = await query.getManyAndCount();
 
-        // Post-process to add store_name for subscriptions (since the column was removed)
-        const mappedItems = items.map(item => {
-            const data = item as any;
-            if (data.entity_type === 'SUBSCRIPTION' && data.registration_data) {
-                data.store_name = data.registration_data.storeName || data.registration_data.store_name || 'N/A';
-            }
-            return data;
-        });
-
-        return { items: mappedItems, total };
+        return { items, total };
     }
 
     private mapRazorpayMethod(method: string): string {

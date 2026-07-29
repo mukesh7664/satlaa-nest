@@ -125,58 +125,6 @@ export class EmailService {
     }
   }
 
-  async sendStoreSubscriptionInvoiceEmail(
-    invoice: any,
-    toEmail: string,
-    ownerName: string,
-    storeName: string,
-    pdfBuffer?: Buffer,
-  ): Promise<void> {
-    const subject = `Invoice for Subscription Plan - ${invoice.plan?.name || 'Store Plan'} [${invoice.invoiceNumber}]`;
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
-        <h2 style="color: #4F46E5; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px;">Subscription Invoice generated! 🎉</h2>
-        <p>Dear ${ownerName},</p>
-        <p>A new invoice has been generated for your store, <strong>${storeName}</strong>, regarding your platform subscription plan.</p>
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold; border-bottom: 1px solid #E5E7EB;">Invoice Number:</td>
-            <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #E5E7EB;">${invoice.invoiceNumber}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold; border-bottom: 1px solid #E5E7EB;">Plan:</td>
-            <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #E5E7EB;">${invoice.plan?.name || 'Satlaa Plan'}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold; border-bottom: 1px solid #E5E7EB;">Billing Cycle:</td>
-            <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #E5E7EB; text-transform: capitalize;">${invoice.billing_cycle}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold; border-bottom: 1px solid #E5E7EB;">Amount:</td>
-            <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #E5E7EB; font-weight: bold; color: #4F46E5;">${invoice.currency} ${Number(invoice.amount).toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold; border-bottom: 1px solid #E5E7EB;">Status:</td>
-            <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #E5E7EB; text-transform: uppercase; color: green; font-weight: bold;">${invoice.status}</td>
-          </tr>
-        </table>
-        <p>We have attached the PDF copy of your invoice to this email for your records.</p>
-        <p>If you have any questions or require support, please reply to this email.</p>
-        <br />
-        <p>Best regards,</p>
-        <p><strong>The Satlaa Team</strong></p>
-      </div>
-    `;
-
-    const attachments = pdfBuffer ? [{
-      filename: `invoice-${invoice.invoiceNumber}.pdf`,
-      content: pdfBuffer,
-      contentType: 'application/pdf',
-    }] : [];
-
-    await this.sendMail(toEmail, subject, html, attachments);
-  }
-
   // ─── Pre-built email methods ────────────────────────────────────────
 
   async sendWelcomeEmail(email: string, firstName: string) {

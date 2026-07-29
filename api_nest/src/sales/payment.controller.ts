@@ -197,14 +197,12 @@ export class PaymentController {
     @UseGuards(JwtAuthGuard)
     @Get('admin/list')
     async getPaymentList(
-        @Request() req: any,
         @Query('limit') limit?: number,
         @Query('offset') offset?: number,
         @Query('startDate') startDate?: string,
         @Query('endDate') endDate?: string,
     ) {
-        const role = req.user?.role;
-        return this.paymentService.getPaymentsForAdmin(role, limit, offset, startDate, endDate);
+        return this.paymentService.getPaymentsForAdmin(limit, offset, startDate, endDate);
     }
 
     // ─── GET /payment/admin/attempts ─────────────────────────────────────
@@ -214,13 +212,11 @@ export class PaymentController {
     @UseGuards(JwtAuthGuard)
     @Get('admin/attempts')
     async getPaymentAttempts(
-        @Request() req: any,
         @Query('limit') limit?: number,
         @Query('offset') offset?: number,
         @Query('startDate') startDate?: string,
         @Query('endDate') endDate?: string,
     ) {
-        const role = req.user?.role;
-        return this.paymentService.getPaymentAttemptsForAdmin(role, limit, offset, startDate, endDate);
+        return this.paymentService.getPaymentAttemptsForAdmin(limit, offset, startDate, endDate);
     }
 }

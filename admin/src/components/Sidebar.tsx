@@ -30,7 +30,6 @@ import {
   KeyboardArrowRight as ArrowRightIcon,
   KeyboardArrowDown as ArrowDownIcon,
   Assessment as ReportsIcon,
-  Subscriptions as SubscriptionsIcon,
   PermMedia as MediaIcon,
   ViewQuilt as ViewQuiltIcon,
   Language as LanguageIcon,

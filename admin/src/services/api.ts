@@ -5,16 +5,6 @@ export interface LoginCredentials {
   password: string;
 }
 
-export interface Plan {
-  id: string;
-  name: string;
-  monthlyPrice: number;
-  yearlyPrice: number;
-  features: any;
-  isActive: boolean;
-  trial_days: number;
-}
-
 export interface LoginResponse {
   message: string;
   token: string;
@@ -106,30 +96,6 @@ class ApiService {
     return response.json();
   }
 
-
-  async getPlans(activeOnly?: boolean): Promise<Plan[]> {
-    let url = `${this.baseUrl}/plans`;
-    const params = new URLSearchParams();
-    if (activeOnly) params.append('isActive', 'true');
-
-    const queryString = params.toString();
-    if (queryString) {
-      url += `?${queryString}`;
-    }
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "Failed to fetch plans");
-    }
-
-    return response.json();
-  }
 
   async forgotPassword(data: ForgotPasswordData): Promise<{ message: string }> {
     const response = await fetch(`${this.baseUrl}/admin/forgot-password`, {
