@@ -17,7 +17,6 @@ import { useAppSelector } from "@/store/hooks";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Page } from "@/services/pages.api";
-import StoreSetupWidget from "@/components/StoreSetupWidget";
 import {
   ShoppingBag,
   DollarSign,
@@ -192,17 +191,12 @@ export default function Dashboard() {
     return <div className="p-6 flex items-center justify-center py-20"><div className="text-red-600">Error: {error || "Failed to load data"}</div></div>;
   }
 
-  const { summary, yearlyData, topProducts, topCustomers, topCategories, orderStats, setupStatus } = dashboardData;
+  const { summary, yearlyData, topProducts, topCustomers, topCategories, orderStats } = dashboardData;
 
 
 
   return (
     <div className="p-4 2xl:p-6 font-sans">
-      {/* Store Completion Progress Bar */}
-      {setupStatus && !setupStatus.isComplete && (
-        <StoreSetupWidget setupStatus={setupStatus} />
-      )}
-
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 2xl:gap-6 mb-4 2xl:mb-6">
         <StatCard

@@ -10,7 +10,6 @@ import { Invoice } from '../sales/entities/invoice.entity';
 import { Inquiry, InquiryStatus } from '../communication/entities/inquiry.entity';
 import { getFullS3Url } from '../common/utils/s3-url.util';
 import { EmailSettings } from './entities/email-settings.entity';
-import { GeneralSettings } from './entities/general-settings.entity';
 import { StorePaymentConfigService } from '../payments/store-payment-config.service';
 import { ShippingConfig } from '../sales/entities/shipping-config.entity';
 
@@ -31,8 +30,6 @@ export class DashboardService {
         private inquiryRepository: Repository<Inquiry>,
         @InjectRepository(EmailSettings)
         private emailSettingsRepository: Repository<EmailSettings>,
-        @InjectRepository(GeneralSettings)
-        private generalSettingsRepository: Repository<GeneralSettings>,
         private storePaymentConfigService: StorePaymentConfigService,
         private dataSource: DataSource,
     ) { }
@@ -116,62 +113,19 @@ export class DashboardService {
     }
 
     async getSetupStatus() {
-        const [emailSettings, paymentConfigs, shippingConfig, generalSettings, productCount] = await Promise.all([
+        // Single-store app: the old multi-store onboarding "completion" flow
+        // (steps / completionPercentage / activate storefront) is gone. We only
+        // keep the operational config flags used to warn the admin when payment,
+        // email, or shipping isn't set up.
+        const [emailSettings, paymentConfigs, shippingConfig] = await Promise.all([
             this.emailSettingsRepository.findOne({ where: {} }),
             this.storePaymentConfigService.findByStore(),
             this.dataSource.getRepository(ShippingConfig).findOne({ where: { provider: 'shiprocket' } }),
-            this.generalSettingsRepository.findOne({ where: {} }),
-            this.productRepository.count(),
         ]);
 
         const emailConfigured = !!(emailSettings && emailSettings.smtpHost && emailSettings.smtpUser && emailSettings.smtpPassword);
         const paymentConfigured = paymentConfigs.some(c => c.isActive && c.keyId && c.keySecret);
         const shippingConfigured = !!(shippingConfig && shippingConfig.email && shippingConfig.password);
-
-        const steps = [
-            {
-                id: 'store_details',
-                label: 'Store Name & Description',
-                description: 'Set your store brand name and a short description',
-                weight: 20,
-                isCompleted: !!(generalSettings && generalSettings.siteName && generalSettings.siteName !== 'Inospire' && generalSettings.siteDescription),
-                redirectUrl: '/settings/general-settings'
-            },
-            {
-                id: 'store_logo',
-                label: 'Store Logo',
-                description: 'Upload a logo to build brand identity',
-                weight: 20,
-                isCompleted: !!(generalSettings && generalSettings.siteLogo),
-                redirectUrl: '/settings/general-settings'
-            },
-            {
-                id: 'first_product',
-                label: 'Add First Product',
-                description: 'Add at least one product to start selling',
-                weight: 20,
-                isCompleted: productCount > 0,
-                redirectUrl: '/manage-products/create-product'
-            },
-            {
-                id: 'payment_gateway',
-                label: 'Payment Gateway',
-                description: 'Setup Razorpay or Stripe to receive payments',
-                weight: 20,
-                isCompleted: paymentConfigured,
-                redirectUrl: '/settings/payment-settings'
-            },
-            {
-                id: 'email_smtp',
-                label: 'Email SMTP Configuration',
-                description: 'Setup SMTP server for transactional emails',
-                weight: 20,
-                isCompleted: emailConfigured,
-                redirectUrl: '/settings/email-config/settings'
-            }
-        ];
-
-        const completionPercentage = steps.reduce((acc, step) => acc + (step.isCompleted ? step.weight : 0), 0);
 
         return {
             emailConfigured,
@@ -180,9 +134,6 @@ export class DashboardService {
             emailAllowed: true,
             paymentAllowed: true,
             shippingAllowed: true,
-            isComplete: completionPercentage === 100,
-            completionPercentage,
-            steps,
         };
     }
 

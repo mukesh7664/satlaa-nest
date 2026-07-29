@@ -74,15 +74,6 @@ export interface TopCustomer {
   image: string | null;
 }
 
-export interface SetupStep {
-  id: string;
-  label: string;
-  description: string;
-  weight: number;
-  isCompleted: boolean;
-  redirectUrl: string;
-}
-
 export interface SetupStatus {
   emailConfigured: boolean;
   paymentConfigured: boolean;
@@ -90,9 +81,6 @@ export interface SetupStatus {
   emailAllowed?: boolean;
   paymentAllowed?: boolean;
   shippingAllowed?: boolean;
-  isComplete: boolean;
-  completionPercentage: number;
-  steps: SetupStep[];
 }
 
 export interface DashboardData {
