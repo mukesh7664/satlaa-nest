@@ -35,6 +35,14 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # HTTP client — used to call the backend REST API (login, register, etc.).
+  # Web analogy: like fetch()/axios.
+  http: ^1.2.2
+
+  # Simple key-value storage on the device — used to save the auth token
+  # so the user stays logged in. Web analogy: like localStorage.
+  shared_preferences: ^2.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

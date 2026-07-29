@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'services/auth_service.dart';
+import 'screens/auth/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/placeholder_screen.dart';
+import 'screens/profile_screen.dart';
 
 // Entry point of the app. Flutter calls main() first when the app launches.
-// Web analogy: like the root index.tsx that mounts the app.
 void main() {
   runApp(const SatlaaApp());
 }
 
 // Root widget of the whole application.
-// MaterialApp sets up theme, title, and the first screen (home).
 class SatlaaApp extends StatelessWidget {
   const SatlaaApp({super.key});
 
@@ -17,55 +18,103 @@ class SatlaaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Satlaa',
-      debugShowCheckedModeBanner: false, // hide the "DEBUG" ribbon in corner
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MainShell(),
+      // AuthGate decides which screen to show first.
+      home: const AuthGate(),
     );
+  }
+}
+
+// AuthGate = the "guard" at the entrance of the app.
+// On startup it checks whether a token is saved:
+//   - logged in  -> show the main app (MainShell)
+//   - logged out -> show the login screen
+// Web analogy: like a route guard / protected-route wrapper.
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool _checking = true; // true while we read the saved token
+  bool _loggedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final loggedIn = await AuthService.isLoggedIn();
+    if (mounted) {
+      setState(() {
+        _loggedIn = loggedIn;
+        _checking = false;
+      });
+    }
+  }
+
+  // Called by the login/signup screens after success.
+  void _onLoggedIn() => setState(() => _loggedIn = true);
+
+  // Called by the profile screen after logout.
+  void _onLoggedOut() => setState(() => _loggedIn = false);
+
+  @override
+  Widget build(BuildContext context) {
+    // While checking the saved token, show a simple splash spinner.
+    if (_checking) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Show login or the main app depending on auth state.
+    if (!_loggedIn) {
+      return LoginScreen(onLoggedIn: _onLoggedIn);
+    }
+    return MainShell(onLoggedOut: _onLoggedOut);
   }
 }
 
 // MainShell = the app "frame" that holds the bottom navigation bar
 // and swaps the screen when you tap a tab.
-//
-// StatefulWidget = a widget that has changing data (here: which tab is
-// currently selected). Web analogy: a component with useState.
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  // Passed down to the Profile tab so logout can return to login.
+  final VoidCallback onLoggedOut;
+
+  const MainShell({super.key, required this.onLoggedOut});
 
   @override
   State<MainShell> createState() => _MainShellState();
 }
 
 class _MainShellState extends State<MainShell> {
-  // Which tab is selected right now (0 = Home). This is our "state".
   int _currentIndex = 0;
 
-  // The screen for each tab. Order matches the nav items below.
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    PlaceholderScreen(title: 'Categories', icon: Icons.grid_view),
-    PlaceholderScreen(title: 'Cart', icon: Icons.shopping_cart),
-    PlaceholderScreen(title: 'Profile', icon: Icons.person),
-  ];
-
+  // Screens are built in build() because the Profile tab needs onLoggedOut.
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // body shows the screen for the currently selected tab.
-      body: _screens[_currentIndex],
+    final screens = [
+      const HomeScreen(),
+      const PlaceholderScreen(title: 'Categories', icon: Icons.grid_view),
+      const PlaceholderScreen(title: 'Cart', icon: Icons.shopping_cart),
+      ProfileScreen(onLoggedOut: widget.onLoggedOut),
+    ];
 
-      // Bottom navigation bar with 4 tabs.
+    return Scaffold(
+      body: screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        // Called when a tab is tapped. setState re-runs build() so the
-        // new screen shows. Web analogy: setState(newIndex) triggers re-render.
         onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          setState(() => _currentIndex = index);
         },
         destinations: const [
           NavigationDestination(
