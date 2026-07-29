@@ -79,8 +79,8 @@ async function bootstrap() {
     }));
 
     const config = new DocumentBuilder()
-        .setTitle('E-commerce SaaS API')
-        .setDescription('The E-commerce SaaS API description')
+        .setTitle('Satlaa API')
+        .setDescription('The Satlaa API description')
         .setVersion('1.0')
         // .addTag('auth') // Tags are automatically picked up from controllers if decorated
         .addBearerAuth()

@@ -182,23 +182,6 @@ class ApiService {
     return response.json();
   }
 
-  async getSaaSSummary(token: string): Promise<any> {
-    const response = await fetch(`${this.baseUrl}/admin/dashboard/saas-summary`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "Failed to fetch SaaS summary");
-    }
-
-    return response.json();
-  }
-
   // Generic methods
   async get(endpoint: string, options?: { params?: Record<string, any> }): Promise<any> {
     const token = localStorage.getItem('token');

@@ -39,7 +39,7 @@ export class PaymentAttempt {
     failure_reason: string;
 
     @Column('jsonb', { nullable: true })
-    registration_data: any; // SaaS store signup details during payment
+    registration_data: any; // Signup details captured during payment
 
     @CreateDateColumn()
     created_at: Date;

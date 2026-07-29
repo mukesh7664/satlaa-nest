@@ -77,7 +77,7 @@ export default function ProfilePage() {
             <div className="md:col-span-2">
               <p className="text-gray-400 font-medium mb-1">Bio</p>
               <p className="font-semibold text-slate-700">
-                {admin.adminType === "store_owner" ? "Store Administrator and Platform Owner." : "SaaS Platform Staff."}
+                {admin.adminType === "store_owner" ? "Store Administrator and Platform Owner." : "Satlaa Platform Staff."}
               </p>
             </div>
           </div>

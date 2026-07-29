@@ -145,7 +145,7 @@ export class EmailService {
           </tr>
           <tr>
             <td style="padding: 8px 0; font-weight: bold; border-bottom: 1px solid #E5E7EB;">Plan:</td>
-            <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #E5E7EB;">${invoice.plan?.name || 'SaaS Plan'}</td>
+            <td style="padding: 8px 0; text-align: right; border-bottom: 1px solid #E5E7EB;">${invoice.plan?.name || 'Satlaa Plan'}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; font-weight: bold; border-bottom: 1px solid #E5E7EB;">Billing Cycle:</td>
