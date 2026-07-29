@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'services/auth_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/placeholder_screen.dart';
+import 'screens/categories_screen.dart';
+import 'screens/cart_screen.dart';
 import 'screens/profile_screen.dart';
 
 // Entry point of the app. Flutter calls main() first when the app launches.
@@ -104,8 +105,8 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final screens = [
       const HomeScreen(),
-      const PlaceholderScreen(title: 'Categories', icon: Icons.grid_view),
-      const PlaceholderScreen(title: 'Cart', icon: Icons.shopping_cart),
+      const CategoriesScreen(),
+      const CartScreen(),
       ProfileScreen(onLoggedOut: widget.onLoggedOut),
     ];
 
