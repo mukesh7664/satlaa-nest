@@ -10,9 +10,6 @@ import {
   Public as PublicIcon,
   PublicOff as PublicOffIcon,
   Home as HomeIcon,
-  FileDownload as DownloadIcon,
-  CloudUpload as CloudUploadIcon,
-  Upload as UploadIcon,
 } from "@mui/icons-material";
 import { toast } from "sonner";
 import { pagesApi, Page } from "@/services/pages.api";
@@ -47,10 +44,7 @@ export default function PagesSection() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [newPageTitle, setNewPageTitle] = useState("");
   const [newPageLoading, setNewPageLoading] = useState(false);
-  const [themeLoading, setThemeLoading] = useState(false);
   const [storeDomain, setStoreDomain] = useState<string>("localhost:3000");
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const fileInputFullThemeRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchData();
@@ -209,234 +203,6 @@ export default function PagesSection() {
     }
   };
 
-  const handleDownloadFullTheme = async () => {
-    try {
-      setThemeLoading(true);
-      toast.info("Preparing full store theme export...");
-
-      const token = localStorage.getItem("token");
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5004/api/v1";
-
-      // 1. Fetch Header/Footer and Settings
-      const [headerRes, footerRes, settingsRes] = await Promise.all([
-        fetch(`${API_URL}/admin/header-sections`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }).then(r => r.json()),
-        fetch(`${API_URL}/admin/footer-sections`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }).then(r => r.json()),
-        settingsApi.getSettings(),
-      ]);
-
-      // 2. Fetch All Pages
-      const allPages = await pagesApi.getAllPages();
-      
-      // 3. Hydrate each page with its full section data
-      const hydratedPages = await Promise.all(
-        allPages.map(async (p) => {
-          const { page: fullPage } = await pagesApi.getPageById(p.id!);
-          return {
-            title: fullPage.title,
-            slug: fullPage.slug,
-            is_homepage: fullPage.is_homepage || false,
-            description: fullPage.description,
-            metaTitle: fullPage.metaTitle,
-            metaDescription: fullPage.metaDescription,
-            sections: fullPage.sections || [],
-          };
-        })
-      );
-
-      // 4. Bundle everything
-      const themeExport = {
-        themeType: "full-store-export",
-        exportedAt: new Date().toISOString(),
-        global: {
-          header: headerRes.data || headerRes.sections || [],
-          footer: footerRes.data || footerRes.sections || [],
-        },
-        pages: hydratedPages,
-        settings: {
-          themeColors: settingsRes?.themeColors || { primary: "#000000", secondary: "#ffffff" },
-          fonts: settingsRes?.fonts || {},
-        },
-      };
-
-      // 5. Download
-      const blob = new Blob([JSON.stringify(themeExport, null, 2)], {
-        type: "application/json",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `full-theme-${new Date().getTime()}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success("Full theme exported successfully");
-    } catch (error) {
-      console.error("Failed to export theme:", error);
-      toast.error("Failed to export full store theme");
-    } finally {
-      setThemeLoading(false);
-    }
-  };
-
-  const handleFullThemeFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setThemeLoading(true);
-      toast.info("Reading full store theme file...");
-
-      const content = await file.text();
-      const data = JSON.parse(content);
-
-      // Validate structure
-      if (data.themeType !== "full-store-export" || !data.global || !data.pages) {
-        throw new Error("Invalid theme setup file format. Please upload a valid exported store JSON.");
-      }
-
-      const token = localStorage.getItem("token");
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5004/api/v1";
-
-      toast.info("Hydrating global sections (Header & Footer)...");
-
-      // 1. Update Header/Footer
-      await Promise.all([
-        fetch(`${API_URL}/admin/header-sections`, {
-          method: "PUT",
-          headers: { 
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}` 
-          },
-          body: JSON.stringify(data.global.header),
-        }),
-        fetch(`${API_URL}/admin/footer-sections`, {
-          method: "PUT",
-          headers: { 
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}` 
-          },
-          body: JSON.stringify(data.global.footer),
-        }),
-      ]);
-
-      toast.info("Creating store pages from theme...");
-
-      // 2. Hydrate Settings if available
-      if (data.settings) {
-        try {
-          await settingsApi.updateSettings({
-            themeColors: data.settings.themeColors,
-            fonts: data.settings.fonts
-          });
-        } catch (err) {
-          console.warn("Failed to hydrate theme settings:", err);
-        }
-      }
-
-      // 3. Create All Pages
-      // Using sequential processing to avoid plan limit races/overwhelming backend
-      for (const pageData of data.pages) {
-        try {
-          await pagesApi.createPage(pageData);
-        } catch (err: any) {
-          console.warn(`Skipped page ${pageData.title}:`, err.response?.data?.message || err.message);
-        }
-      }
-
-      toast.success("Store theme hydrated successfully!");
-      fetchData();
-    } catch (error: any) {
-      console.error("Failed to upload store theme:", error);
-      toast.error(error.message || "Failed to upload store theme");
-    } finally {
-      setThemeLoading(false);
-      if (fileInputFullThemeRef.current) fileInputFullThemeRef.current.value = "";
-    }
-  };
-
-  const handleDownloadPageJson = async (page: Page) => {
-    try {
-      toast.info(`Preparing download for ${page.title}...`);
-      const { page: fullPage } = await pagesApi.getPageById(page.id!);
-
-      // Structure the data as a "Theme Setup" compatible object
-      const downloadData = {
-        themeType: "single-page-export",
-        exportedAt: new Date().toISOString(),
-        page: {
-          title: fullPage.title,
-          slug: fullPage.slug,
-          description: fullPage.description,
-          metaTitle: fullPage.metaTitle,
-          metaDescription: fullPage.metaDescription,
-          sections: fullPage.sections || [],
-        },
-      };
-
-      const blob = new Blob([JSON.stringify(downloadData, null, 2)], {
-        type: "application/json",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${fullPage.slug || "page"}-theme.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success("Page setup downloaded successfully");
-    } catch (error) {
-      console.error("Failed to download page JSON:", error);
-      toast.error("Failed to download page data");
-    }
-  };
-  
-  const handlePageFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setNewPageLoading(true);
-      toast.info("Reading page setup file...");
-
-      const content = await file.text();
-      const data = JSON.parse(content);
-
-      // Validate structure
-      if (data.themeType !== "single-page-export" || !data.page) {
-        throw new Error("Invalid page setup file format. Please upload a valid exported page JSON.");
-      }
-
-      toast.info("Rehydrating page into your store...");
-      
-      // Create the page using the data from the JSON
-      // The backend handles section creation automatically if sections array is present
-      const res = await pagesApi.createPage(data.page);
-
-      toast.success("Page imported successfully!");
-      setAddDialogOpen(false);
-      
-      // Navigate to the edit page
-      if (res.page?.id || (res.page as any)?._id) {
-        router.push(`/pages/${res.page.id || (res.page as any)?._id}`);
-      } else {
-        fetchData();
-      }
-    } catch (error: any) {
-      console.error("Failed to upload page setup:", error);
-      toast.error(error.message || "Failed to upload page setup");
-    } finally {
-      setNewPageLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
 
   const filteredPages = pages.filter((page) =>
     page.title.toLowerCase().includes(search.toLowerCase())
@@ -456,41 +222,6 @@ export default function PagesSection() {
           </p>
         </div>
           <div className="flex gap-2">
-            <input
-              type="file"
-              ref={fileInputFullThemeRef}
-              className="hidden"
-              accept=".json"
-              onChange={handleFullThemeFileUpload}
-            />
-            <Button
-              onClick={() => fileInputFullThemeRef.current?.click()}
-              variant="outlined"
-              color="info"
-              className="border-dashed"
-              startIcon={themeLoading ? <CircularProgress size={16} /> : <CloudUploadIcon fontSize="small" />}
-              disabled={themeLoading}
-              sx={{
-                  textTransform: "none",
-                  borderRadius: "8px",
-                  px: 3,
-              }}
-            >
-              {themeLoading ? "Hydrating..." : "Upload Full Theme"}
-            </Button>
-            <Button
-              onClick={handleDownloadFullTheme}
-              variant="outlined"
-              startIcon={themeLoading ? <CircularProgress size={16} /> : <DownloadIcon fontSize="small" />}
-              disabled={themeLoading}
-              sx={{
-                  textTransform: "none",
-                  borderRadius: "8px",
-                  px: 3,
-              }}
-            >
-              {themeLoading ? "Exporting..." : "Download Full Theme"}
-            </Button>
             <Button
               onClick={() => {
                 setAddDialogOpen(true);
@@ -641,14 +372,6 @@ export default function PagesSection() {
                             )}
                           </IconButton>
                           <IconButton
-                            onClick={() => handleDownloadPageJson(page)}
-                            color="info"
-                            size="small"
-                            title="Download Setup (JSON)"
-                          >
-                            <DownloadIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
                             onClick={() => {
                               setSelectedPageId(page.id!);
                               setDeleteDialogOpen(true);
@@ -720,71 +443,29 @@ export default function PagesSection() {
         </DialogTitle>
         <DialogContent className="pt-2">
           <div className="space-y-6">
-            {/* Manual Option */}
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
-                Option A: Create New
-              </p>
-              <div className="flex flex-col gap-3">
-                <TextField
-                  autoFocus
-                  id="title"
-                  label="Page Title"
-                  placeholder="e.g. Summer Collection"
-                  type="text"
-                  fullWidth
-                  variant="outlined"
-                  value={newPageTitle}
-                  onChange={(e) => setNewPageTitle(e.target.value)}
-                  disabled={newPageLoading}
-                  size="small"
-                />
-                <Button
-                  onClick={handleCreatePage}
-                  variant="contained"
-                  fullWidth
-                  className="bg-blue-600 hover:bg-blue-700 normal-case shadow-none h-10"
-                  disabled={newPageLoading || !newPageTitle.trim()}
-                >
-                  {newPageLoading ? <CircularProgress size={20} color="inherit" /> : 'Create Blank Page'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-slate-400">OR</span>
-              </div>
-            </div>
-
-            {/* Upload Option */}
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
-                Option B: Upload Setup
-              </p>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept=".json"
-                onChange={handlePageFileUpload}
+            <div className="flex flex-col gap-3">
+              <TextField
+                autoFocus
+                id="title"
+                label="Page Title"
+                placeholder="e.g. Summer Collection"
+                type="text"
+                fullWidth
+                variant="outlined"
+                value={newPageTitle}
+                onChange={(e) => setNewPageTitle(e.target.value)}
+                disabled={newPageLoading}
+                size="small"
               />
               <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outlined"
+                onClick={handleCreatePage}
+                variant="contained"
                 fullWidth
-                startIcon={<CloudUploadIcon />}
-                className="border-slate-200 text-slate-600 hover:bg-slate-50 normal-case h-10 border-dashed border-2"
-                disabled={newPageLoading}
+                className="bg-blue-600 hover:bg-blue-700 normal-case shadow-none h-10"
+                disabled={newPageLoading || !newPageTitle.trim()}
               >
-                {newPageLoading ? 'Uploading...' : 'Upload Page JSON'}
+                {newPageLoading ? <CircularProgress size={20} color="inherit" /> : 'Create Blank Page'}
               </Button>
-              <p className="text-[10px] text-center text-slate-400">
-                Upload a .json file exported from another store
-              </p>
             </div>
           </div>
         </DialogContent>
