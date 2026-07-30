@@ -3,6 +3,7 @@ import 'services/auth_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/categories_screen.dart';
+import 'screens/play_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/profile_screen.dart';
 
@@ -106,6 +107,7 @@ class _MainShellState extends State<MainShell> {
     final screens = [
       const HomeScreen(),
       const CategoriesScreen(),
+      const PlayScreen(),
       const CartScreen(),
       ProfileScreen(onLoggedOut: widget.onLoggedOut),
     ];
@@ -127,6 +129,11 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Icons.grid_view_outlined),
             selectedIcon: Icon(Icons.grid_view),
             label: 'Categories',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.play_circle_outline),
+            selectedIcon: Icon(Icons.play_circle),
+            label: 'Play',
           ),
           NavigationDestination(
             icon: Icon(Icons.shopping_cart_outlined),

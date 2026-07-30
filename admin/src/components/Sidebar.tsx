@@ -134,6 +134,7 @@ const menu = [
           { label: "Categories", key: "categories", href: "/manage-products/categories" },
           { label: "Collections", key: "collections" },
           { label: "Create Product", key: "create-product" },
+          { label: "Reels", key: "reels", href: "/manage-products/reels" },
           { label: "Discounts", key: "discounts", href: "/discounts" },
         ],
       },

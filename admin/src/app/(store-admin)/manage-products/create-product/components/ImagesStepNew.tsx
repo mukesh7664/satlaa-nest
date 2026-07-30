@@ -482,6 +482,9 @@ export default function ImagesStepNew({
         open={videoPickerOpen}
         onClose={() => setVideoPickerOpen(false)}
         onSelect={handleVideoSelect}
+        title="Select Product Video"
+        type="video"
+        defaultFolder="reels"
       />
     </Box>
   );

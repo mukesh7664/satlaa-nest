@@ -95,6 +95,51 @@ export class UploadController {
         };
     }
 
+    @ApiOperation({ summary: 'Upload video (defaults to the reels/ folder)' })
+    @Post('video')
+    @UseInterceptors(FileInterceptor('video', {
+        storage: memoryStorage(),
+        // Only accept video files.
+        fileFilter: (_req, file, cb) => {
+            if (file.mimetype && file.mimetype.startsWith('video/')) {
+                cb(null, true);
+            } else {
+                cb(new BadRequestException('Only video files are allowed'), false);
+            }
+        },
+        // Cap upload size at 100 MB.
+        limits: { fileSize: 100 * 1024 * 1024 },
+    }))
+    async uploadVideo(@UploadedFile() file: Express.Multer.File, @Body() body: any, @Req() req: any) {
+        if (!file) throw new BadRequestException('Video file is required');
+
+        // Reel videos live in their own folder, separate from other media.
+        const folder = body.folder || 'reels';
+
+        const uniqueName = `media/${folder}/${uuidv4()}${extname(file.originalname)}`;
+
+        const s3Url = await this.s3Service.uploadFile(file, uniqueName);
+
+        this.logger.log(`Created video: folder=${folder}, url=${s3Url}`);
+
+        const media = this.mediaRepository.create({
+            name: body.name || file.originalname,
+            alt: body.alt || '',
+            type: 'video',
+            size: file.size,
+            mimeType: file.mimetype,
+            key: uniqueName,
+            folder: folder,
+            tags: body.tags ? (typeof body.tags === 'string' ? body.tags.split(',').map(t => t.trim()) : body.tags) : [],
+            usageType: body.usageType || 'reel',
+        });
+        const savedMedia = await this.mediaRepository.save(media);
+        return {
+            ...savedMedia,
+            url: s3Url
+        };
+    }
+
     @ApiOperation({ summary: 'List uploaded images' })
     @Get('list')
     async listImages(

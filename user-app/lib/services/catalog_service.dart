@@ -40,6 +40,27 @@ class CatalogService {
         .toList();
   }
 
+  // GET /products/reels?page=&limit= -> { success, data: [...], pagination }
+  // Returns only products that have a dedicated video, for the Play feed.
+  static Future<List<Product>> getReels({int page = 1, int limit = 10}) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/products/reels').replace(
+      queryParameters: {'page': '$page', 'limit': '$limit'},
+    );
+    final res = await http.get(uri);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw 'Failed to load reels (${res.statusCode})';
+    }
+
+    final body = jsonDecode(res.body);
+    final list = (body is Map ? body['data'] : null) as List? ?? [];
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map((e) => Product.fromApi(e))
+        .where((p) => p.hasVideo) // safety: only keep ones with a video
+        .toList();
+  }
+
   // GET /products/:idOrSlug -> { success, data: {...} }
   static Future<Product> getProductBySlug(String slug) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/products/$slug');

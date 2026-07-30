@@ -15,6 +15,7 @@ class Product {
   final List<String> images; // all image urls
   final bool inStock;
   final int stockQuantity;
+  final String? videoUrl; // dedicated product/reel video (video.url), if any
 
   const Product({
     required this.id,
@@ -26,7 +27,11 @@ class Product {
     this.images = const [],
     this.inStock = true,
     this.stockQuantity = 0,
+    this.videoUrl,
   });
+
+  // Whether this product has a playable video (used by the reels feed).
+  bool get hasVideo => videoUrl != null && videoUrl!.isNotEmpty;
 
   // Discount % (0 if no valid MRP).
   int get discountPercent {
@@ -63,6 +68,10 @@ class Product {
     double? mrp = _toDouble(priceInfo['original']);
     if (mrp != null && mrp <= basePrice) mrp = null;
 
+    // Dedicated product video (the backend sends `video: { url, ... }` or null).
+    final video = json['video'] as Map<String, dynamic>?;
+    final videoUrl = video?['url']?.toString();
+
     return Product(
       id: json['_id']?.toString() ?? '',
       slug: json['slug']?.toString() ?? '',
@@ -75,6 +84,7 @@ class Product {
           : (mainImage.isNotEmpty ? [mainImage] : const []),
       inStock: simple['inStock'] == true || (simple['inStock'] == null),
       stockQuantity: _toDouble(simple['stockQuantity'])?.toInt() ?? 0,
+      videoUrl: (videoUrl != null && videoUrl.isNotEmpty) ? videoUrl : null,
     );
   }
 

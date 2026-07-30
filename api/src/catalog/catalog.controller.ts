@@ -50,6 +50,22 @@ export class CatalogController {
         return { success: true, data: result.products, pagination: result.pagination };
     }
 
+    // Reels feed — products that have a dedicated video. Declared BEFORE
+    // 'products/:idOrSlug' so "reels" is not mistaken for a product slug.
+    @ApiOperation({ summary: 'Get product reels (products with a video)' })
+    @ApiResponse({ status: 200, description: 'List of products that have a video.' })
+    @Get('products/reels')
+    async getReels(
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+    ) {
+        const result = await this.catalogService.findReels({
+            page: parseInt(page) || 1,
+            limit: parseInt(limit) || 10,
+        });
+        return { success: true, data: result.products, pagination: result.pagination };
+    }
+
     @ApiOperation({ summary: 'Get product by slug or ID' })
     @ApiParam({ name: 'idOrSlug', description: 'Product ID (UUID) or slug' })
     @ApiResponse({ status: 200, description: 'Product details.' })

@@ -52,6 +52,38 @@ class UploadApiService {
     return response.json();
   }
 
+  // Upload a video (e.g. a product reel). Defaults to the dedicated reels/
+  // folder and hits the video-only upload endpoint on the backend.
+  async uploadVideo(
+    file: File,
+    folder: string = "reels",
+    name?: string,
+    alt?: string,
+    tags: string[] = [],
+    usageType: string = "reel"
+  ) {
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("folder", folder);
+    if (name) formData.append("name", name);
+    if (alt) formData.append("alt", alt);
+    if (tags && tags.length > 0) formData.append("tags", tags.join(","));
+    if (usageType) formData.append("usageType", usageType);
+
+    const response = await fetch(`${API_BASE_URL}/admin/upload/video`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to upload video");
+    }
+
+    return response.json();
+  }
+
   async listImages(
     page: number = 1,
     limit: number = 20,

@@ -63,6 +63,7 @@ interface MediaPickerModalProps {
   onSelect: (media: MediaFile) => void;
   title?: string;
   type?: string; // 'image', 'video', etc
+  defaultFolder?: string; // initial upload folder (e.g. 'reels' for videos)
 }
 
 const STORE_FOLDERS = [
@@ -81,6 +82,7 @@ export default function MediaPickerModal({
   onSelect,
   title = "Select Media",
   type = "all",
+  defaultFolder = "products",
 }: MediaPickerModalProps) {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -103,7 +105,7 @@ export default function MediaPickerModal({
   const [uploadTagsList, setUploadTagsList] = useState<string[]>([]);
   const [newUploadTag, setNewUploadTag] = useState("");
   const [uploadUsageType, setUploadUsageType] = useState("other");
-  const [uploadFolder, setUploadFolder] = useState("products");
+  const [uploadFolder, setUploadFolder] = useState(defaultFolder);
   const [uploading, setUploading] = useState(false);
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -200,19 +202,31 @@ export default function MediaPickerModal({
     if (!uploadFile) return;
     setUploading(true);
     try {
-      const res = await uploadApi.uploadImage(
-        uploadFile,
-        uploadFolder,
-        uploadName,
-        uploadAlt,
-        uploadTagsList,
-        uploadUsageType
-      );
+      // Videos go to the video endpoint (reels/ folder by default); everything
+      // else uses the image endpoint.
+      const isVideo = uploadFile.type?.startsWith("video/");
+      const res = isVideo
+        ? await uploadApi.uploadVideo(
+            uploadFile,
+            uploadFolder,
+            uploadName,
+            uploadAlt,
+            uploadTagsList,
+            uploadUsageType === "other" ? "reel" : uploadUsageType
+          )
+        : await uploadApi.uploadImage(
+            uploadFile,
+            uploadFolder,
+            uploadName,
+            uploadAlt,
+            uploadTagsList,
+            uploadUsageType
+          );
       toast.success("File uploaded successfully");
       onSelect(res); // Automatically select the new upload
       onClose();
     } catch (error: any) {
-      toast.error("Upload failed");
+      toast.error(error?.message || "Upload failed");
     } finally {
       setUploading(false);
     }

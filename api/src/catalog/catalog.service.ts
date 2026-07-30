@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Like, IsNull } from 'typeorm';
 import { Product } from './entities/product.entity';
+import { ProductMedia } from './entities/product-media.entity';
 import { ProductReview } from './entities/product-review.entity';
 import { Collection } from './entities/collection.entity';
 import { Category } from './entities/category.entity';
@@ -536,6 +537,49 @@ export class CatalogService {
 
         const [products, total] = await queryBuilder.getManyAndCount();
 
+        const mappedProducts = await Promise.all(products.map(p => this.transformProduct(p)));
+
+        return {
+            products: mappedProducts,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }
+        };
+    }
+
+    /**
+     * Reels feed: only active parent products that have a dedicated product
+     * video (a ProductMedia row with media_type = 'video' and sort_order = -1).
+     * The full media relation is loaded so transformProduct emits the `video`
+     * object the mobile app plays. Newest first.
+     */
+    async findReels(params: { page?: number; limit?: number }) {
+        const { page = 1, limit = 10 } = params;
+
+        const queryBuilder = this.productRepository.createQueryBuilder('product')
+            .leftJoinAndSelect('product.media', 'media')
+            .leftJoinAndSelect('product.children', 'children')
+            .where('product.isActive = true')
+            .andWhere('product.parentId IS NULL')
+            // Keep only products that own a dedicated reel video.
+            .andWhere((qb) => {
+                const sub = qb.subQuery()
+                    .select('1')
+                    .from(ProductMedia, 'pm')
+                    .where('pm.productId = product.id')
+                    .andWhere("pm.media_type = 'video'")
+                    .andWhere('pm.sort_order = -1')
+                    .getQuery();
+                return `EXISTS ${sub}`;
+            })
+            .orderBy('product.createdAt', 'DESC')
+            .skip((page - 1) * limit)
+            .take(limit);
+
+        const [products, total] = await queryBuilder.getManyAndCount();
         const mappedProducts = await Promise.all(products.map(p => this.transformProduct(p)));
 
         return {
