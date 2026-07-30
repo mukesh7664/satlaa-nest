@@ -20,6 +20,7 @@ import { DocumentationModule } from './documentation/documentation.module';
 import { CurrencyModule } from './common/currency/currency.module';
 import { SupportModule } from './support/support.module';
 import { BlogModule } from './blog/blog.module';
+import { PosModule } from './pos/pos.module';
 
 @Module({
     imports: [
@@ -52,6 +53,7 @@ import { BlogModule } from './blog/blog.module';
         CurrencyModule,
         SupportModule,
         BlogModule,
+        PosModule,
     ],
     controllers: [AppController],
     providers: [

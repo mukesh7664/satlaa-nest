@@ -3,6 +3,7 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 export enum AdminRole {
     ADMIN = 'admin',
     SUB_ADMIN = 'sub_admin',
+    POS_USER = 'pos_user',
 }
 
 @Entity('admins')

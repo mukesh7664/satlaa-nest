@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
+import { Order, OrderStatus, PaymentStatus, SaleChannel } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { CartService } from './cart.service';
 import { DiscountService } from './discount.service';
@@ -10,6 +10,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { EmailService } from '../notifications/email.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PaymentService } from './payment.service';
+import { getFullS3Url } from '../common/utils/s3-url.util';
 
 @Injectable()
 export class OrderService {
@@ -154,13 +155,100 @@ export class OrderService {
         );
     }
 
+    /**
+     * Create a Point-of-Sale order. Recomputes totals server-side from product records,
+     * routes through the shared engine so stock is validated + decremented (omnichannel sync),
+     * records channel/staff/courier attribution, marks the sale PAID, and generates a receipt.
+     */
+    async createPosOrder(
+        customerId: string | null,
+        orderData: CreateOrderDto,
+        attribution: {
+            saleChannel: SaleChannel;
+            posOperatorId?: string;
+            courierId?: string;
+            paymentMethod: string;
+            customerName?: string;
+            customerPhone?: string;
+            customerCity?: string;
+        },
+    ) {
+        if (!orderData.items || !orderData.items.length) {
+            throw new BadRequestException('No items provided for POS sale');
+        }
+
+        // Recompute tax + totals server-side from the product catalog (never trust the client).
+        const productIds = orderData.items.map(item => item.productId).filter(Boolean);
+        const products = await this.catalogService.findProductsByIds(productIds);
+
+        const itemsWithTax = orderData.items.map(item => {
+            const target = products.find(p => p.id === (item.variantId || item.productId))
+                || products.find(p => p.id === item.productId);
+            const price = Number(target?.price ?? item.price ?? 0);
+            const taxRate = Number(target?.tax_rate ?? item.tax_rate ?? 0);
+            const lineSubtotal = price * item.quantity;
+            const taxAmount = (lineSubtotal * taxRate) / 100;
+            return {
+                ...item,
+                price,
+                tax_rate: taxRate,
+                tax_amount: taxAmount,
+                totalPrice: lineSubtotal,
+            };
+        });
+
+        const subtotal = itemsWithTax.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
+        const tax = itemsWithTax.reduce((acc, item) => acc + (item.tax_amount || 0), 0);
+        const total = subtotal + tax;
+
+        const totals = { subtotal, tax, shippingCharges: 0, total, discountAmount: 0, discount: 0 };
+
+        const order = await this.createOrderWithItems(
+            customerId,
+            orderData,
+            itemsWithTax,
+            totals,
+            undefined,
+            undefined,
+            {
+                status: OrderStatus.DELIVERED,
+                paymentStatus: PaymentStatus.PAID,
+                paymentMethod: attribution.paymentMethod,
+                orderType: 'pos_sale',
+                saleChannel: attribution.saleChannel,
+                posOperatorId: attribution.posOperatorId,
+                courierId: attribution.courierId,
+                customerName: attribution.customerName,
+                customerPhone: attribution.customerPhone,
+                customerCity: attribution.customerCity,
+                paymentInfo: {
+                    method: attribution.paymentMethod,
+                    status: 'paid',
+                    paidAt: new Date(),
+                },
+            } as Partial<Order>,
+        );
+
+        // Generate the receipt/invoice (idempotent) and attach its PDF URL.
+        let invoicePdfUrl: string | null = null;
+        try {
+            const invoice: any = await this.invoiceService.createInvoiceFromOrder((order as any).id);
+            invoicePdfUrl = invoice?.pdfUrl ? getFullS3Url(invoice.pdfUrl) : null;
+        } catch (err) {
+            this.logger.error('POS invoice generation failed', err as any);
+        }
+
+        return { order, invoicePdfUrl };
+    }
+
     private async createOrderWithItems(
         customerId: string,
         orderData: CreateOrderDto,
         items: any[],
         totals: any,
         discountCode?: string,
-        appliedDiscountId?: string
+        appliedDiscountId?: string,
+        overrides?: Partial<Order>
     ) {
         // 1. Validate Inventory (Check stock for all items before starting)
         for (const item of items) {
@@ -193,7 +281,9 @@ export class OrderService {
             orderType: orderData.paymentMethod === 'razorpay' ? 'direct_purchase' : 'quote_request',
             metadata: {
                 // Only non-fixed data here (Browser info, etc. could be added from orderData if provided)
-            }
+            },
+            // POS / channel / attribution overrides (status, paymentStatus, saleChannel, posOperatorId, courierId, customer snapshot, orderType)
+            ...(overrides || {}),
         });
 
         const savedOrder = await this.orderRepository.save(order);

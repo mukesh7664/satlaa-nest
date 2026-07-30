@@ -10,14 +10,17 @@ export class Customer {
     @Column()
     name: string;
 
-    @Column()
-    email: string;
+    @Column({ nullable: true })
+    email?: string;
 
     @Column({ nullable: true })
     password?: string;
 
     @Column({ nullable: true })
     phone?: string;
+
+    @Column({ nullable: true })
+    city?: string;
 
     @Column({ default: true })
     isActive: boolean;

@@ -4,6 +4,7 @@ import { ColumnNumericTransformer } from '../../common/transformers/numeric.tran
 import { OrderItem } from './order-item.entity';
 import { Shipment } from './shipment.entity';
 import { ReturnRequest } from './return-request.entity';
+import { Courier } from './courier.entity';
 
 export enum OrderStatus {
     PENDING = 'pending',
@@ -28,6 +29,11 @@ export enum PaymentStatus {
     PAID = 'paid',
     FAILED = 'failed',
     REFUNDED = 'refunded',
+}
+
+export enum SaleChannel {
+    ONLINE = 'online',
+    OFFLINE = 'offline',
 }
 
 @Entity('orders')
@@ -123,6 +129,38 @@ export class Order {
 
     @Column({ nullable: true })
     orderType: string;
+
+    // --- POS / omnichannel fields ---
+    @Column({
+        type: 'enum',
+        enum: SaleChannel,
+        default: SaleChannel.ONLINE,
+    })
+    @Index()
+    saleChannel: SaleChannel;
+
+    // Admin/staff (from `admins` table) who created this sale at the POS
+    @Column({ nullable: true })
+    @Index()
+    posOperatorId: string;
+
+    @ManyToOne(() => Courier, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'courierId' })
+    courier: Courier;
+
+    @Column({ nullable: true })
+    @Index()
+    courierId: string;
+
+    // Walk-in customer snapshot (kept on the order for receipts even if no Customer row)
+    @Column({ nullable: true })
+    customerName: string;
+
+    @Column({ nullable: true })
+    customerPhone: string;
+
+    @Column({ nullable: true })
+    customerCity: string;
 
     @OneToOne(() => Shipment, (shipment) => shipment.order)
     shipment: Shipment;

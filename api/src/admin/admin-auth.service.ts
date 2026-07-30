@@ -193,8 +193,9 @@ export class AdminAuthService {
     async validateUserCreation(currentUser: Admin, newUserRole: AdminRole) {
         // Only an admin can create users; they may create admin or sub_admin.
         if (currentUser.role === AdminRole.ADMIN) {
-            if (newUserRole !== AdminRole.ADMIN && newUserRole !== AdminRole.SUB_ADMIN) {
-                throw new BadRequestException('Invalid role. Allowed: admin or sub_admin');
+            const allowedRoles = [AdminRole.ADMIN, AdminRole.SUB_ADMIN, AdminRole.POS_USER];
+            if (!allowedRoles.includes(newUserRole)) {
+                throw new BadRequestException('Invalid role. Allowed: admin, sub_admin or pos_user');
             }
         } else {
             throw new BadRequestException('You do not have permission to add users');
