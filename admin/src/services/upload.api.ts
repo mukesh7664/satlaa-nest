@@ -27,7 +27,6 @@ class UploadApiService {
     folder: string = "products",
     name?: string,
     alt?: string,
-    isGlobal: boolean = false,
     tags: string[] = [],
     usageType: string = "other"
   ) {
@@ -36,7 +35,6 @@ class UploadApiService {
     formData.append("folder", folder);
     if (name) formData.append("name", name);
     if (alt) formData.append("alt", alt);
-    if (isGlobal) formData.append("isGlobal", "true");
     if (tags && tags.length > 0) formData.append("tags", tags.join(","));
     if (usageType) formData.append("usageType", usageType);
 
@@ -60,7 +58,6 @@ class UploadApiService {
     search?: string,
     type: string = "all",
     folder?: string,
-    isGlobal?: boolean,
     tags?: string[]
   ) {
     const params = new URLSearchParams();
@@ -69,7 +66,6 @@ class UploadApiService {
     if (search) params.append("search", search);
     if (type && type !== "all") params.append("type", type);
     if (folder) params.append("folder", folder);
-    if (isGlobal) params.append("isGlobal", "true");
     if (tags && tags.length > 0) params.append("tags", tags.join(","));
 
     const response = await fetch(

@@ -66,7 +66,6 @@ interface MediaFile {
   mimeType: string;
   createdAt: string;
   folder: string;
-  isGlobal: boolean;
   tags: string[];
   usageType: string;
 }
@@ -203,7 +202,6 @@ export default function MediaPage() {
         searchTerm,
         mediaType,
         activeFolder === "all" ? undefined : activeFolder,
-        false,
         selectedTags
       );
 
@@ -279,7 +277,6 @@ export default function MediaPage() {
         uploadFolder,
         uploadName,
         uploadAlt,
-        false,
         uploadTagsList,
         uploadUsageType
       );

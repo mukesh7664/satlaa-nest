@@ -152,7 +152,7 @@ export class EstimateService {
         const settings = await this.settingsRepository.findOne({ where: {} });
         const pdfBuffer = await this.pdfService.generateEstimatePdf(estimate, settings);
 
-        const key = `estimate/${estimate.id}.pdf`;
+        const key = `estimates/${estimate.id}.pdf`;
         await this.s3Service.uploadBuffer(pdfBuffer, key, 'application/pdf');
 
         estimate.pdfUrl = key;

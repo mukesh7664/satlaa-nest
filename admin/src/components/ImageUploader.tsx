@@ -27,7 +27,6 @@ interface ImageUploaderProps {
   recommendedSize?: string;
   compact?: boolean;
   aspectRatio?: number; // Target aspect ratio (width / height)
-  isGlobal?: boolean;
 }
 
 export default function ImageUploader({
@@ -39,7 +38,6 @@ export default function ImageUploader({
   recommendedSize,
   compact = false,
   aspectRatio,
-  isGlobal = false,
   mediaType = "image",
 }: ImageUploaderProps & { mediaType?: "image" | "video" | "any" }) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -284,7 +282,6 @@ export default function ImageUploader({
         onClose={() => setPickerOpen(false)}
         onSelect={handleSelect}
         title={`Select ${label}`}
-        isGlobal={isGlobal}
       />
     </Box>
   );

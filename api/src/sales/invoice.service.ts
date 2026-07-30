@@ -279,7 +279,7 @@ export class InvoiceService {
         const settings = await this.settingsRepository.findOne({ where: {} });
         const pdfBuffer = await this.pdfService.generateInvoicePdf(invoice, settings);
 
-        const key = `invoice/${invoice.id}.pdf`;
+        const key = `invoices/${invoice.id}.pdf`;
         await this.s3Service.uploadBuffer(pdfBuffer, key, 'application/pdf');
 
         invoice.pdfUrl = key;

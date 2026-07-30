@@ -63,7 +63,6 @@ interface MediaPickerModalProps {
   onSelect: (media: MediaFile) => void;
   title?: string;
   type?: string; // 'image', 'video', etc
-  isGlobal?: boolean;
 }
 
 const STORE_FOLDERS = [
@@ -82,7 +81,6 @@ export default function MediaPickerModal({
   onSelect,
   title = "Select Media",
   type = "all",
-  isGlobal = false,
 }: MediaPickerModalProps) {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -173,7 +171,6 @@ export default function MediaPickerModal({
         searchTerm,
         mediaType,
         activeFolder === "all" ? undefined : activeFolder,
-        isGlobal,
         selectedTags
       );
 
@@ -204,11 +201,10 @@ export default function MediaPickerModal({
     setUploading(true);
     try {
       const res = await uploadApi.uploadImage(
-        uploadFile, 
-        uploadFolder, 
-        uploadName, 
-        uploadAlt, 
-        isGlobal,
+        uploadFile,
+        uploadFolder,
+        uploadName,
+        uploadAlt,
         uploadTagsList,
         uploadUsageType
       );
