@@ -103,6 +103,35 @@ class CartService {
     }
   }
 
+  // POST /cart/discount  body: { code }
+  // Applies a coupon/discount code. Throws with the server message on failure
+  // (e.g. invalid or expired code).
+  static Future<void> applyCoupon(String code) async {
+    final headers = await _authHeaders();
+    final res = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/cart/discount'),
+      headers: headers,
+      body: jsonEncode({'code': code}),
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw _errorFrom(res.body) ?? 'Invalid coupon code (${res.statusCode})';
+    }
+  }
+
+  // DELETE /cart/discount — removes the applied coupon.
+  static Future<void> removeCoupon() async {
+    final headers = await _authHeaders();
+    final res = await http.delete(
+      Uri.parse('${ApiConfig.baseUrl}/cart/discount'),
+      headers: headers,
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw _errorFrom(res.body) ?? 'Failed to remove coupon (${res.statusCode})';
+    }
+  }
+
   // Pull a human-readable message out of a NestJS error body.
   static String? _errorFrom(String responseBody) {
     try {

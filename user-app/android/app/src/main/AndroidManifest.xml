@@ -2,7 +2,7 @@
     <!-- Needed to make network (API) calls. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="fanostyle_app"
+        android:label="Fanostyle"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">

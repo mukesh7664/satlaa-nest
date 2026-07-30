@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import 'orders_screen.dart';
+import 'wishlist_screen.dart';
+import 'addresses_screen.dart';
 
 // ProfileScreen — shows the logged-in user's info and a logout button.
 // It reads the user that AuthService saved on the device at login time.
@@ -117,7 +120,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ? _user!.phone!
                         : 'Not added'),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
+
+                // ---- Account menu links ----
+                _menuTile(Icons.receipt_long, 'My Orders', () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const OrdersScreen()));
+                }),
+                _menuTile(Icons.favorite_border, 'Wishlist', () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const WishlistScreen()));
+                }),
+                _menuTile(Icons.location_on_outlined, 'My Addresses', () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const AddressesScreen()));
+                }),
+
+                const SizedBox(height: 24),
 
                 // ---- Logout button ----
                 SizedBox(
@@ -150,6 +169,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         subtitle: Text(value,
             style: const TextStyle(
                 fontSize: 15, color: Colors.black, fontWeight: FontWeight.w500)),
+      ),
+    );
+  }
+
+  // A tappable menu row (icon + label + chevron) used for account links.
+  Widget _menuTile(IconData icon, String label, VoidCallback onTap) {
+    return Card(
+      elevation: 0,
+      color: Colors.grey.shade50,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.deepPurple),
+        title: Text(label,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: onTap,
       ),
     );
   }

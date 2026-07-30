@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/cart_service.dart';
+import 'checkout_screen.dart';
 
 // A small view model for one row in the cart.
 // The backend nests the product data under item.product, so we flatten
@@ -72,10 +73,21 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   List<_CartLine> _items = [];
   double _total = 0;
+  double _subtotal = 0;
+  double _discount = 0; // total discount applied (from coupon)
+  String _appliedCode = ''; // currently applied coupon code (if any)
   bool _loading = true;
   String? _error;
   bool _loggedIn = true; // becomes false if there is no token
   final Set<String> _busyIds = {}; // rows with an in-flight update/remove
+  final TextEditingController _couponController = TextEditingController();
+  bool _couponBusy = false; // true while applying/removing a coupon
+
+  @override
+  void dispose() {
+    _couponController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -111,7 +123,11 @@ class _CartScreenState extends State<CartScreen> {
             .whereType<Map<String, dynamic>>()
             .map((e) => _CartLine.fromApi(e))
             .toList();
+        _subtotal = _CartLine._toDouble(totals['subtotal']);
+        _discount = _CartLine._toDouble(totals['discountAmount']) +
+            _CartLine._toDouble(totals['discount']);
         _total = _CartLine._toDouble(totals['total']);
+        _appliedCode = cart['discountCode']?.toString() ?? '';
         _loading = false;
       });
     } catch (e) {
@@ -156,6 +172,52 @@ class _CartScreenState extends State<CartScreen> {
     } finally {
       if (mounted) setState(() => _busyIds.remove(item.id));
     }
+  }
+
+  // Apply the coupon code typed in the field.
+  Future<void> _applyCoupon() async {
+    final code = _couponController.text.trim();
+    if (code.isEmpty) return;
+    setState(() => _couponBusy = true);
+    try {
+      await CartService.applyCoupon(code);
+      await _load(); // totals now reflect the discount
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Coupon applied')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _couponBusy = false);
+    }
+  }
+
+  // Remove the currently applied coupon.
+  Future<void> _removeCoupon() async {
+    setState(() => _couponBusy = true);
+    try {
+      await CartService.removeCoupon();
+      _couponController.clear();
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _couponBusy = false);
+    }
+  }
+
+  // Go to the checkout screen, then refresh on return (order may empty cart).
+  Future<void> _goToCheckout() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+    );
+    _load();
   }
 
   @override
@@ -223,15 +285,94 @@ class _CartScreenState extends State<CartScreen> {
       );
     }
 
-    // Cart items list.
+    // Cart items list + coupon section at the bottom.
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView.separated(
+      child: ListView(
         padding: const EdgeInsets.all(12),
-        itemCount: _items.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) => _buildRow(_items[index]),
+        children: [
+          ..._items.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildRow(item),
+              )),
+          const SizedBox(height: 8),
+          _buildCouponSection(),
+        ],
       ),
+    );
+  }
+
+  // Coupon input (or the applied-coupon chip with a remove button).
+  Widget _buildCouponSection() {
+    if (_appliedCode.isNotEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.green.shade200),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.local_offer, color: Colors.green, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Coupon "$_appliedCode" applied',
+                style: const TextStyle(color: Colors.green),
+              ),
+            ),
+            _couponBusy
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : TextButton(
+                    onPressed: _removeCoupon,
+                    child: const Text('Remove'),
+                  ),
+          ],
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _couponController,
+            decoration: InputDecoration(
+              hintText: 'Enter coupon code',
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          height: 46,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: _couponBusy ? null : _applyCoupon,
+            child: _couponBusy
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Apply'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -351,45 +492,63 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // The bottom bar showing the cart total and a checkout button.
+  // The bottom bar showing totals (with discount) and a checkout button.
   Widget _buildTotalBar() {
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border(top: BorderSide(color: Colors.grey.shade200)),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Total', style: TextStyle(color: Colors.grey)),
-            const SizedBox(width: 8),
-            Text(
-              '₹${_total.toStringAsFixed(0)}',
-              style: const TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
-              ),
-              onPressed: () {
-                // Checkout flow comes later.
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Checkout coming soon'),
-                    duration: Duration(seconds: 1),
+            // Subtotal / discount breakdown (only if a discount exists).
+            if (_discount > 0) ...[
+              _summaryLine('Subtotal', _subtotal),
+              _summaryLine('Discount', -_discount, color: Colors.green),
+              const SizedBox(height: 4),
+            ],
+            Row(
+              children: [
+                const Text('Total', style: TextStyle(color: Colors.grey)),
+                const SizedBox(width: 8),
+                Text(
+                  '₹${_total.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                   ),
-                );
-              },
-              child: const Text('Checkout'),
+                  onPressed: _goToCheckout,
+                  child: const Text('Checkout'),
+                ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // A small label + amount row used in the totals breakdown.
+  Widget _summaryLine(String label, double value, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: color ?? Colors.black87)),
+          Text('₹${value.toStringAsFixed(0)}',
+              style: TextStyle(color: color ?? Colors.black87)),
+        ],
       ),
     );
   }

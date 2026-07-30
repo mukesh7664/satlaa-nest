@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../services/catalog_service.dart';
 import '../services/cart_service.dart';
+import '../services/wishlist_service.dart';
+import '../services/auth_service.dart';
+import 'checkout_screen.dart';
 
 // ProductDetailScreen — shows one product in full: big image(s), name,
-// price, stock, and an "Add to Cart" button.
+// price, stock, a wishlist toggle, and Add to Cart / Buy Now buttons.
 //
 // We accept the product we already have (from the grid) so the screen
 // can show instantly, and then fetch fresh details in the background
@@ -21,20 +24,22 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   late Product _product; // current product data shown on screen
   int _imageIndex = 0; // which image is selected in the gallery
-  bool _adding = false; // true while the add-to-cart request is running
+  bool _adding = false; // true while an add-to-cart / buy-now runs
+  bool _inWishlist = false; // whether this product is in the wishlist
+  bool _wishlistBusy = false; // true while toggling the wishlist
 
   @override
   void initState() {
     super.initState();
     _product = widget.product;
     _refresh(); // load full details in the background
+    _loadWishlistState();
   }
 
   // Fetch the latest product details by slug (or id) and update the UI.
   Future<void> _refresh() async {
     try {
-      final slugOrId =
-          _product.slug.isNotEmpty ? _product.slug : _product.id;
+      final slugOrId = _product.slug.isNotEmpty ? _product.slug : _product.id;
       if (slugOrId.isEmpty) return;
       final fresh = await CatalogService.getProductBySlug(slugOrId);
       if (mounted) setState(() => _product = fresh);
@@ -43,8 +48,48 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  // Add this product to the cart.
-  Future<void> _addToCart() async {
+  // Check if this product is already in the wishlist (best-effort).
+  Future<void> _loadWishlistState() async {
+    try {
+      if (!await AuthService.isLoggedIn()) return;
+      final items = await WishlistService.getWishlist();
+      final inList = items.any((p) => p.id == _product.id);
+      if (mounted) setState(() => _inWishlist = inList);
+    } catch (_) {
+      // Non-critical — leave the heart in its default (off) state.
+    }
+  }
+
+  // Add or remove this product from the wishlist.
+  Future<void> _toggleWishlist() async {
+    if (_wishlistBusy) return;
+    if (!await AuthService.isLoggedIn()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to use the wishlist')),
+      );
+      return;
+    }
+    setState(() => _wishlistBusy = true);
+    final wasIn = _inWishlist;
+    try {
+      if (wasIn) {
+        await WishlistService.remove(_product.id);
+      } else {
+        await WishlistService.add(_product.id);
+      }
+      if (mounted) setState(() => _inWishlist = !wasIn);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _wishlistBusy = false);
+    }
+  }
+
+  // Add this product to the cart. Returns true on success.
+  Future<bool> _addToCart({bool showMessage = true}) async {
     setState(() => _adding = true);
     try {
       await CartService.addItem(
@@ -52,21 +97,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         price: _product.price,
         quantity: 1,
       );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${_product.name} added to cart'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
+      if (mounted && showMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${_product.name} added to cart'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+      return true;
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+      return false;
     } finally {
       if (mounted) setState(() => _adding = false);
     }
+  }
+
+  // Buy Now — same behaviour as the web app: add to cart silently, then
+  // go straight to checkout.
+  Future<void> _buyNow() async {
+    final ok = await _addToCart(showMessage: false);
+    if (!ok || !mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+    );
   }
 
   @override
@@ -81,6 +139,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         title: const Text('Details'),
+        actions: [
+          // Wishlist heart toggle.
+          IconButton(
+            onPressed: _wishlistBusy ? null : _toggleWishlist,
+            icon: Icon(
+              _inWishlist ? Icons.favorite : Icons.favorite_border,
+              color: _inWishlist ? Colors.redAccent : Colors.white,
+            ),
+          ),
+        ],
       ),
       body: ListView(
         children: [
@@ -216,32 +284,58 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
       ),
 
-      // ---- Sticky "Add to Cart" button at the bottom ----
+      // ---- Sticky action bar: Add to Cart + Buy Now ----
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          child: Row(
+            children: [
+              // Add to Cart (outlined)
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.deepPurple,
+                      side: const BorderSide(color: Colors.deepPurple),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed:
+                        (!_product.inStock || _adding) ? null : _addToCart,
+                    icon: _adding
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child:
+                                CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.shopping_cart_outlined),
+                    label: const Text('Add to Cart'),
+                  ),
                 ),
               ),
-              onPressed:
-                  (!_product.inStock || _adding) ? null : _addToCart,
-              icon: _adding
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.shopping_cart_outlined),
-              label: Text(_product.inStock ? 'Add to Cart' : 'Out of Stock'),
-            ),
+              const SizedBox(width: 12),
+              // Buy Now (filled)
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed:
+                        (!_product.inStock || _adding) ? null : _buyNow,
+                    child: Text(_product.inStock ? 'Buy Now' : 'Out of Stock'),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -64,8 +64,22 @@ export class AuditLogService {
     
     const actionDescription = `Admin ${actorName} ${actionVerb} ${resourceType.toLowerCase()} ${targetName}`;
 
+    // Resolve adminId against the admins table. The FK (adminId -> admins.id)
+    // will reject a value that doesn't exist (e.g. a stale JWT issued before a
+    // DB reset, or a non-admin token). Column is nullable, so fall back to null
+    // rather than breaking the operation being audited.
+    const candidateAdminId = admin?.id || admin?.userId || null;
+    let adminId: string | null = null;
+    if (candidateAdminId) {
+      const exists = await this.auditLogRepository.manager.query(
+        'SELECT 1 FROM admins WHERE id = $1 LIMIT 1',
+        [candidateAdminId],
+      );
+      adminId = exists?.length ? candidateAdminId : null;
+    }
+
     const auditLog = this.auditLogRepository.create({
-      adminId: admin?.id || admin?.userId,
+      adminId,
       adminName: actorName,
       action,
       resourceType,
