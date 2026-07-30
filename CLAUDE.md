@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 Ecommerce SaaS is a full-stack monorepo for a software e-commerce SaaS platform:
-- **api_nest**: NestJS backend with PostgreSQL (TypeORM)
+- **api**: NestJS backend with PostgreSQL (TypeORM)
 - **admin**: Next.js 15 admin panel (Super & Store Admin)
 - **web**: Next.js 15 customer storefront
 - **marketplace**: Next.js global store directory
@@ -15,7 +15,7 @@ Ecommerce SaaS is a full-stack monorepo for a software e-commerce SaaS platform:
 
 ### API (Backend)
 ```bash
-cd api_nest
+cd api
 npm run start:dev   # Start NestJS in watch mode
 npm run build       # Compile to dist/
 npm run start:prod  # Run compiled build
@@ -72,4 +72,4 @@ All apps use:
 - PascalCase for component filenames.
 
 ## Database Connection
-PostgreSQL connection is managed in `api_nest/src/app.module.ts` via `TypeOrmModule`. Environment variables like `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_DATABASE` are required.
+PostgreSQL connection is managed in `api/src/app.module.ts` via `TypeOrmModule`. Environment variables like `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_DATABASE` are required.

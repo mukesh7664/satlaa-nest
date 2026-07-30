@@ -24,12 +24,12 @@ export async function generateMetadata({
 
   if (!category) {
     return {
-      title: "Category Not Found - Satlaa",
+      title: "Category Not Found - Fanostyle",
     };
   }
 
   return {
-    title: `${category.name} - Satlaa Blog`,
+    title: `${category.name} - Fanostyle Blog`,
     description:
       category.description ||
       `Browse all articles in ${category.name} category.`,

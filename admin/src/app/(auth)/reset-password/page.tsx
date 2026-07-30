@@ -92,7 +92,7 @@ function ResetPasswordForm() {
             <span className="text-white font-bold text-xl">E</span>
           </div>
           <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-red-600">
-            SATLAA
+            FANOSTYLE
           </span>
         </Link>
       </div>
@@ -230,7 +230,7 @@ export default function ResetPasswordPage() {
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
             <span className="text-orange-600 font-bold text-xl">E</span>
           </div>
-          <span className="text-2xl font-bold tracking-tight">SATLAA</span>
+          <span className="text-2xl font-bold tracking-tight">FANOSTYLE</span>
         </Link>
 
         <div className="z-10 max-w-lg">
@@ -277,7 +277,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="z-10 flex items-center space-x-4 text-orange-200 text-sm">
-          <span>© 2026 SATLAA Inc.</span>
+          <span>© 2026 FANOSTYLE Inc.</span>
           <span className="w-1 h-1 bg-orange-200/50 rounded-full"></span>
           <span>Terms & Privacy</span>
         </div>

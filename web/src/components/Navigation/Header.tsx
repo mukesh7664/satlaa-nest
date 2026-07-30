@@ -467,7 +467,7 @@ export const Header = ({ data: propData, sectionIndex }: { data?: any, sectionIn
                     </Link>
                   </SheetHeader>
                   <h1 className="text-base md:text-xl pt-2 text-white border-t mx-4">
-                    <InlineEditable tag="span" value={propData?.welcomeText || "Welcome to Satlaa Technologies"} fieldPath="welcomeText" sectionIndex={sectionIndex} />
+                    <InlineEditable tag="span" value={propData?.welcomeText || "Welcome to Fanostyle Technologies"} fieldPath="welcomeText" sectionIndex={sectionIndex} />
                   </h1>
 
                   <nav className="mt-4 flex flex-col space-y-2 overflow-y-auto px-8">

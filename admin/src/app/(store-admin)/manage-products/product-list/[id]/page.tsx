@@ -1017,7 +1017,7 @@ function ProductQrCodeWidget({ productId, storeSettings }: { productId: string; 
         </head>
         <body>
           <div class="label-card">
-            <div class="store-name">${storeSettings?.storeName || "Satlaa Store"}</div>
+            <div class="store-name">${storeSettings?.storeName || "Fanostyle Store"}</div>
             <div style="border-bottom: 1px dashed #ccc; margin: 8px 0;"></div>
             <div class="product-title">Scan to Order</div>
             <img class="qr-image" src="${qrData.qrCode}" alt="Product QR Code" />

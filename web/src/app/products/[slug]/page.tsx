@@ -20,10 +20,10 @@ export async function generateMetadata({
     const seo = product.seo || {};
     const productInfo = product.productInfo || {};
 
-    const title = seo.metaTitle || productInfo.title || "Satlaa Product";
+    const title = seo.metaTitle || productInfo.title || "Fanostyle Product";
     const description =
       seo.metaDescription ||
-      `Buy ${title} at the best price on Satlaa. Guaranteed authentic products.`;
+      `Buy ${title} at the best price on Fanostyle. Guaranteed authentic products.`;
 
     // Determine the best image for OG
     let ogImage = "/images/og-image.jpg"; // Default
@@ -64,7 +64,7 @@ export async function generateMetadata({
   }
 
   return {
-    title: "Product Not Found | Satlaa",
+    title: "Product Not Found | Fanostyle",
     description: "The requested product information could not be found.",
   };
 }

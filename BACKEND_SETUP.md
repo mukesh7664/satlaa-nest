@@ -22,12 +22,12 @@ The system is organized into the following feature modules:
 
 ### 1. Install Dependencies
 ```bash
-cd api_nest
+cd api
 npm install
 ```
 
 ### 2. Configure Environment Variables
-Create a `.env` file in the `api_nest` directory:
+Create a `.env` file in the `api` directory:
 ```env
 DB_HOST=localhost
 DB_PORT=5432

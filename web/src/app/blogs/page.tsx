@@ -3,7 +3,7 @@ import { getPosts, getCategories } from "@/services/blog";
 import { BlogCard, Pagination, CategoryList } from "@/components/Pages/Blog";
 
 export const metadata: Metadata = {
-  title: "Blog - Satlaa",
+  title: "Blog - Fanostyle",
   description:
     "Stay informed with expert articles covering industry insights and proven strategies for software solutions.",
 };

@@ -1,10 +1,10 @@
 # Email Service Setup: NestJS NotificationsModule
 
 ## Overview
-Email functionality is centralized in the `NotificationsModule` within the `api_nest` backend. It uses `Nodemailer` to send beautifully styled HTML emails.
+Email functionality is centralized in the `NotificationsModule` within the `api` backend. It uses `Nodemailer` to send beautifully styled HTML emails.
 
 ## Configuration
-Add the following to your `api_nest/.env`:
+Add the following to your `api/.env`:
 ```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587

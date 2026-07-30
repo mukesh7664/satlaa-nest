@@ -1,9 +1,9 @@
 module.exports = {
     apps: [
         {
-            name: 'api_nest',
+            name: 'api',
             script: 'dist/main.js',
-            cwd: './api_nest',
+            cwd: './api',
             env: {
                 NODE_ENV: 'production',
                 PORT: 5001,

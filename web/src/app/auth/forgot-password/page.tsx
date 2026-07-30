@@ -14,7 +14,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const { forgotPassword, isLoading } = useAuth();
   
-  const [siteName, setSiteName] = useState<string>("Satlaa");
+  const [siteName, setSiteName] = useState<string>("Fanostyle");
   const [siteLoading, setSiteLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
           const result = await res.json();
           const name = result.data?.siteName || result.data?.seo?.siteName;
 
-          setSiteName(name || "Satlaa");
+          setSiteName(name || "Fanostyle");
         }
       } catch (error) {
         console.error("Error fetching site name:", error);

@@ -34,7 +34,7 @@ export async function getGlobalSEO(): Promise<SEOData> {
     return {
       seo: {
         ...(result.data?.seo || {}),
-        siteName: result.data?.siteName || result.data?.seo?.siteName || "Satlaa",
+        siteName: result.data?.siteName || result.data?.seo?.siteName || "Fanostyle",
         siteDescription: result.data?.siteDescription || result.data?.seo?.siteDescription || "Your B2B Software Marketplace",
       },
       customScripts: result.data?.customScripts || {},
@@ -45,7 +45,7 @@ export async function getGlobalSEO(): Promise<SEOData> {
     // Return default values on error
     return {
       seo: {
-        siteName: "Satlaa",
+        siteName: "Fanostyle",
         siteDescription: "Your B2B Software Marketplace",
         keywords: [],
       },

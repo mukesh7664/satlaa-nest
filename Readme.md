@@ -12,7 +12,7 @@ This project is architected as a monorepo containing multiple distinct applicati
 4.  **`admin` (Management Panel):** 
     *   **Super-Admin:** Platform-level management (Tenants, Plans, Global Settings).
     *   **Store-Admin:** Merchant-level management (Products, Orders, Customers).
-5.  **`api_nest` (Backend Server):** The central NestJS API that handles all business logic, multi-tenancy, database interactions, and payments.
+5.  **`api` (Backend Server):** The central NestJS API that handles all business logic, multi-tenancy, database interactions, and payments.
 
 ---
 
@@ -20,7 +20,7 @@ This project is architected as a monorepo containing multiple distinct applicati
 
 This project uses a modern TypeScript-based stack.
 
-### Backend (`api_nest`)
+### Backend (`api`)
 
 - **Framework:** NestJS (Node.js)
 - **Database:** PostgreSQL with TypeORM
@@ -52,7 +52,7 @@ Install dependencies for all packages:
 
 ```bash
 # Backend
-cd api_nest && npm install && cd ..
+cd api && npm install && cd ..
 
 # Admin
 cd admin && npm install && cd ..
@@ -69,7 +69,7 @@ cd marketplace && npm install && cd ..
 
 ### 3. Environment Setup
 
-Create `.env` in `api_nest`:
+Create `.env` in `api`:
 
 ```env
 DB_HOST=localhost
@@ -84,7 +84,7 @@ JWT_SECRET=your_secret
 
 **Backend:**
 ```bash
-cd api_nest && npm run start:dev
+cd api && npm run start:dev
 ```
 
 **Frontend (Example Admin):**
@@ -98,7 +98,7 @@ cd admin && npm run dev
 
 ```
 ecommerce saas/
-├── api_nest/    # NestJS Backend
+├── api/    # NestJS Backend
 ├── admin/       # Next.js Admin Panel
 ├── web/         # Next.js Storefront
 ├── marketplace/ # Next.js Marketplace

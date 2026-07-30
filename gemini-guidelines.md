@@ -3,7 +3,7 @@
 ## General
 - **Language:** TypeScript is mandatory for all packages.
 - **Monorepo Structure:** 
-    - `api_nest`: NestJS backend.
+    - `api`: NestJS backend.
     - `admin`: Next.js admin dashboard.
     - `web`: Next.js client storefront.
     - `marketplace`: Next.js global directory.
@@ -11,7 +11,7 @@
 
 ---
 
-## Backend (`api_nest`)
+## Backend (`api`)
 - **Architecture:** NestJS Modular Architecture.
 - **Data Access:** Use TypeORM with PostgreSQL.
 - **Validation:** Use DTOs and `class-validator`.

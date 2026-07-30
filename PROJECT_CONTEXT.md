@@ -8,21 +8,21 @@ The project consists of four main frontend applications and a centralized backen
 - **marketplace**: A global directory for discovering stores and products.
 - **web**: The customer-facing storefront for individual tenants.
 - **admin**: A dual-purpose dashboard for both Super-Admins (platform) and Store-Admins (merchants).
-- **api_nest**: The centralized NestJS backend server providing multi-tenant business logic.
+- **api**: The centralized NestJS backend server providing multi-tenant business logic.
 
 ## 2. Architecture & Structure
 The project follows a monorepo structure with clear separation of concerns:
 
 ```
 ecommerce saas/
-├── api_nest/    # NestJS Backend (PostgreSQL)
+├── api/    # NestJS Backend (PostgreSQL)
 ├── admin/       # Next.js Admin Panel (Super & Store Admin)
 ├── web/         # Next.js Customer Storefront
 ├── marketplace/ # Next.js Global Marketplace
 └── landing/     # Next.js Marketing Site
 ```
 
-### Backend (`api_nest`)
+### Backend (`api`)
 - **Framework**: NestJS (Node.js)
 - **Database**: PostgreSQL with TypeORM
 - **Architecture**: Modular (Modules -> Controllers -> Services -> Entities)
@@ -54,7 +54,7 @@ Each application runs independently:
 
 **API (Backend)**
 ```bash
-cd api_nest
+cd api
 npm run start:dev # Runs on port 5000
 ```
 
@@ -88,6 +88,6 @@ npm run dev # Runs on port 3000
 
 ## 6. Key Configuration Files
 - **CLAUDE.md**: Specific guidelines for AI assistants.
-- **api_nest/.env**: Environment variables for the backend (DB_HOST, JWT_SECRET, etc.).
+- **api/.env**: Environment variables for the backend (DB_HOST, JWT_SECRET, etc.).
 - **architecture_report.html**: Visual architecture diagram (printable to PDF).
 

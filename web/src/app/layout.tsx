@@ -35,7 +35,7 @@ const poppins = Poppins({
 export async function generateMetadata(): Promise<Metadata> {
   const seoData = await getGlobalSEO();
 
-  const siteName = seoData?.seo?.siteName || "Satlaa";
+  const siteName = seoData?.seo?.siteName || "Fanostyle";
   const siteDescription = seoData?.seo?.siteDescription || "Your B2B Software Marketplace";
   const favicon = seoData?.siteFavicon || "/favicon.ico";
 
@@ -80,7 +80,7 @@ export default async function RootLayout({
 
   const sections = globalSectionsResult.status === 'fulfilled' ? globalSectionsResult.value : { headers: [], footers: [] };
   const seoData = (seoDataResult.status === 'fulfilled' ? seoDataResult.value : {
-    seo: { siteName: "Satlaa", siteDescription: "", keywords: [] },
+    seo: { siteName: "Fanostyle", siteDescription: "", keywords: [] },
     customScripts: {}
   }) as SEOData;
   const publicSettings = publicSettingsResult.status === 'fulfilled' ? publicSettingsResult.value : null;

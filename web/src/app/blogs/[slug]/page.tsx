@@ -25,12 +25,12 @@ export async function generateMetadata({
 
   if (!post) {
     return {
-      title: "Post Not Found - Satlaa",
+      title: "Post Not Found - Fanostyle",
     };
   }
 
   return {
-    title: `${post.title} - Satlaa Blog`,
+    title: `${post.title} - Fanostyle Blog`,
     description: post.excerpt.slice(0, 160),
     openGraph: {
       title: post.title,

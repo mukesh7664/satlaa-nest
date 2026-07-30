@@ -380,7 +380,7 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
             <>
               <div className="relative w-32 h-10 flex items-center">
                 <span className="text-xl font-bold text-[#408dfb] truncate">
-                  Satlaa
+                  Fanostyle
                 </span>
               </div>
             </>
