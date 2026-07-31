@@ -50,6 +50,9 @@ dependencies:
   # Plays product videos in the Play (reels) tab. Web analogy: <video> element.
   video_player: ^2.9.2
 
+  # Modern typography (Poppins) for a premium look across the app.
+  google_fonts: ^6.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

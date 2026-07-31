@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/address.dart';
 import '../services/address_service.dart';
 import 'address_form_screen.dart';
@@ -102,12 +103,12 @@ class _AddressesScreenState extends State<AddressesScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: Text(widget.selectable ? 'Select Address' : 'My Addresses'),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         onPressed: () => _openForm(),
         icon: const Icon(Icons.add),
@@ -160,7 +161,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: a.isDefault ? Colors.deepPurple : Colors.grey.shade200,
+          color: a.isDefault ? AppColors.brand : Colors.grey.shade200,
           width: a.isDefault ? 1.5 : 1,
         ),
       ),
@@ -178,12 +179,12 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.deepPurple.shade50,
+                    color: AppColors.surfaceAlt,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text('Default',
                       style: TextStyle(
-                          fontSize: 11, color: Colors.deepPurple)),
+                          fontSize: 11, color: AppColors.brand)),
                 ),
             ],
           ),

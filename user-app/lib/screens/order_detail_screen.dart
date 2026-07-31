@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/order.dart';
 import '../services/order_service.dart';
 
@@ -114,7 +115,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('Order Details'),
       ),
@@ -274,7 +275,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: reached ? Colors.deepPurple : Colors.grey.shade300,
+                    color: reached ? AppColors.brand : Colors.grey.shade300,
                     shape: BoxShape.circle,
                   ),
                   child: reached
@@ -285,7 +286,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   Container(
                     width: 2,
                     height: 28,
-                    color: reached ? Colors.deepPurple : Colors.grey.shade300,
+                    color: reached ? AppColors.brand : Colors.grey.shade300,
                   ),
               ],
             ),

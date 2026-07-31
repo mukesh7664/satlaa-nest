@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/order.dart';
 import '../services/order_service.dart';
 import 'order_detail_screen.dart';
@@ -75,7 +76,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('My Orders'),
       ),

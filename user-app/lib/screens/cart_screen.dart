@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/cart_service.dart';
 import 'checkout_screen.dart';
@@ -225,7 +226,7 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('Cart'),
       ),
@@ -358,7 +359,7 @@ class _CartScreenState extends State<CartScreen> {
           height: 46,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
+              backgroundColor: AppColors.brand,
               foregroundColor: Colors.white,
             ),
             onPressed: _couponBusy ? null : _applyCoupon,
@@ -421,7 +422,7 @@ class _CartScreenState extends State<CartScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '₹${item.price.toStringAsFixed(0)}',
-                  style: const TextStyle(color: Colors.deepPurple),
+                  style: const TextStyle(color: AppColors.brand),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -522,7 +523,7 @@ class _CartScreenState extends State<CartScreen> {
                 const Spacer(),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
+                    backgroundColor: AppColors.brand,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 12),

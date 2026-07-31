@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/labeled_field.dart';
 import '../models/address.dart';
 import '../services/address_service.dart';
 
@@ -101,7 +103,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: Text(editing ? 'Edit Address' : 'Add Address'),
       ),
@@ -145,7 +147,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Set as default address'),
               value: _isDefault,
-              activeThumbColor: Colors.deepPurple,
+              activeThumbColor: AppColors.brand,
               onChanged: (v) => setState(() => _isDefault = v),
             ),
 
@@ -154,7 +156,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
               height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: AppColors.brand,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -177,7 +179,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
     );
   }
 
-  // A single labelled text field with padding + default "required" validation.
+  // A single labelled text field: label shown ABOVE the input box.
   Widget _field(
     TextEditingController controller,
     String label, {
@@ -186,18 +188,16 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
     int maxLines = 1,
     String? Function(String?)? validator,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+    // Strip a trailing "(optional)" from the visible label for the required mark.
+    final isRequired = required || validator != null;
+    return LabeledField(
+      label: label,
+      required: isRequired,
       child: TextFormField(
         controller: controller,
         keyboardType: keyboard,
         maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+        decoration: const InputDecoration(hintText: ''),
         validator: validator ??
             (required
                 ? (v) => (v == null || v.trim().isEmpty)

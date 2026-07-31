@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/product.dart';
 import '../services/catalog_service.dart';
 import '../services/cart_service.dart';
@@ -136,7 +137,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('Details'),
         actions: [
@@ -192,7 +193,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: selected
-                              ? Colors.deepPurple
+                              ? AppColors.brand
                               : Colors.grey.shade300,
                           width: selected ? 2 : 1,
                         ),
@@ -230,7 +231,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
+                        color: AppColors.brand,
                       ),
                     ),
                     if (_product.mrp != null) ...[
@@ -296,8 +297,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   height: 52,
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.deepPurple,
-                      side: const BorderSide(color: Colors.deepPurple),
+                      foregroundColor: AppColors.brand,
+                      side: const BorderSide(color: AppColors.brand),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -323,7 +324,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   height: 52,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
+                      backgroundColor: AppColors.brand,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

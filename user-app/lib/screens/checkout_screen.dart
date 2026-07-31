@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../models/address.dart';
 import '../services/cart_service.dart';
@@ -251,7 +252,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('Checkout'),
       ),
@@ -306,10 +307,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ? const Row(
                     children: [
                       Icon(Icons.add_location_alt_outlined,
-                          color: Colors.deepPurple),
+                          color: AppColors.brand),
                       SizedBox(width: 10),
                       Text('Select delivery address',
-                          style: TextStyle(color: Colors.deepPurple)),
+                          style: TextStyle(color: AppColors.brand)),
                     ],
                   )
                 : Column(
@@ -327,7 +328,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const SizedBox(height: 6),
                       const Text('Tap to change',
                           style: TextStyle(
-                              color: Colors.deepPurple, fontSize: 12)),
+                              color: AppColors.brand, fontSize: 12)),
                     ],
                   ),
           ),
@@ -397,7 +398,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           height: 52,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
+              backgroundColor: AppColors.brand,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

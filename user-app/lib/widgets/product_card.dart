@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/product.dart';
 
 // ProductCard — a reusable "component" that displays a single product.
@@ -100,7 +101,7 @@ class ProductCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: Colors.deepPurple,
+                  color: AppColors.brand,
                 ),
               ),
               // Show MRP only when it exists — with a strike-through (line-through).

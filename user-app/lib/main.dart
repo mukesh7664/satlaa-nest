@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home_screen.dart';
@@ -21,10 +22,7 @@ class FanostyleApp extends StatelessWidget {
     return MaterialApp(
       title: 'Fanostyle',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.build(),
       // AuthGate decides which screen to show first.
       home: const AuthGate(),
     );

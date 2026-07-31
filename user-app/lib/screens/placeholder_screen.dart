@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 // PlaceholderScreen — a simple empty screen used for tabs that are
 // not built yet (Categories, Cart, Profile). We show an icon + label
@@ -18,7 +19,7 @@ class PlaceholderScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         title: Text(
           title,
           style: const TextStyle(color: Colors.white),

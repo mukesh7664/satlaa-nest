@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import 'orders_screen.dart';
@@ -69,7 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         title: const Text('Profile', style: TextStyle(color: Colors.white)),
       ),
       body: _loading
@@ -83,13 +84,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Center(
                   child: CircleAvatar(
                     radius: 44,
-                    backgroundColor: Colors.deepPurple.shade100,
+                    backgroundColor: AppColors.goldSoft,
                     child: Text(
                       _initials(_user?.name),
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
+                        color: AppColors.brand,
                       ),
                     ),
                   ),
@@ -168,7 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       color: Colors.grey.shade50,
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: Icon(icon, color: Colors.deepPurple),
+        leading: Icon(icon, color: AppColors.brand),
         title: Text(label,
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
         subtitle: Text(value,
@@ -185,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       color: Colors.grey.shade50,
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: Icon(icon, color: Colors.deepPurple),
+        leading: Icon(icon, color: AppColors.brand),
         title: Text(label,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),

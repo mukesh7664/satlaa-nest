@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/product.dart';
 import '../services/catalog_service.dart';
 import '../widgets/product_card.dart';
@@ -22,11 +23,18 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true; // true while the first load is running
   String? _error; // holds an error message if the load failed
   String _search = ''; // current search text
+  final _searchController = TextEditingController(); // controls the search box
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   // Load products from the backend.
@@ -68,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         title: const Text(
           'Fanostyle',
           style: TextStyle(
@@ -97,27 +105,77 @@ class _HomeScreenState extends State<HomeScreen> {
             // ---- Search bar ----
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  // Outer bar: light gray rounded background.
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.search, color: Colors.grey),
+                      // Search icon inside its own gray rounded tile.
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.search,
+                            color: AppColors.textSecondary, size: 20),
+                      ),
                       const SizedBox(width: 8),
+                      // Input sits in its own white rounded pill.
                       Expanded(
-                        child: TextField(
-                          decoration: const InputDecoration(
-                            hintText: 'Search suits, lehengas...',
-                            border: InputBorder.none,
+                        child: Container(
+                          height: 38,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          // Update search text; reload when the user submits.
-                          onChanged: (v) => _search = v,
-                          onSubmitted: (_) => _load(),
-                          textInputAction: TextInputAction.search,
+                          alignment: Alignment.center,
+                          child: TextField(
+                            controller: _searchController,
+                            style: const TextStyle(
+                              fontSize: 14.5,
+                              color: AppColors.textPrimary,
+                            ),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              hintText: 'Search suits, lehengas...',
+                              hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                              // Show a clear button only when text is present.
+                              suffixIcon: _search.isEmpty
+                                  ? null
+                                  : GestureDetector(
+                                      onTap: () {
+                                        _searchController.clear();
+                                        setState(() => _search = '');
+                                        _load();
+                                      },
+                                      child: const Icon(Icons.close,
+                                          size: 18,
+                                          color: AppColors.textSecondary),
+                                    ),
+                              suffixIconConstraints: const BoxConstraints(
+                                  minWidth: 24, minHeight: 24),
+                            ),
+                            // Update search text; reload when the user submits.
+                            onChanged: (v) => setState(() => _search = v),
+                            onSubmitted: (_) => _load(),
+                            textInputAction: TextInputAction.search,
+                          ),
                         ),
                       ),
                     ],

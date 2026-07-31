@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/category.dart';
 import '../services/catalog_service.dart';
 import 'category_products_screen.dart';
@@ -58,7 +59,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('Categories'),
       ),
@@ -104,8 +105,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           final category = _categories[index];
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.deepPurple.shade50,
-              child: const Icon(Icons.category, color: Colors.deepPurple),
+              backgroundColor: AppColors.surfaceAlt,
+              child: const Icon(Icons.category, color: AppColors.brand),
             ),
             title: Text(
               category.name,

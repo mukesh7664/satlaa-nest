@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/ticket.dart';
 import '../services/support_service.dart';
 import 'support_new_screen.dart';
@@ -68,14 +69,14 @@ class _SupportScreenState extends State<SupportScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('Help & Support'),
       ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _newTicket,
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('New Ticket'),
@@ -206,7 +207,7 @@ class _SupportScreenState extends State<SupportScreen> {
       case 'closed':
         return Colors.grey;
       default:
-        return Colors.deepPurple;
+        return AppColors.brand;
     }
   }
 

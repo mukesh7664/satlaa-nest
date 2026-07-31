@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/ticket.dart';
 import '../services/support_service.dart';
 
@@ -148,7 +149,7 @@ class _SupportDetailScreenState extends State<SupportDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('Ticket'),
         actions: [
@@ -262,7 +263,7 @@ class _SupportDetailScreenState extends State<SupportDetailScreen> {
           maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
         decoration: BoxDecoration(
-          color: mine ? Colors.deepPurple : Colors.grey.shade100,
+          color: mine ? AppColors.brand : Colors.grey.shade100,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(14),
             topRight: const Radius.circular(14),
@@ -281,7 +282,7 @@ class _SupportDetailScreenState extends State<SupportDetailScreen> {
                     style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple)),
+                        color: AppColors.brand)),
               ),
             Text(
               m.message,
@@ -332,7 +333,7 @@ class _SupportDetailScreenState extends State<SupportDetailScreen> {
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 22,
-              backgroundColor: Colors.deepPurple,
+              backgroundColor: AppColors.brand,
               child: _sending
                   ? const SizedBox(
                       width: 18,
@@ -376,7 +377,7 @@ class _SupportDetailScreenState extends State<SupportDetailScreen> {
       case 'closed':
         return Colors.grey;
       default:
-        return Colors.deepPurple;
+        return AppColors.brand;
     }
   }
 

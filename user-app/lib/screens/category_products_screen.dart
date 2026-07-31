@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/product.dart';
 import '../models/category.dart';
 import '../services/catalog_service.dart';
@@ -66,7 +67,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: Text(widget.category.name),
       ),

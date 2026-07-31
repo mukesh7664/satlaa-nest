@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../models/product.dart';
 import '../services/wishlist_service.dart';
 import '../widgets/product_card.dart';
@@ -71,7 +72,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('Wishlist'),
       ),

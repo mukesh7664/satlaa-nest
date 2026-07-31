@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/labeled_field.dart';
 import '../../services/auth_service.dart';
 import 'signup_screen.dart';
 
@@ -84,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 20),
                   // ---- Brand / heading ----
                   const Icon(Icons.shopping_bag,
-                      size: 64, color: Colors.deepPurple),
+                      size: 64, color: AppColors.brand),
                   const SizedBox(height: 16),
                   const Text(
                     'Welcome to Fanostyle',
@@ -101,52 +103,57 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 32),
 
                   // ---- Email field ----
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
+                  LabeledField(
+                    label: 'Email',
+                    required: true,
+                    child: TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        hintText: 'you@example.com',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                      // validator returns an error string, or null if valid.
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Please enter a valid email';
+                        }
+                        return null;
+                      },
                     ),
-                    // validator returns an error string, or null if valid.
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 16),
 
                   // ---- Password field ----
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      border: const OutlineInputBorder(),
-                      // Eye button to toggle password visibility.
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility),
-                        onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword),
+                  LabeledField(
+                    label: 'Password',
+                    required: true,
+                    child: TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        hintText: 'Enter your password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        // Eye button to toggle password visibility.
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        return null;
+                      },
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
 
                   // ---- Login button ----
                   SizedBox(
@@ -154,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       onPressed: _loading ? null : _submit,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
+                        backgroundColor: AppColors.brand,
                         foregroundColor: Colors.white,
                       ),
                       child: _loading
@@ -193,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: const Text(
                           'Sign Up',
                           style: TextStyle(
-                            color: Colors.deepPurple,
+                            color: AppColors.brand,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

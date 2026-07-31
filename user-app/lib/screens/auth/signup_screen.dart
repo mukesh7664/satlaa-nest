@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/labeled_field.dart';
 import '../../services/auth_service.dart';
 
 // SignupScreen — registers a new customer via the backend.
@@ -100,83 +102,91 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 24),
 
                 // ---- Full name ----
-                TextFormField(
-                  controller: _nameController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
+                LabeledField(
+                  label: 'Full Name',
+                  required: true,
+                  child: TextFormField(
+                    controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      hintText: 'Your full name',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your name';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
 
                 // ---- Email ----
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
+                LabeledField(
+                  label: 'Email',
+                  required: true,
+                  child: TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      hintText: 'you@example.com',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your email';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
 
                 // ---- Phone (optional) ----
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone (optional)',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ---- Password ----
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility),
-                      onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword),
+                LabeledField(
+                  label: 'Phone (optional)',
+                  child: TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      hintText: '10-digit mobile number',
+                      prefixIcon: Icon(Icons.phone_outlined),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 24),
+
+                // ---- Password ----
+                LabeledField(
+                  label: 'Password',
+                  required: true,
+                  child: TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      hintText: 'At least 6 characters',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility),
+                        onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a password';
+                      }
+                      if (value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
 
                 // ---- Sign up button ----
                 SizedBox(
@@ -184,7 +194,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   child: ElevatedButton(
                     onPressed: _loading ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
+                      backgroundColor: AppColors.brand,
                       foregroundColor: Colors.white,
                     ),
                     child: _loading
@@ -213,7 +223,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: const Text(
                         'Login',
                         style: TextStyle(
-                          color: Colors.deepPurple,
+                          color: AppColors.brand,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

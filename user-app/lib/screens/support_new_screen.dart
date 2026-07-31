@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/labeled_field.dart';
 import '../services/support_service.dart';
 
 // SupportNewScreen — form to create a new support ticket.
@@ -64,7 +66,7 @@ class _SupportNewScreenState extends State<SupportNewScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         title: const Text('New Ticket'),
       ),
@@ -74,15 +76,13 @@ class _SupportNewScreenState extends State<SupportNewScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             // Subject
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+            LabeledField(
+              label: 'Subject',
+              required: true,
               child: TextFormField(
                 controller: _subject,
-                decoration: InputDecoration(
-                  labelText: 'Subject',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
+                decoration: const InputDecoration(
+                    hintText: 'Short summary of your issue'),
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? 'Subject is required'
                     : null,
@@ -90,15 +90,10 @@ class _SupportNewScreenState extends State<SupportNewScreen> {
             ),
 
             // Category
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+            LabeledField(
+              label: 'Category',
               child: DropdownButtonFormField<String>(
                 initialValue: _category,
-                decoration: InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
                 items: _categories
                     .map((c) =>
                         DropdownMenuItem(value: c, child: Text(c)))
@@ -108,15 +103,10 @@ class _SupportNewScreenState extends State<SupportNewScreen> {
             ),
 
             // Priority
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+            LabeledField(
+              label: 'Priority',
               child: DropdownButtonFormField<String>(
                 initialValue: _priority,
-                decoration: InputDecoration(
-                  labelText: 'Priority',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
                 items: _priorities
                     .map((p) => DropdownMenuItem(
                           value: p,
@@ -128,17 +118,14 @@ class _SupportNewScreenState extends State<SupportNewScreen> {
             ),
 
             // Description
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+            LabeledField(
+              label: 'Describe your issue',
+              required: true,
               child: TextFormField(
                 controller: _description,
                 maxLines: 6,
-                decoration: InputDecoration(
-                  labelText: 'Describe your issue',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
+                decoration: const InputDecoration(
+                    hintText: 'Tell us what happened...'),
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? 'Please describe your issue'
                     : null,
@@ -150,7 +137,7 @@ class _SupportNewScreenState extends State<SupportNewScreen> {
               height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: AppColors.brand,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
