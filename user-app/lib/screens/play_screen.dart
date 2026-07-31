@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../models/product.dart';
 import '../services/catalog_service.dart';
-import '../services/cart_service.dart';
 import 'product_detail_screen.dart';
 
 // PlayScreen — a reels-style vertical feed of product videos.
@@ -128,7 +127,6 @@ class _ReelPageState extends State<_ReelPage> {
   VideoPlayerController? _controller;
   bool _initialized = false;
   bool _hasError = false;
-  bool _addingToCart = false;
 
   @override
   void initState() {
@@ -191,33 +189,15 @@ class _ReelPageState extends State<_ReelPage> {
     });
   }
 
-  Future<void> _addToCart() async {
-    if (_addingToCart) return;
-    setState(() => _addingToCart = true);
-    try {
-      await CartService.addItem(
-        productId: widget.product.id,
-        price: widget.product.price,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Added to cart')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
-      if (mounted) setState(() => _addingToCart = false);
-    }
-  }
-
-  void _openDetail() {
-    Navigator.of(context).push(
+  Future<void> _openDetail() async {
+    // Pause the reel while the details page is open, resume on return.
+    _controller?.pause();
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ProductDetailScreen(product: widget.product),
       ),
     );
+    if (mounted) _syncPlayback();
   }
 
   @override
@@ -225,6 +205,12 @@ class _ReelPageState extends State<_ReelPage> {
     final product = widget.product;
     return GestureDetector(
       onTap: _togglePlay,
+      // Swipe right-to-left (finger moves left) opens the product details.
+      onHorizontalDragEnd: (details) {
+        if ((details.primaryVelocity ?? 0) < -100) {
+          _openDetail();
+        }
+      },
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -307,22 +293,19 @@ class _ReelPageState extends State<_ReelPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Product name (tap -> detail)
-        GestureDetector(
-          onTap: _openDetail,
-          child: Text(
-            product.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+        // Product name only.
+        Text(
+          product.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 6),
-        // Price row
+        // Price row (price + optional MRP/discount).
         Row(
           children: [
             Text(
@@ -356,48 +339,16 @@ class _ReelPageState extends State<_ReelPage> {
             ],
           ],
         ),
-        const SizedBox(height: 14),
-        // Action buttons
+        const SizedBox(height: 10),
+        // Hint: swipe left to open the full product details.
         Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _openDetail,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white70),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                icon: const Icon(Icons.visibility_outlined, size: 18),
-                label: const Text('View'),
-              ),
+          children: const [
+            Text(
+              'Swipe left for details',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _addingToCart ? null : _addToCart,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                icon: _addingToCart
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.add_shopping_cart, size: 18),
-                label: const Text('Add'),
-              ),
-            ),
+            SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_left, color: Colors.white70, size: 18),
           ],
         ),
       ],

@@ -106,8 +106,8 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final screens = [
       const HomeScreen(),
-      const CategoriesScreen(),
       const PlayScreen(),
+      const CategoriesScreen(),
       const CartScreen(),
       ProfileScreen(onLoggedOut: widget.onLoggedOut),
     ];
@@ -126,14 +126,14 @@ class _MainShellState extends State<MainShell> {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view),
-            label: 'Categories',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.play_circle_outline),
             selectedIcon: Icon(Icons.play_circle),
             label: 'Play',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.grid_view_outlined),
+            selectedIcon: Icon(Icons.grid_view),
+            label: 'Categories',
           ),
           NavigationDestination(
             icon: Icon(Icons.shopping_cart_outlined),
