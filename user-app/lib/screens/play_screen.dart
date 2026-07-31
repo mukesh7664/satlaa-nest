@@ -217,6 +217,73 @@ class _ReelPageState extends State<_ReelPage> {
           // ---- Video (or fallback image / error) ----
           _buildVideoLayer(),
 
+          // ---- Dark gradient at the top for the header labels ----
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: Container(
+              height: 120,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Colors.transparent, Colors.black54],
+                ),
+              ),
+            ),
+          ),
+
+          // ---- Top header: "For You" (active) | "Details" ----
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // "For You" — the current reel feed (active).
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Text(
+                          'For You',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        SizedBox(
+                          width: 22,
+                          child: Divider(
+                              color: Colors.white, thickness: 2, height: 2),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 26),
+                    // "Details" — opens the full product details page.
+                    GestureDetector(
+                      onTap: _openDetail,
+                      child: const Text(
+                        'Details',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // ---- Dark gradient at the bottom for text legibility ----
           Positioned(
             left: 0,

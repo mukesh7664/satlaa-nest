@@ -115,6 +115,9 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       body: screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
+        // Slimmer than the Material 3 default (80) for a compact bar.
+        height: 60,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
           setState(() => _currentIndex = index);
