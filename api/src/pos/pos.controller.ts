@@ -91,6 +91,14 @@ export class PosController {
         return { data };
     }
 
+    @ApiOperation({ summary: 'Day summary for cash reconciliation' })
+    @Get('summary')
+    async daySummary(@Request() req, @Query('date') date?: string, @Query('mine') mine?: string) {
+        const operatorId = mine === 'true' ? req.user.userId : undefined;
+        const data = await this.posService.daySummary(date, operatorId);
+        return { data };
+    }
+
     // ---- Reports ----
     @ApiOperation({ summary: 'Staff-wise sales report' })
     @Get('reports/staff')

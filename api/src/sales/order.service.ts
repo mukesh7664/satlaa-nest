@@ -171,6 +171,8 @@ export class OrderService {
             customerName?: string;
             customerPhone?: string;
             customerCity?: string;
+            billDiscount?: number;
+            cashTendered?: number;
         },
     ) {
         if (!orderData.items || !orderData.items.length) {
@@ -181,27 +183,49 @@ export class OrderService {
         const productIds = orderData.items.map(item => item.productId).filter(Boolean);
         const products = await this.catalogService.findProductsByIds(productIds);
 
+        let lineDiscountTotal = 0;
         const itemsWithTax = orderData.items.map(item => {
             const target = products.find(p => p.id === (item.variantId || item.productId))
                 || products.find(p => p.id === item.productId);
             const price = Number(target?.price ?? item.price ?? 0);
             const taxRate = Number(target?.tax_rate ?? item.tax_rate ?? 0);
             const lineSubtotal = price * item.quantity;
-            const taxAmount = (lineSubtotal * taxRate) / 100;
+            // Clamp per-line discount to the line subtotal.
+            const lineDiscount = Math.min(Math.max(Number(item.discount ?? 0), 0), lineSubtotal);
+            lineDiscountTotal += lineDiscount;
+            const discountedLine = lineSubtotal - lineDiscount;
+            const taxAmount = (discountedLine * taxRate) / 100; // tax on the discounted amount
             return {
                 ...item,
                 price,
                 tax_rate: taxRate,
                 tax_amount: taxAmount,
-                totalPrice: lineSubtotal,
+                totalPrice: discountedLine,
             };
         });
 
-        const subtotal = itemsWithTax.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
+        const grossSubtotal = itemsWithTax.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
+        const afterLineDiscount = grossSubtotal - lineDiscountTotal;
+        // Clamp the bill-level discount to what remains after line discounts.
+        const billDiscount = Math.min(Math.max(Number(attribution.billDiscount ?? 0), 0), afterLineDiscount);
         const tax = itemsWithTax.reduce((acc, item) => acc + (item.tax_amount || 0), 0);
-        const total = subtotal + tax;
+        const discountAmount = lineDiscountTotal + billDiscount;
+        const total = grossSubtotal - discountAmount + tax;
 
-        const totals = { subtotal, tax, shippingCharges: 0, total, discountAmount: 0, discount: 0 };
+        const totals = {
+            subtotal: grossSubtotal,
+            tax,
+            shippingCharges: 0,
+            total,
+            discountAmount,
+            discount: 0,
+        };
+
+        // Cash / change bookkeeping (cash payments only).
+        const cashTendered = attribution.paymentMethod === 'cash' && attribution.cashTendered != null
+            ? Number(attribution.cashTendered)
+            : undefined;
+        const changeDue = cashTendered != null ? Math.max(0, cashTendered - total) : undefined;
 
         const order = await this.createOrderWithItems(
             customerId,
@@ -221,10 +245,19 @@ export class OrderService {
                 customerName: attribution.customerName,
                 customerPhone: attribution.customerPhone,
                 customerCity: attribution.customerCity,
+                discountAmount,
                 paymentInfo: {
                     method: attribution.paymentMethod,
                     status: 'paid',
                     paidAt: new Date(),
+                },
+                metadata: {
+                    pos: {
+                        lineDiscountTotal,
+                        billDiscount,
+                        cashTendered,
+                        changeDue,
+                    },
                 },
             } as Partial<Order>,
         );
@@ -238,7 +271,18 @@ export class OrderService {
             this.logger.error('POS invoice generation failed', err as any);
         }
 
-        return { order, invoicePdfUrl };
+        return {
+            order,
+            invoicePdfUrl,
+            summary: {
+                subtotal: grossSubtotal,
+                discountAmount,
+                tax,
+                total,
+                cashTendered,
+                changeDue,
+            },
+        };
     }
 
     private async createOrderWithItems(

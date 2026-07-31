@@ -8,6 +8,7 @@ import { logout } from "@/store/authSlice";
 const TITLES: Record<string, string> = {
   "/billing": "Billing",
   "/sales": "Sales",
+  "/summary": "Day Summary",
   "/couriers": "Couriers",
   "/reports/staff": "Staff Report",
   "/reports/courier": "Courier Report",

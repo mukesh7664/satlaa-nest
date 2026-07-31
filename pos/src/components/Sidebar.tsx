@@ -8,11 +8,13 @@ import {
   Truck,
   Users,
   BarChart3,
+  CalendarClock,
 } from "lucide-react";
 
 const NAV = [
   { label: "Billing", href: "/billing", icon: ShoppingCart },
   { label: "Sales", href: "/sales", icon: ReceiptText },
+  { label: "Day Summary", href: "/summary", icon: CalendarClock },
   { label: "Couriers", href: "/couriers", icon: Truck },
   { label: "Staff Report", href: "/reports/staff", icon: Users },
   { label: "Courier Report", href: "/reports/courier", icon: BarChart3 },

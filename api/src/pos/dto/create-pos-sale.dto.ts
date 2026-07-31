@@ -18,6 +18,12 @@ export class PosSaleItemDto {
     @IsOptional()
     @IsNumber()
     price?: number;
+
+    // Flat discount (₹) applied to this line's subtotal (UI resolves ₹/% to a ₹ amount).
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    discount?: number;
 }
 
 export class PosCustomerDto {
@@ -63,4 +69,16 @@ export class CreatePosSaleDto {
     @IsOptional()
     @IsString()
     courierId?: string;
+
+    // Flat discount (₹) applied to the whole bill, on top of any line discounts.
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    billDiscount?: number;
+
+    // Cash handed over by the customer (cash payments only) — used to record change given.
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    cashTendered?: number;
 }

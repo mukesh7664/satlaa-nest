@@ -174,6 +174,8 @@ export class PosService {
                 customerName: snap.name,
                 customerPhone: snap.phone,
                 customerCity: snap.city,
+                billDiscount: dto.billDiscount,
+                cashTendered: dto.paymentMethod === 'cash' ? dto.cashTendered : undefined,
             },
         );
     }
@@ -193,6 +195,41 @@ export class PosService {
         }
 
         return qb.take(200).getMany();
+    }
+
+    /** Day summary for cash reconciliation: totals + payment-method breakdown. */
+    async daySummary(dateStr?: string, operatorId?: string) {
+        const base = dateStr ? new Date(dateStr) : new Date();
+        const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 0, 0, 0);
+        const end = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 23, 59, 59, 999);
+
+        const qb = this.orderRepository.createQueryBuilder('order')
+            .where('order.orderType = :type', { type: 'pos_sale' })
+            .andWhere('order.createdAt BETWEEN :start AND :end', { start, end });
+        if (operatorId) qb.andWhere('order.posOperatorId = :op', { op: operatorId });
+
+        const orders = await qb.getMany();
+
+        const summary = {
+            date: start.toISOString().slice(0, 10),
+            ordersCount: orders.length,
+            revenue: 0,
+            discountTotal: 0,
+            byMethod: { cash: 0, card: 0, upi: 0 } as Record<string, number>,
+            byChannel: { offline: 0, online: 0 } as Record<string, number>,
+        };
+
+        for (const o of orders) {
+            const total = Number(o.totalAmount) || 0;
+            summary.revenue += total;
+            summary.discountTotal += Number(o.discountAmount) || 0;
+            const m = (o.paymentMethod || '').toLowerCase();
+            if (summary.byMethod[m] != null) summary.byMethod[m] += total;
+            const ch = (o.saleChannel || '').toLowerCase();
+            if (summary.byChannel[ch] != null) summary.byChannel[ch] += total;
+        }
+
+        return summary;
     }
 
     // ---------- Courier CRUD ----------
