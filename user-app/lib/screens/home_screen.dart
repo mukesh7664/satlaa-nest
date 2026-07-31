@@ -107,77 +107,56 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
                 child: Container(
-                  height: 52,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  // Outer bar: light gray rounded background.
+                  height: 50,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  // Single full-width white input with a thin border.
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(14),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: Row(
                     children: [
-                      // Search icon inside its own gray rounded tile.
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: AppColors.border,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.search,
-                            color: AppColors.textSecondary, size: 20),
-                      ),
-                      const SizedBox(width: 8),
-                      // Input sits in its own white rounded pill.
+                      // Search icon sits INSIDE the white input.
+                      const Icon(Icons.search,
+                          color: AppColors.textSecondary, size: 22),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: Container(
-                          height: 38,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
+                        child: TextField(
+                          controller: _searchController,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            color: AppColors.textPrimary,
                           ),
-                          alignment: Alignment.center,
-                          child: TextField(
-                            controller: _searchController,
-                            style: const TextStyle(
-                              fontSize: 14.5,
-                              color: AppColors.textPrimary,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            hintText: 'Search suits, lehengas...',
+                            hintStyle: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
                             ),
-                            decoration: InputDecoration(
-                              isDense: true,
-                              hintText: 'Search suits, lehengas...',
-                              hintStyle: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textSecondary,
-                              ),
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              // Show a clear button only when text is present.
-                              suffixIcon: _search.isEmpty
-                                  ? null
-                                  : GestureDetector(
-                                      onTap: () {
-                                        _searchController.clear();
-                                        setState(() => _search = '');
-                                        _load();
-                                      },
-                                      child: const Icon(Icons.close,
-                                          size: 18,
-                                          color: AppColors.textSecondary),
-                                    ),
-                              suffixIconConstraints: const BoxConstraints(
-                                  minWidth: 24, minHeight: 24),
-                            ),
-                            // Update search text; reload when the user submits.
-                            onChanged: (v) => setState(() => _search = v),
-                            onSubmitted: (_) => _load(),
-                            textInputAction: TextInputAction.search,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
                           ),
+                          // Update search text; reload when the user submits.
+                          onChanged: (v) => setState(() => _search = v),
+                          onSubmitted: (_) => _load(),
+                          textInputAction: TextInputAction.search,
                         ),
                       ),
+                      // Clear button only when text is present.
+                      if (_search.isNotEmpty)
+                        GestureDetector(
+                          onTap: () {
+                            _searchController.clear();
+                            setState(() => _search = '');
+                            _load();
+                          },
+                          child: const Icon(Icons.close,
+                              size: 18, color: AppColors.textSecondary),
+                        ),
                     ],
                   ),
                 ),
