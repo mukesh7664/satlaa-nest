@@ -307,7 +307,7 @@ export default function BillingPage() {
           {loadingProducts ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-28 animate-pulse rounded-xl bg-gray-100" />
+                <div key={i} className="h-28 animate-pulse rounded-md bg-gray-100" />
               ))}
             </div>
           ) : products.length === 0 ? (
@@ -325,10 +325,10 @@ export default function BillingPage() {
                     key={u.id}
                     onClick={() => addToCart(u)}
                     disabled={soldOut}
-                    className={`relative flex flex-col justify-between rounded-xl border p-3 text-left transition-all ${
+                    className={`relative flex flex-col justify-between rounded-md border p-3 text-left transition-all ${
                       soldOut
                         ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
-                        : "border-gray-200 bg-white hover:border-[#408dfb] hover:shadow-md"
+                        : "border-gray-200 bg-white hover:border-[#408dfb] hover:shadow-sm"
                     }`}
                   >
                     {inCart > 0 && (
