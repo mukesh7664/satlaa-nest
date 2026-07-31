@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import 'orders_screen.dart';
 import 'wishlist_screen.dart';
 import 'addresses_screen.dart';
+import 'support_screen.dart';
 
 // ProfileScreen — shows the logged-in user's info and a logout button.
 // It reads the user that AuthService saved on the device at login time.
@@ -134,6 +135,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _menuTile(Icons.location_on_outlined, 'My Addresses', () {
                   Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => const AddressesScreen()));
+                }),
+                _menuTile(Icons.support_agent, 'Help & Support', () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const SupportScreen()));
                 }),
 
                 const SizedBox(height: 24),
